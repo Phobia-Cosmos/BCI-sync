@@ -1,27 +1,27 @@
 [submodule "code/Deep-BCI"]
-	path = code/Deep-BCI
+	path = code/bci_toolkits/Deep-BCI
 	url = https://github.com/DeepBCI/Deep-BCI.git
 [submodule "code/DIFO-Plus"]
-	path = code/DIFO-Plus
+	path = code/sfda/2024CVPR-DIFO-Plus
 	url = https://github.com/tntek/DIFO-Plus.git
 [submodule "code/mindbridge"]
-	path = code/mindbridge
+	path = code/brain_decoding/2024CVPR-MindBridge
 	url = https://github.com/littlepure2333/mindbridge.git
 [submodule "code/PDCC"]
-	path = code/PDCC
+	path = code/sfda/2025JBHI-PDCC-Cross-Subject-EEG-Classification
 	url = https://github.com/SunseaIU/PDCC.git
 [submodule "code/SFDA-SSVEP-BCI"]
-	path = code/SFDA-SSVEP-BCI
+	path = code/sfda/2023Arxiv-SFDA-SSVEP-BCI
 	url = https://github.com/osmanberke/SFDA-SSVEP-BCI.git
 [submodule "code/SF-UIDA"]
-	path = code/SF-UIDA
+	path = code/sfda/2025AAAI-SF-UIDA
 	url = https://github.com/xiaobaben/SF-UIDA.git
 [submodule "code/SHOT"]
-	path = code/SHOT
+	path = code/sfda/2020ICML-SHOT
 	url = https://github.com/tim-learn/SHOT.git
 [submodule "code/source-free-domain-adaptation"]
-	path = code/source-free-domain-adaptation
+	path = code/sfda/2024CVPR-DIFO-ProDe-Source-Free-Domain-Adaptation
 	url = https://github.com/tntek/source-free-domain-adaptation.git
 [submodule "code/TSMNet"]
-	path = code/TSMNet
+	path = code/brain_decoding/2022NeurIPS-TSMNet-SPD-DSBN-EEG-UDA
 	url = https://github.com/rkobler/TSMNet.git
