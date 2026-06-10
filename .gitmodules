@@ -1,0 +1,27 @@
+[submodule "code/Deep-BCI"]
+	path = code/Deep-BCI
+	url = https://github.com/DeepBCI/Deep-BCI.git
+[submodule "code/DIFO-Plus"]
+	path = code/DIFO-Plus
+	url = https://github.com/tntek/DIFO-Plus.git
+[submodule "code/mindbridge"]
+	path = code/mindbridge
+	url = https://github.com/littlepure2333/mindbridge.git
+[submodule "code/PDCC"]
+	path = code/PDCC
+	url = https://github.com/SunseaIU/PDCC.git
+[submodule "code/SFDA-SSVEP-BCI"]
+	path = code/SFDA-SSVEP-BCI
+	url = https://github.com/osmanberke/SFDA-SSVEP-BCI.git
+[submodule "code/SF-UIDA"]
+	path = code/SF-UIDA
+	url = https://github.com/xiaobaben/SF-UIDA.git
+[submodule "code/SHOT"]
+	path = code/SHOT
+	url = https://github.com/tim-learn/SHOT.git
+[submodule "code/source-free-domain-adaptation"]
+	path = code/source-free-domain-adaptation
+	url = https://github.com/tntek/source-free-domain-adaptation.git
+[submodule "code/TSMNet"]
+	path = code/TSMNet
+	url = https://github.com/rkobler/TSMNet.git
