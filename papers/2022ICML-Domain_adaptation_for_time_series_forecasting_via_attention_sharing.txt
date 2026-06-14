@@ -1,0 +1,1047 @@
+       Domain Adaptation for Time Series Forecasting via Attention Sharing
+
+
+                Xiaoyong Jin 1 Youngsuk Park 2 Danielle C. Maddix 2 Hao Wang 3 Yuyang Wang 2
+
+
+                         Abstract                                1. Introduction
+                                                                 Similar to other fields with predictive tasks, time series
+                                                                 forecasting has recently benefited from the development
+     Recently, deep neural networks have gained in-              of deep neural networks (Flunkert et al., 2020; Borovykh
+     creasing popularity in the field of time series fore-       et al., 2017; Oreshkin et al., 2020b), ultimately toward final
+     casting. A primary reason for their success is              decision making systems like retail (Böse et al., 2017), re-
+     their ability to effectively capture complex tem-           source planning for cloud computing (Park et al., 2019), and
+     poral dynamics across multiple related time se-             optimal control vehicles (Kim et al., 2020; Park et al., 2022).
+     ries. The advantages of these deep forecasters              In particular, based on the success of Transformer models in
+     only start to emerge in the presence of a suffi-            natural language processing (Vaswani et al., 2017), attention
+     cient amount of data. This poses a challenge for            models have also been effectively applied to forecasting (Li
+     typical forecasting problems in practice, where             et al., 2019; Lim et al., 2019; Zhou et al., 2021; Xu et al.,
+     there is a limited number of time series or obser-          2021). While these deep forecasting models excel at cap-
+     vations per time series, or both. To cope with this         turing complex temporal dynamics from a sufficiently large
+     data scarcity issue, we propose a novel domain              time series dataset, it is often challenging in practice to
+     adaptation framework, Domain Adaptation Fore-               collect enough data.
+     caster (DAF). DAF leverages statistical strengths
+     from a relevant domain with abundant data sam-              A common solution to the data scarcity problem is to in-
+     ples (source) to improve the performance on the             troduce another dataset with abundant data samples from
+     domain of interest with limited data (target). In           a so-called source domain related to the dataset of interest,
+     particular, we use an attention-based shared mod-           referred to as the target domain. For example, traffic data
+     ule with a domain discriminator across domains              from an area with an abundant number of sensors (source
+     and private modules for individual domains. We              domain) can be used to train a model to forecast the traf-
+     induce domain-invariant latent features (queries            fic flow in an area with insufficient monitoring recordings
+     and keys) and retrain domain-specific features              (target domain). However, deep neural networks trained on
+     (values) simultaneously to enable joint training of         one domain can be poor at generalizing to another domain
+     forecasters on source and target domains. A main            due to the issue of domain shift, that is, the distributional
+     insight is that our design of aligning keys allows          discrepancy between domains (Wang et al., 2021).
+     the target domain to leverage source time series            Domain adaptation (DA) methods attempt to mitigate the
+     even with different characteristics. Extensive ex-          harmful effect of domain shift by aligning features extracted
+     periments on various domains demonstrate that               across source and target domains (Ganin et al., 2016; Bous-
+     our proposed method outperforms state-of-the-               malis et al., 2016; Hoffman et al., 2018; Bartunov & Vetrov,
+     art baselines on synthetic and real-world datasets,         2018; Wang et al., 2020). Existing approaches mainly focus
+     and ablation studies verify the effectiveness of our        on classification tasks, where a classifier learns a mapping
+     design choices.                                             from a learned domain-invariant latent space to a fixed la-
+                                                                 bel space using source data. Consequently, the classifier
+                                                                 depends only on common features across domains, and can
+                                                                 be applied to the target domain (Wilson & Cook, 2020).
+   1
+     Department of Computer Science, University of California
+Santa Barbara, California, USA (work done during internship at   There are two main challenges in directly applying existing
+Amazon AWS AI) 2 Amazon AWS AI 3 Rutgers University. Corre-      DA methods to time series forecasting. First, due to the
+spondence to: Xiaoyong Jin <x jin@cs.ucsb.edu>.                  temporal nature of time series, evolving patterns within time
+                                                                 series are not likely to be captured by a representation of
+Proceedings of the 39 th International Conference on Machine
+Learning, Baltimore, Maryland, USA, PMLR 162, 2022. Copy-        the entire history. Future predictions may depend on local
+right 2022 by the author(s).                                     patterns within different time periods, and a sequence of
+                              Domain Adaptation for Time Series Forecasting via Attention Sharing
+
+
+
+
+Figure 1. Forecasts of single-domain attention-based forecaster (AttF) and our cross-domain forecaster (DAF) on synthetic data. Sample
+forecasts from steps 72-84 on the target domain where our DAF is also trained on the source domain (top left). Bar plot of the weights on
+the context history of the attention distributions of AttF and DAF associated with forecasting step 84 (bottom left). Attention keys (top
+right) and values (bottom right) of AttF and DAF after dimension reduction to 2D. The keys and values of AttF in the source domain
+are generated by simply applying AttF model trained on target data to the source data. The strategy of aligning keys rather than values
+between source and target domains in our DAF captures the correct attention weights, as illustrated by the accurate forecasts compared to
+AttF (cf. red dots vs. blue dots from steps 72-84).
+
+
+local representations can be more appropriate than using the           DAF is able to generate distinct values for each domain. As
+entire history as done with most conventional approaches.              a result, the top left panel shows that DAF produces more
+Second, the output space in forecasting tasks is not fixed             accurate domain-specific forecasts than AttF does.
+across domains in general since a forecaster generates a
+                                                                       In this paper, we propose the Domain Adaptation Fore-
+time series following the input, which is domain-dependent,
+                                                                       caster (DAF), a novel method that effectively solves the data
+e.g. kW in electrical source data vs. unit count in stock
+                                                                       scarcity issue in the specific task of time series forecast-
+target data. Both domain-invariant and domain-specific fea-
+                                                                       ing by applying domain adaptation techniques via attention
+tures need to be extracted and incorporated in forecasting to
+                                                                       sharing. The main contributions of this paper are:
+model domain-dependent properties so that the data distri-
+bution of the respective domain is properly approximated.              1. In DAF, we propose a new architecture that properly
+Hence, we need to carefully design the type of features to be             induces and combines domain-invariant and domain-
+shared or non-shared over different domains, and to choose                specific features to make multi-horizon forecasts for
+a suitable architecture for our time-series forecasting model.            source and target domains through a shared attention
+                                                                          module. To the best of our knowledge, our work pro-
+We propose to resolve the two challenges using an attention-
+                                                                          vides the first end-to-end DA solution specific for multi-
+based model (Vaswani et al., 2017) equipped with domain
+                                                                          horizon forecasting tasks with adversarial training.
+adaptation. First, for evolving patterns, attention models can
+                                                                       2. We demonstrate that DAF outperforms state-of-the-art
+make dynamic forecasts based on a combination of values
+                                                                          single-domain forecasting and domain adaptation base-
+weighted by time-dependent query-key alignments. Second,
+                                                                          lines in terms of accuracy in a data-scarce target domain
+as the alignments in an attention module are independent of
+                                                                          through extensive synthetic and real-world experiments
+specific patterns, the queries and keys can be induced to be
+                                                                          that solve cold-start and few-shot forecasting problems.
+domain-invariant while the values can stay domain-specific
+                                                                       3. We perform extensive ablation studies to show the im-
+for the model to make domain-dependent forecasts. Figure 1
+                                                                          portance of the domain-invariant features induced by a
+presents an illustrative example of a comparison between a
+                                                                          discriminator and the retrained domain-specific features
+conventional attention-based forecaster (AttF) and its coun-
+                                                                          in our DAF model, and that our designed sharing strate-
+terpart combined with our domain adaptation strategy (DAF)
+                                                                          gies with the discriminator result in better performance
+on synthetic datasets with sinusoidal signals. While AttF
+                                                                          than other potential variants.
+is trained using limited target data, DAF is jointly trained
+on both domains. By aligning the keys across domains as
+the top rightmost panel shows, the context matching learned            2. Related Work
+in the source domain helps DAF generate more reasonable
+                                                                       Deep neural networks have been introduced to time series
+attention weights that focus on the same phases in previous
+                                                                       forecasting with considerable successes (Flunkert et al.,
+periods of target data than the uniform weights generated by
+                                                                       2020; Borovykh et al., 2017; Oreshkin et al., 2020b; Wen
+AttF in the bottom left panel. The bottom right panels illus-
+                                                                       et al., 2017; Wang et al., 2019; Sen et al., 2019; Rangapuram
+trate that the single-domain AttF produces the same values
+                                                                       et al., 2018; Park et al., 2022; Kan et al., 2022). In particu-
+for both domains as the input is highly overlapped, while
+                              Domain Adaptation for Time Series Forecasting via Attention Sharing
+
+lar, attention-based transformer-like models (Vaswani et al.,       and regression tasks by minimizing the discrepancy of the
+2017) have achieved state-of-the-art performance (Li et al.,        associative structure of time series variables between do-
+2019; Lim et al., 2019; Wu et al., 2020; Zhou et al., 2021).        mains. A limitation of this metric-based approach is that
+A downside to these sophisticated models is their reliance          it cannot handle the multi-horizon forecasting task since
+on a large dataset with homogeneous time series to train.           the label is associated with the input rather than being pre-
+Once trained, the deep learning models may not generalize           defined. Hu et al. (2020) propose DATSING to adopt adver-
+well to a new domain of exogenous data due to domain shift          sarial training to fine-tune a pre-trained forecasting model
+issues (Wang et al., 2005; Purushotham et al., 2017; Wang           by augmenting the target dataset with selected source data
+et al., 2021). There are several robust forecasting methods         based on pre-defined metrics. This approach lacks the effi-
+(Yoon et al., 2022) in terms of defending adversarial attacks,      ciency of end-to-end solutions due to its two-stage nature.
+but does not explicitly cover general domain shifts beyond          In addition, it does not consider domain-specific features
+adversarial ones.                                                   to make domain-dependent forecasts. Lastly, Ghifary et al.
+                                                                    (2016); Bousmalis et al. (2016); Shi et al. (2018) make use
+To solve the domain shift issue, domain adaptation has been
+                                                                    of domain-invariant and domain-specific representations in
+proposed to transfer knowledge captured from a source do-
+                                                                    adaptation. However, since these methods do not accom-
+main with sufficient data to the target domain with unlabeled
+                                                                    modate the sequential nature of time series, they cannot be
+or insufficiently labeled data for various tasks (Motiian et al.,
+                                                                    directly applied to forecasting.
+2017; Wilson & Cook, 2020; Ramponi & Plank, 2020). In
+particular, sequence modeling tasks in natural language
+processing mainly adopt a paradigm where large transform-           3. Domain Adaptation in Forecasting
+ers are successively pre-trained on a general domain and
+                                                                    Time Series Forecasting Suppose a set of N time se-
+fine-tuned on the task domain (Devlin et al., 2019; Han &
+                                                                    ries, and each consists of observations zi,t ∈ R, associated
+Eisenstein, 2019; Gururangan et al., 2020; Rietzler et al.,
+                                                                    with optional input covariates ξi,t ∈ Rd such as price and
+2020; Yao et al., 2020). It is not immediate to directly apply
+                                                                    promotion, at time t. In time series forecasting, given T
+these methods to forecasting scenarios due to several chal-
+                                                                    past observations and all future input covariates, we wish
+lenges. First, it is difficult to find a common source dataset
+                                                                    to make τ multi-horizon future predictions at time T via
+in time series forecasting to pre-train a large forecasting
+                                                                    model F :
+model. Second, it is expensive to pre-train a different model
+for each target domain. Third, the predicted values are not          zi,T +1 , . . . , zi,T +τ = F (zi,1 , . . . , zi,T ; ξi,1 , . . . , ξi,T +τ ).
+subject to a fixed vocabulary, heavily relying on extrapola-                                                                                     (1)
+tion. Lastly, there are many domain-specific confounding            In this paper, we focus on the scenario where little data is
+factors that cannot be encoded by a pre-trained model.              available for the problem of interest while sufficient data
+                                                                    from other sources is provided. For example, one or both of
+An alternative approach to pre-training and fine-tuning for
+                                                                    the number of time series N and the length T is limited. For
+domain adaptation is to extract domain-invariant represen-
+                                                                    notation simplicity, we drop the covariates {ξi,t }Tt=1              +τ
+                                                                                                                                              in the
+tations from raw data (Ben-David et al., 2010; Cortes &
+                                                                    following. We denote the dataset D = {(Xi , Yi )}N                    i=1 with
+Mohri, 2011). Then a recognition model that learns to pre-
+                                                                    past observations Xi = [zi,t ]Tt=1 and future ground truths
+dict labels using the source data can be applied to the target
+                                                                    Yi = [zi,t ]Tt=T  +τ
+                                                                                         +1 for the i-th time series. We also omit the
+data. In their seminal works, Ganin & Lempitsky (2015);
+                                                                    index i when the context is clear.
+Ganin et al. (2016) propose DANN to obtain domain invari-
+ance by confusing a domain discriminator that is trained to         Adversarial Domain Adaptation in Forecasting To find
+distinguish representations from different domains. A series        a suitable forecasting model F in equation (1) on a data-
+of works follow this adversarial training paradigm (Tzeng           scarce time series dataset, we cast the problem in terms of
+et al., 2017; Zhao et al., 2018; Alam et al., 2018; Wright &        a domain adaptation problem, given that another “relevant”
+Augenstein, 2020; Wang et al., 2020; Xu et al., 2022), and          dataset is accessible. In the domain adaption setting, we
+outperform conventional metric-based approaches (Long               have two types of data: source data DS with abundant sam-
+et al., 2015; Chen et al., 2020; Guo et al., 2020) in various       ples and target data DT with limited samples. Our goal
+applications of domain adaptation. However, these works do          is to produce an accurate forecast on the target domain T ,
+not consider the task of time series forecasting, and address       where little data is available, by leveraging the data in the
+the challenges in the introduction accordingly.                     source domain S. Since our goal is to provide a forecast
+In light of successes in related fields, domain adaptation          in the target domain, in the remainder of the text, we use
+techniques have been introduced to time series tasks (Pu-           T and τ to denote the target historical length and target
+rushotham et al., 2017; Wilson et al., 2020). Cai et al.            prediction length, respectively, and also use the subscript S
+(2021) aim to solve domain shift issues in classification           for the corresponding quantities in the source data DS , and
+                                                                    likewise for T .
+                                Domain Adaptation for Time Series Forecasting via Attention Sharing
+
+To compute the desired target prediction Ŷi = [ẑi,t ]Tt=T
+                                                         +τ
+                                                            +1 ,    for adaptation. In addition to computing future predictions,
+i = 1, . . . , N , we optimize the training error on both do-       the generator also reconstructs the input to further guarantee
+mains jointly and in an adversarial manner in the following         the effectiveness of the learned representations. Figure 2
+minimax problem:                                                    illustrates an overview of the proposed architecture.
+       min max        Lseq (DS ; GS ) + Lseq (DT ; GT )
+      GS ,GT    D
+                                                             (2)    4.1. Sequence Generators
+                    −λLdom (DS , DT ; D, GS , GT ) ,                In this subsection, we discuss our design of the sequence
+where the parameter λ ≥ 0 balances between the estimation           generators GS , GT in equation (2). Since the generators for
+error Lseq and the domain classification error Ldom . Here,         both domains have the same architecture, we omit the do-
+GS , GT denote sequence generators that estimate sequences          main index of all quantities and denote either generator by G
+in each domain, respectively, and D denotes a discriminator         in the following paragraphs by default. The generator G in
+that classifies the domain between source and target.               each domain processes an input time series X = [zt ]Tt=1 and
+                                                                    generates the reconstructed sequence X̂ and the predicted
+We first define the estimation error Lseq induced by a se-          future Ŷ.
+quence generator G as follows:
+  Lseq (D; G) =                                                     Private Encoders The private encoder transforms the raw
+      N      T                       T +τ
+                                                                    input X into the pattern embedding P = [pt ]Tt=1 and value
+                                                              (3)
+                                                           
+     X      1X                      1 X                             embedding V = [vt ]Tt=1 . We apply a position-wise MLP
+                 l(zi,t , ẑi,t ) +        l(zi,t , ẑi,t ) ,
+     i=1
+           T t=1                    τ
+                                         t=T +1
+                                                                    with parameter θv to encode input X = [zt ]Tt=1 for the
+                                                                    value embedding vt = MLP(zt ; θv ). In the meantime, we
+where l is a loss function and estimation ẑi,t is the output       apply M independent temporal convolutions with various
+of a generator G, and each term in equation (3) represents          kernel sizes in order to extract short-term patterns at differ-
+the error of input reconstruction and future prediction, re-        ent scales. Specifically, for j = 1, . . . , M , each convolution
+spectively. Next, let H = {hi,t }N,T   +τ
+                                   i=1,t=1 be a set of some         with parameter θp takes the input X to give       a sequence of
+latent feature hi,t induced by generator G. Then, the do-           local representations, pj = Conv X; θpj . We then con-
+main classification error Ldom in equation (2) denotes the          catenate each pj to build a multi-scale pattern embedding
+cross-entropy loss in the latent spaces as follows:                 P = [pj ]M                                    j M
+                                                                               j=1 with parameters θp = [θp ]j=1 accordingly.
+
+            Ldom (DS , DT ; D, GS , GT ) =                          To avoid dimension issues from the concatenation, we keep
+                                                                    the dimension of P and V the same. The extracted pattern
+                 1     X
+            −                log D(hi,t )                           P and value V are fed into the shared attention module.
+               |HS |                                         (4)
+                         hi,t ∈HS
+                   1       X                                        Shared Attention Module We design the attention mod-
+               −                    log [1 − D(hi,t )] ,            ule to be shared by both domains since its primary task is to
+                 |HT |
+                         hi,t ∈HT
+                                                                    generate domain-invariant queries Q and keys K from pat-
+where HS and HT are latent feature sets associated with the         tern embeddings P for both source and target domains. For-
+source DS and target DT , and |H| denotes the cardinality           mally, we project P into d-dimensional queries Q = [qt ]Tt=1
+of a set H. The minimax objective equation (2) is optimized         and keys K = [kt ]Tt=1 via a position-wise MLP
+via adversarial training alternately. In the following sub-
+sections, we propose specific design choices for GS , GT                              (qt , kt ) = MLP(pt ; θs ).
+(see subsection 4.1) and the latent features HS , HT (see
+                                                                    As a result, the patterns from both domains are projected
+subsection 4.2) in our DAF model.
+                                                                    into a common space, which is later induced to be domain-
+                                                                    invariant via adversarial training. At time t, an attention
+4. The Domain Adaptation Forecaster (DAF)                           score α is computed as the normalized alignment between
+                                                                    the query qt and keys kt′ at neighborhood positions t′ ∈
+We propose a novel strategy based on attention mechanism
+                                                                    N (t) using a positive semi-definite kernel K(·, ·),
+to perform domain adaptation in forecasting. The proposed
+solution, the Domain Adaptation Forecaster (DAF), em-                                                   K(qt , kt′ )
+ploys a sequence generator to process time series from each                      α(qt , kt′ ) = P                         ,      (5)
+                                                                                                    t′ ∈N (t) K(qt , kt )
+                                                                                                                       ′
+domain. Each sequence generator consists of an encoder, an
+attention module and a decoder. As each domain provides
+                                                                    e.g.  an exponential scaled dot-product K(q, k) =
+data with distinct patterns from different spaces, we keep the             T
+                                                                          q√ k
+encoders and decoders privately owned by the respective do-         exp     d
+                                                                                 . Then, a representation ot is produced as the av-
+main. The core attention module is shared by both domains           erage of values vµ(t′ ) weighted by attention score α(qt , kt′ )
+                                 Domain Adaptation for Time Series Forecasting via Attention Sharing
+
+     Time
+                                                                      Forecast
+
+
+
+
+               Encoder        Attention    Decoder                Reconstruction                   Decoder        Attention    Encoder
+
+
+
+
+                                                                                                                                             `
+      `
+
+
+
+
+                                                                                                                                   Source-only
+                                                                      Domain
+                                                                   Discriminator
+                                                                                                                                   Target-only
+
+                                                                                   Domain Prediction                               Shared
+
+
+Figure 2. An architectural overview of DAF. The grey modules belong to the source domain, and red modules belong to target domain.
+The attention modules and domain discriminators shown in beige are shared by both domains. The model takes the historical portion of a
+time series as input, and produces a reconstruction of input and a forecast of the future time steps. The domain discriminator is a binary
+classifier, and predicts the origin of an intermediate representation within the attention module, either the source or the target.
+
+
+                                                                                                  Reconstruction
+                                                     Shared Attention
+
+                                                                                                       Forecast
+                                           MLP
+
+
+
+Figure 3. In DAF, the shared attention module processes pattern and value embeddings from either domain. A kernel function encodes
+pattern embeddings to a shared latent space for weight computation. We combine value embeddings by different groups of weights to
+obtain the interpolation t ≤ T for reconstruction X̂ and the extrapolation t = T + 1 for the forecast Ŷ.
+
+
+on neighborhood N (t), followed by a MLP with parameter                   combination of vt′ weighted by α(qT −1 , kt′ ) according to
+θo :                                                                      equation (5).
+                                                                        By generalizing the example above at time T − 1 to all time
+                                                                          steps, we set
+                     X
+       ot = MLP            α(qt , kt′ )vµ(t′ ) ; θo  , (6)
+                         t′ ∈N (t)                                                             N (t) = {1, 2, . . . , T } \ {t},
+                                                                                               µ(t′ ) = t′ ,
+where µ : N → N is a position translation. The choice of
+N (t) and µ(t) depends on whether G is in interpolation                   in equation (6). Since the output ot depends on values at
+mode for reconstruction when t ≤ T or extrapolation mode                  N (t) and does not access the ground truth zt , the recon-
+for forecasting when t > T .                                              struction task is not trivial.
+
+                                                                          Extrapolation: Future Predictions Since DAF is an au-
+Interpolation: Input Reconstruction We reconstruct the
+                                                                          toregressive forecaster, it generates forecasts one step ahead.
+input by interpolating ẑt using the observations at other
+                                                                          At each step, we forecast the next value by extrapolating
+time points. The upper panel of Figure 4(b) illustrates
+                                                                          from the given historical values. The lower panel of Fig-
+an example, where we would like to estimate ẑT −1 using
+                                                                          ure 4(b) illustrates an example, where we would like to esti-
+{z1 , z2 , . . . , zT −2 , zT }. We take qT −1 that depends on the
+                                                                          mate the (T + 1)-th value given the past T observations and
+local windows centered at the target step T − 1 as shown
+                                                                          expected. The prediction ẑT +1 follows the last local win-
+in Figure 4(a) as the query, and compare it with the keys
+                                                                          dow {zT −s+1 , zT −s+2 , . . . , zT } on which the query qT −s̄
+{k1 , k2 , . . . , kT −2 , kT }. Similar to the query, the attended
+                                                                          is dependent, where s̄ = ⌈ s−1 2 ⌉, and ⌈·⌉ denotes the ceiling
+keys kt′ depend on local windows centered at the respec-
+                                                                          operator. We take qT −s̄ as the query for T + 1, i.e. we set
+tive step t′ . Hence, the scores α(qT −1 , kt′ ), computed
+                                                                          qT +1 = qT −s̄ , and attend to the previous keys that do not
+by equation (5) and illustrated by the thickness of arrows
+                                                                          encode padding zeros, i.e. we set:
+in Figure 4(b), depict the similarity of the value ẑT −1 to
+the attended value zt′ , and the output oT −1 is from the                                  N (T + 1) = {s, . . . , T − s̄ − 1}.
+                                 Domain Adaptation for Time Series Forecasting via Attention Sharing
+
+
+
+
+                                                                                                                   Interpolation
+
+
+
+
+            PAD                                            PAD
+
+
+
+
+                                                                                                                  Extrapolation
+
+
+                        (a) Queries, keys and values                              (b) Interpolation and Extrapolation
+
+
+Figure 4. Interpolation and extrapolation within an attention module where s = 3 and M = 1. Specifically, the lower panel of (b)
+describes how attention is performed to estimate vT +1 . The extrapolation query qT +1 comes from the last local window zT −2 , zT −1 , zT ,
+which is convoluted into qT −1 . Meanwhile, a key kt′ comes from the window zt′ −1 , zt′ , zt′ +1 via convolution. Since the predicted
+zT +1 follows the query window zT −2 , zT −1 , zT , we take the value that follows the key window zt′ −1 , zt′ , zt′ +1 , i.e. zt′ +2 , to make a
+correspondence. In this way, the following value of similar windows to the query window will receive larger weights in attention. For
+example, in Figure 7, the key kT −2 corresponds to the value vT , where the correspondence is indicated by the boldness of the arrows.
+Therefore, the key kt′ will be paired with the value vt′ +s̄+1 , and µ(t′ ) = t′ + s̄ + 1.
+
+
+In this case, the attention score α(qT +1 , kt′ ) from equa-               Algorithm 1 Adversarial Training of DAF
+tion (5) depicts the similarity of the unknown ẑT +1 ,                     1: Input: dataset DS , DT ; epochs E, step sizes
+and the value zt′ +s̄+1 following the local window                          2: Initialization: parameter ΘG for generator GS , GT ,
+{zt′ −s̄ , . . . , zt′ , . . . , zt′ +s̄ } corresponding to the attended         parameter θD for discriminator D
+key kt′ . Hence, we set                                                     3: for epoch = 1 to E do
+                        µ(t′ ) = t′ + s̄ + 1,                               4:   repeat
+                                                                            5:      sample XS , YS ∼ DS and XT , YT ∼ DT
+in equation (6) to estimate oT +1 .                                         6:      generate X̂S , ŶS = GS (XS ) and X̂T , ŶT =
+Figure 4 illustrates an example of future forecasts, where                          GT (XT )
+s = 3 and M = 1 in encoder module. A detailed walk-                         7:      compute Lseq in equation (3) for S and T , Ldom
+through of can be found in the caption.                                             in equation (4) , and total L in equation (2)
+                                                                            8:      gradient descent with ∇ΘG L to update GS , GT
+                                                                            9:      gradient ascent with ∇θD L to update D
+Private Decoders The private decoder produces predic-
+                                                                           10:   until DT is exhausted
+tion ẑt out of ot through another position-wise MLP: ẑt =
+                                                                           11: end for
+MLP(ot ; θd ). By doing so, we can generate reconstructions
+X̂ = [ẑt ]Tt=1 and the one-step prediction ẑT +1 . This predic-
+tion ẑT +1 is fed back into the encoder and attention model
+to predict the next one-step ahead prediction. We recur-                   equation (4) to be the keys K = [kt ]Tt=1
+                                                                                                                  +τ
+                                                                                                                     and queries Q =
+sively feed the prior predictions to generate the predictions                   T +τ
+                                                                           [qt ]t=1 in both source and target domains, respectively.
+Ŷ = [zˆt ]Tt=T
+             +τ
+                +1 over τ time steps.
+                                                                           4.3. Adversarial Training
+4.2. Domain Discriminator
+                                                                           Recall we have defined generators GS , GT based on the
+In order to induce the queries and keys of the attention                   private encoder/decoder and the shared attention module.
+module to be domain-invariant, a domain discriminator is                   The discriminator D induces the invariance of latent fea-
+introduced to recognize the origin of a given query or key. A              tures keys K and queries Q across domains. While D
+position-wise MLP-based binary classifier D : Rd → [0, 1]:                 tries to classify the domain between source and target,
+                                                                           GS , GT are trained to confuse D. By choosing the MSE
+     D(qt ) = MLP(qt ; θD ), D(kt ) = MLP(kt ; θD ).
+                                                                           loss for l, the minimax objective in equation (2) is now
+is trained by minimizing the cross entropy loss of Ldom                    formally defined over generators GS , GT with parameters
+in equation (4). We design the latent features HS , HT in                  ΘG = {θpS , θvS , θdS , θpT , θvT , θdT , θs , θo } and domain dis-
+                            Domain Adaptation for Time Series Forecasting via Attention Sharing
+
+criminator D with parameter θD . Algorithm 1 summa-              We evaluate the forecasting error in terms of the Normalized
+rizes the training routine of DAF. We alternately update         Deviation (ND) (Yu et al., 2016):
+ΘG and θD in opposite directions so that G = {GS , GT }                                              !                     !
+                                                                            N T   +τ                      N T    +τ
+and D are trained adversarially. Here, we use a standard                   X     X                       X     X
+                                                                  ND =                |zi,t − ẑi,t | /             |zi,t | ,
+pre-processing for X, Y and post-processing for X̂, Ŷ. In
+                                                                            i=1 t=T +1                    i=1 t=T +1
+our experiments, the coefficient λ in equation (2) is fixed to
+be 1.                                                            where Yi = [zi,t ]Tt=T
+                                                                                     +τ                      T +τ
+                                                                                        +1 and Ŷi = [ẑi,t ]t=T +1 denote the
+                                                                 ground truths and predictions, respectively. In the subse-
+5. Experiments                                                   quent tables, the methods with a mean ND metric within
+                                                                 one standard deviation of method with the lowest mean ND
+We conduct extensive experiments to demonstrate the ef-          metric are shown in bold.
+fectiveness of the proposed DAF in adapting from a source
+domain to a target domain, leading to accuracy improve-          5.2. Synthetic Datasets
+ment over state-of-the-art forecasters and existing DA ethos.
+In addition, we conduct ablation studies to examine the          We first simulate scenarios suited for domain adaptation,
+contribution of our design to the significant performance        namely cold-start and few-shot forecasting. In both sce-
+improvement.                                                     narios, we consider a source dataset DS and a target dataset
+                                                                 DT consisting of time-indexed sinusoidal signals with ran-
+5.1. Baselines and Evaluation                                    dom parameters, including amplitude, frequency and phases,
+                                                                 sampled from different uniform distributions. See appendix
+In the experiments, we compare DAF with the following            A for details on the data generation. The total observations
+single-domain and cross-domain baselines. The conven-            in the target dataset are limited in both scenarios by either
+tional single-domain forecasters trained only on the target      length or number of time series.
+domain include:
+                                                                 Cold-start forecasting aims to forecast in a target domain,
+ • DAR: DeepAR (Flunkert et al., 2020);                          where the signals are fairly short and limited historical in-
+ • VT: Vanilla Transformer (Vaswani et al., 2017);               formation is available for future predictions. To simulate
+ • AttF: the sequence generator GT for the target domain         solving the cold-start problem, we set the time series his-
+   trained by minimizing Lseq (DT ; GT ) in equation (2).        torical length in the source data TS = 144, and vary the
+The cross-domain forecasters trained on both source and          historical length in the target data T within {36, 45, 54}.
+target domain include:                                           The period of sinusoids in the target domain is fixed to be
+                                                                 36, so that the historical observations cover 1 ∼ 1.5 periods.
+ • DATSING: pretrained and finetuned forecaster (Hu et al.,      We also fix the number of time series NS = N = 5000.
+   2020);
+ • SASA: metric-based domain adaptation for time series          Few-shot forecasting occurs when there is an insufficient
+   data (Cai et al., 2021) which is extended from regression     number of time series in the target domain for a well-trained
+   task to multi-horizon forecasting;                            forecaster. To simulate this problem, we set the number of
+ • RDA: RNN-based DA forecaster obtained by replacing            time series in the source data NS = 5000, and vary the num-
+   the attention module in DAF with a LSTM module and            ber of time series in the target data N within {20, 50, 100}.
+   inducing the domain-invariance of LSTM encodings.             We also fix the historical lengths TS = T = 144. The
+   Specifically, we consider three variants:                     prediction length is set to be equal for both source and target
+                                                                 datasets, i.e. τS = τ = 18.
+      – RDA-DANN: adversarial DA via gradient revers-
+         ing (Ganin et al., 2016);                               The results of the synthetic experiments on the cold-start
+      – RDA-ADDA: adversarial DA via GAN-like opti-              and few-shot problems in Table 1 demonstrate that the per-
+         mization (Tzeng et al., 2017);                          formance of DAF is better than or on par with the baselines
+                                                                 in all experiments. We also note the following observations
+      – RDA-MMD: metric based DA via minimizing
+                                                                 to provide a better understanding into domain adaptation
+         MMD between LSTM encodings (Li et al., 2017).
+                                                                 methods. First, we see that the cross-domain forecasters
+We implement the models using PyTorch (Paszke et al.,            RDA and DAF that are jointly trained end-to-end using both
+2019), and train them on AWS Sagemaker (Liberty et al.,          source and target data are overall more accurate than the
+2020). For DAR, we call the publicly available version on        single-domain forecasters. This finding indicates that source
+Sagemaker. In most of the experiments, DAF and the base-         data is helpful in forecasting the target data. Second, among
+lines are tuned on a held-out validation set. See appendix       the cross-domain forecasters DATSING is outperformed by
+B.2 for details on the model configurations and hyperparam-      RDA and DAF, indicating the importance of joint training
+eter selections.                                                 on both domains. Third, on a majority of the experiments
+                                 Domain Adaptation for Time Series Forecasting via Attention Sharing
+
+   Task        N     T      τ             DAR                 VT         AttF          DATSING         RDA-ADDA             DAF
+                    36                 0.053±0.003      0.040±0.001   0.042±0.001     0.039±0.004      0.035±0.002      0.035±0.003
+   Cold
+             5000   45                 0.037±0.002      0.039±0.001   0.041±0.004     0.039±0.002      0.034±0.001      0.030±0.003
+   Start
+                    54                 0.031±0.002      0.039±0.001   0.038±0.005     0.037±0.001      0.034±0.001      0.029±0.003
+                            18
+               20                      0.062±0.003      0.089±0.001   0.095±0.003     0.078±0.005      0.059±0.003      0.057±0.004
+   Few
+               50   144                0.059±0.004      0.085±0.001   0.074±0.005     0.076±0.006      0.054±0.003      0.055±0.001
+   Shot
+              100                      0.059±0.003      0.079±0.002   0.071±0.002     0.058±0.005      0.053±0.007      0.051±0.001
+
+Table 1. Performance comparison of DAF on synthetic datasets with varying historical lengths T (cold-start), and varying number of time
+series N (few-shot) and prediction length τ in terms of the mean +/- the standard deviation ND metric. The winners and the competitive
+followers (the gap is smaller than its standard deviation over 5 runs) are bolded for reference.
+
+our attention-based DAF model is more accurate than or                  datasets elec and traf, and the day of the month and day of
+competitive to the RNN-based DA (RDA) method. We show                   the week for the daily datasets sales and wiki. For more
+the results for RDA-ADDA as the other DA variants, DANN                 dataset details, see appendix A.
+and MMD, have similar performance. They are considered
+                                                                        To evaluate the performance of DAF, we consider cross-
+in the following real-world experiments (see Table 2). Fi-
+                                                                        dataset adaptation, i.e., transferring between a pair of
+nally, we observe in Figure 5 that DAF improves more
+                                                                        datasets. Since the original datasets are large enough to
+significantly as the number of training samples becomes
+                                                                        train a reasonably good forecaster, we only take a subset of
+smaller.
+                                                                        each dataset as a target domain to simulate the data-scarce
+                                                                        situation. Specifically, we take the last 30 days of each time
+                                                                        series in the hourly dataset elec and traf, and the last 60
+                                                                        days from daily dataset sales and wiki. We partition the
+                                                                        target datasets equally into training/validation/test splits, i.e.
+                                                                        10/10/10 days for hourly datasets and 20/20/20 days for
+                                                                        daily datasets. The full datasets are used as source domains
+                                                                        in adaptation. We follow the rolling window strategy from
+                                                                        Flunkert et al. (2020), and split each window into historical
+                                                                        and prediction time series of lengths T and T + τ , respec-
+Figure 5. Forecasting accuracy of AttF and DAF methods in syn-
+                                                                        tively. In our experiments, we set T = 168, τ = 24 for
+thetic few-shot experiments with different target dataset sizes.        hourly datasets, and T = 28, τ = 7 for the daily datasets.
+                                                                        For DA methods, the splitting of the source data follows
+5.3. Real-World Datasets                                                analogously.
+
+                     Traf                       Sales
+                                                                        Table 2 shows that the conclusions drawn from Table 1 on
+                                                                        the synthetic experiments generally hold on the real-world
+                                                                        datasets. In particular, we see the accuracy improvement
+                                                                        by DAF over the baselines is more significant than that in
+                                                                        the synthetic experiments. The real-world experiments also
+                                                                        demonstrate that in general the success of DAF is agnostic
+                                                                        of the source domain, and is even effective when transfer-
+      query step
+                                                                        ring from a source domain of different frequency than that
+                            key step                     key step
+                                                                        of the target domain. In addition, the cross-domain forecast-
+                                                                        ers, DATSING, the RDA variants and our DAF outperform
+Figure 6. Attention distribution produced by an attention head of       the three single-domain baselines in most cases. As in the
+DAF with DS = traf (left) and DT = sales (right).                       synthetic cases, DATSING performs relatively worse than
+                                                                        RDA and DAF. On the other hand, another cross-domain
+We perform experiments on four real benchmark datasets                  forecaster SASA is originally designed for regression tasks,
+that are widely used in forecasting literature: elec and traf           where a fixed-sized window is used to predict a single exo-
+from the UCI data repository (Dua & Graff, 2017), sales                 geneous numerical label. While it can be extended to multi-
+(Kar, 2019) and wiki (Lai, 2017) from Kaggle. Notably, the              horizon forecasting tasks by replacing the label with the
+elec and traf datasets present clear daily and weekly patterns          next-step value and making autoregressive predictions, the
+while sales and wiki are less regular and more challenging.             performance is significantly worse than other cross-domain
+We use the following time features ξt ∈ R2 as covariates:               competitors and even some single-domain counterparts in
+the day of the week and hour of the day for the hourly
+                                  Domain Adaptation for Time Series Forecasting via Attention Sharing
+
+  DT       DS      τ        DAR              AttF           SASA             DATSING   RDA-DANN      RDA-ADDA      RDA-MMD          DAF
+           elec                                           0.177±0.004    0.184±0.004   0.181±0.009   0.174±0.005   0.186±0.004   0.169±0.002
+  traf                  0.205±0.015     0.182±0.007
+          wiki                                            0.197±0.001    0.189±0.005   0.180±0.004   0.181±0.003   0.179±0.004   0.176±0.004
+                  24
+           traf                                           0.164±0.001    0.137±0.003   0.133±0.005   0.134±0.002   0.140±0.006   0.125±0.008
+  elec                  0.141±0.023     0.137±0.005
+          sales                                           0.160±0.001    0.149±0.009   0.135±0.007   0.142±0.003   0.144±0.003   0.123±0.005
+           traf                                           0.053±0.001    0.049±0.002   0.047±0.005   0.045±0.003   0.045±0.003   0.042±0.004
+  wiki                  0.055±0.010     0.050±0.003
+          sales                                           0.053±0.001    0.052±0.004   0.053±0.002   0.049±0.003   0.052±0.004   0.049±0.003
+                   7
+           elec                                           0.451±0.001    0.301±0.008   0.297±0.004   0.281±0.001   0.291±0.004   0.277±0.005
+  sales                 0.305±0.005     0.308±0.002
+          wiki                                            0.301±0.001    0.305±0.008   0.287±0.009   0.287±0.002   0.289±0.003   0.280±0.007
+
+Table 2. Performance comparison of DAF on real-world benchmark datasets with prediction length τ in the target domain in terms of the
+mean +/- standard deviation ND metric. The winners and the competitive followers (the gap is smaller than its standard deviation over 5
+runs) are bolded for reference.
+
+some cases. The accuracy differences between DAF and                            adversarial variant (no-adv). We see that sharing both keys
+RDA are larger than in the synthetic case, and in favor of                      and queries in DAF results in performance gains over not
+DAF. This finding further demonstrates that our choice of an                    sharing either (no-k-share and no-q-share). Furthermore, it
+attention-based architecture is well-suited for real domain                     is clear that our design choice of the values to be domain-
+adaptation problems.                                                            specific for domain-dependent forecasts rather than shared
+                                                                                (v-share) has the largest positive impact on the performance.
+Remarkably, DAF manages to learn the different patterns
+between source and target domains under our setups. For                         Figure 7 visualizes the distribution of queries and keys
+instance, Figure 6 illustrates that DAF can successfully                        learned by DAF and no-adv, where the target data DT =
+learn clear daily patterns in the traf dataset, and find ir-                    traf and the source data DS = elec via a TSNE embedding.
+regular patterns in the sales dataset. A reason for its suc-                    Empirically, we see the latent distributions are well aligned
+cess is that the private encoders capture features at various                   in DAF and not in no-adv. This can explain the improved
+scales in different domains, and the attention module cap-                      performance of DAF over its variants. It also further verifies
+tures domain-dependent patterns by context matching using                       our intuition that DAF benefits from an aligned latent space
+domain-invariant queries and keys.                                              of queries and keys across domains.
+
+  DT       DS     τ    no-adv   no-q-share   no-k-share    v-share   DAF
+  traf     elec   24    0.172     0.171        0.172        0.176    0.168
+  elec     traf   24    0.121     0.122        0.120        0.127    0.119
+ wiki     sales   7     0.042     0.042        0.044        0.049    0.041
+ sales    wiki    7     0.294     0.283        0.282        0.291    0.280
+
+Table 3. Results of ablation studies of DAF variants on four adap-
+tation tasks on real-world datasets.
+                                                                                Figure 7. Query alignment with (DAF: right) and without adver-
+5.4. Additional Experiments                                                     sarial training (no-adv: left), where DS = elec and DT = traf.
+In addition to the listed baselines in section 5.1, we also
+compare DAF with other single-domain forecasters, e.g.                          6. Conclusions
+ConvTrans (Li et al., 2019), N-BEATS (Oreshkin et al.,
+2020b), and domain adaptation methods on time series tasks,                     In this paper, we aim to apply domain adaptation to time se-
+e.g. MetaF (Oreshkin et al., 2020a). These methods are                          ries forecasting to solve the data scarcity problem. We iden-
+either similar to the baselines in Table 2 or designed for                      tify the differences between the forecasting task and com-
+a different setting. We still adapt them to our setting to                      mon domain adaptation scenarios, and accordingly propose
+provide additional results in Tables 6-7 in appendix C.                         the Domain Adaptation Forecaster (DAF) based on attention
+                                                                                sharing. Through empirical experiments, we demonstrate
+                                                                                that DAF outperforms state-of-the-art single-domain fore-
+5.5. Ablation Studies
+                                                                                casters and various domain adaptation baselines on synthetic
+In order to examine the effectiveness of our designs, we                        and real-world datasets. We further show the effectiveness
+conduct ablation studies by adjusting each key component                        of our designs via extensive ablation studies. In spite of
+successively. Table 3 shows the improved performance of                         empirical evidences, the theoretical justification of having
+DAF over its variants on the target domain on four adap-                        domain-invariant features within attention models remains
+tation tasks. Equipped with a domain discriminator, DAF                         an open problem. Extension to multi-variate time series
+improves its effectiveness of adaptation compared to its non-                   forecasting experiments is another direction of future work.
+                             Domain Adaptation for Time Series Forecasting via Attention Sharing
+
+References                                                        Cuturi, M. and Blondel, M. Soft-DTW: a Differen-
+                                                                    tiable Loss Function for Time-Series. arXiv:1703.01541
+Alam, F., Joty, S., and Imran, M. Domain Adapta-
+                                                                    [stat], March 2017. URL http://arxiv.org/abs/
+  tion with Adversarial Training and Graph Embeddings.
+                                                                    1703.01541. arXiv: 1703.01541.
+  In Proceedings of the 56th Annual Meeting of the
+  Association for Computational Linguistics (Volume 1:            Devlin, J., Chang, M.-W., Lee, K., and Toutanova, K.
+  Long Papers), pp. 1077–1087, Melbourne, Australia,                BERT: Pre-training of Deep Bidirectional Transform-
+  2018. Association for Computational Linguistics. doi:             ers for Language Understanding. In Proceedings of
+  10.18653/v1/P18-1099. URL http://aclweb.org/                      the 2019 Conference of the North American Chapter of
+  anthology/P18-1099.                                               the Association for Computational Linguistics: Human
+Bartunov, S. and Vetrov, D. P. Few-shot Generative Mod-             Language Technologies, Volume 1 (Long and Short
+  elling with Generative Matching Networks. International           Papers), pp. 4171–4186, 2019. URL http://arxiv.
+  Conference on Artificial Intelligence and Statistics, pp.         org/abs/1810.04805. arXiv: 1810.04805.
+  670–678, 2018.
+                                                                  Dua, D. and Graff, C. UCI Machine Learning Repository.
+Ben-David, S., Blitzer, J., Crammer, K., Kulesza,                   University of California, Irvine, School of Informa-
+  A., Pereira, F., and Vaughan, J. W.      A the-                   tion and Computer Sciences, 2017. URL http://
+  ory of learning from different domains. Machine                   archive.ics.uci.edu/ml.
+  Learning, 79(1-2):151–175, May 2010. ISSN 0885-
+  6125, 1573-0565. doi: 10.1007/s10994-009-5152-4.                Flunkert, V., Salinas, D., and Gasthaus, J. DeepAR: Proba-
+  URL http://link.springer.com/10.1007/                             bilistic Forecasting with Autoregressive Recurrent Net-
+  s10994-009-5152-4.                                                works. International Journal of Forecasting, 36:1181–
+                                                                    1191, 2020. arXiv: 1704.04110.
+Borovykh, A., Bohte, S., and Oosterlee, C. W. Condi-
+  tional time series forecasting with convolutional neural        Ganin, Y. and Lempitsky, V. Unsupervised Domain Adap-
+  networks. arXiv preprint arXiv:1703.04691, 2017.                  tation by Backpropagation. International conference on
+                                                                    machine learning, pp. 1180–1189, 2015.
+Böse, J.-H., Flunkert, V., Gasthaus, J., Januschowski, T.,
+  Lange, D., Salinas, D., Schelter, S., Seeger, M., and Wang,     Ganin, Y., Ustinova, E., Ajakan, H., Germain, P., Larochelle,
+  Y. Probabilistic demand forecasting at scale. Proceedings         H., Laviolette, F., Marchand, M., and Lempitsky, V.
+  of the VLDB Endowment, 10(12):1694–1705, 2017.                    Domain-Adversarial Training of Neural Networks. The
+                                                                    journal of machine learning research, 17:2096–2030,
+Bousmalis, K., Trigeorgis, G., Silberman, N., Krishnan, D.,
+                                                                    2016.
+  and Erhan, D. Domain Separation Networks. volume 29,
+  pp. 345–351, 2016.                                              Ghifary, M., Kleijn, W. B., Zhang, M., Balduzzi, D., and Li,
+Cai, R., Chen, J., Li, Z., Chen, W., Zhang, K., Ye, J., Li, Z.,    W. Deep Reconstruction-Classification Networks for Un-
+  Yang, X., and Zhang, Z. Time Series Domain Adaptation             supervised Domain Adaptation. In European conference
+  via Sparse Associative Structure Alignment. Proceedings           on computer vision, pp. 597–613, 2016.
+  of the AAAI Conference on Artificial Intelligence, 35:
+                                                                  Guo, H., Pasunuru, R., and Bansal, M. Multi-Source Do-
+  6859–6867, 2021.
+                                                                    main Adaptation for Text Classification via DistanceNet-
+Chen, W.-Y., Liu, Y.-C., Kira, Z., Wang, Y.-C. F., and              Bandits. Proceedings of the AAAI Conference on
+  Huang, J.-B. A Closer Look at Few-shot Classifi-                  Artificial Intelligence, 34(05):7830–7838, April 2020.
+  cation. arXiv:1904.04232 [cs], January 2020. URL                  ISSN 2374-3468, 2159-5399. doi: 10.1609/aaai.v34i05.
+  http://arxiv.org/abs/1904.04232. arXiv:                           6288.      URL https://aaai.org/ojs/index.
+ 1904.04232.                                                        php/AAAI/article/view/6288.
+
+Cortes, C. and Mohri, M. Domain Adaptation in Regres-             Gururangan, S., Marasović, A., Swayamdipta, S., Lo,
+  sion. In Kivinen, J., Szepesvári, C., Ukkonen, E., and           K., Beltagy, I., Downey, D., and Smith, N. A.
+  Zeugmann, T. (eds.), Algorithmic Learning Theory, vol-            Don’t Stop Pretraining: Adapt Language Models to
+  ume 6925, pp. 308–323. Springer Berlin Heidelberg,                Domains and Tasks.       In Proceedings of the 58th
+  Berlin, Heidelberg, 2011. ISBN 978-3-642-24411-7 978-             Annual Meeting of the Association for Computational
+  3-642-24412-4. doi: 10.1007/978-3-642-24412-4 25.                 Linguistics, pp. 8342–8360, Online, 2020. Association
+  URL http://link.springer.com/10.1007/                             for Computational Linguistics. doi: 10.18653/v1/2020.
+  978-3-642-24412-4_25. Series Title: Lecture                       acl-main.740. URL https://www.aclweb.org/
+  Notes in Computer Science.                                        anthology/2020.acl-main.740.
+                             Domain Adaptation for Time Series Forecasting via Attention Sharing
+
+Han, X. and Eisenstein, J. Unsupervised Domain Adapta-             Liberty, E., Karnin, Z., Xiang, B., Rouesnel, L., Coskun,
+  tion of Contextualized Embeddings for Sequence Label-              B., Nallapati, R., Delgado, J., Sadoughi, A., Astashonok,
+  ing. In Proceedings of the 2019 Conference on Empirical            Y., Das, P., Balioglu, C., Chakravarty, S., Jha, M., Gau-
+  Methods in Natural Language Processing and the 9th                 tier, P., Arpin, D., Januschowski, T., Flunkert, V., Wang,
+  International Joint Conference on Natural Language                 Y., Gasthaus, J., Stella, L., Rangapuram, S., Salinas,
+  Processing (EMNLP-IJCNLP), pp. 4237–4247, Hong                     D., Schelter, S., and Smola, A. Elastic Machine Learn-
+  Kong, China, 2019. Association for Computational Lin-              ing Algorithms in Amazon SageMaker. In Proceedings
+  guistics. doi: 10.18653/v1/D19-1433. URL https:                    of the 2020 ACM SIGMOD International Conference
+ //www.aclweb.org/anthology/D19-1433.                                on Management of Data, pp. 731–737, Portland OR
+                                                                     USA, June 2020. ACM. ISBN 978-1-4503-6735-6. doi:
+Hoffman, J., Tzeng, E., Park, T., Zhu, J.-Y., Isola, P., Saenko,     10.1145/3318464.3386126. URL https://dl.acm.
+  K., Efros, A. A., and Darrell, T. CyCADA: Cycle-                   org/doi/10.1145/3318464.3386126.
+  Consistent Adversarial Domain Adaptation. International
+  conference on machine learning, pp. 1989–1998, 2018.             Lim, B., Arik, S. O., Loeff, N., and Pfister, T. Tempo-
+                                                                     ral Fusion Transformers for Interpretable Multi-horizon
+Hu, H., Tang, M., and Bai, C. DATSING: Data Aug-                     Time Series Forecasting. arXiv:1912.09363 [cs, stat],
+  mented Time Series Forecasting with Adversarial Do-                December 2019. URL http://arxiv.org/abs/
+  main Adaptation. In Proceedings of the 29th ACM                    1912.09363. arXiv: 1912.09363.
+  International Conference on Information & Knowledge
+  Management, pp. 2061–2064, Virtual Event Ireland, Oc-            Long, M., Cao, Y., Wang, J., and Jordan, M. I. Learning
+  tober 2020. ACM. ISBN 978-1-4503-6859-9. doi:                      Transferable Features with Deep Adaptation Networks.
+ 10.1145/3340531.3412155. URL https://dl.acm.                        pp. 97–105, 2015. URL http://arxiv.org/abs/
+  org/doi/10.1145/3340531.3412155.                                   1502.02791. arXiv: 1502.02791.
+
+Kan, K., Aubet, F.-X., Januschowski, T., Park, Y., Benidis,        Motiian, S., Jones, Q., Iranmanesh, S. M., and Doretto, G.
+  K., Ruthotto, L., and Gasthaus, J. Multivariate quan-             Few-Shot Adversarial Domain Adaptation. Advances
+  tile function forecaster. In International Conference on          in Neural Information Processing Systems, pp. 6670–
+  Artificial Intelligence and Statistics, pp. 10603–10621.          6680, 2017. URL http://arxiv.org/abs/1711.
+  PMLR, 2022.                                                       02536. arXiv: 1711.02536.
+
+                                                                   Oreshkin, B. N., Carpov, D., Chapados, N., and Bengio,
+Kar, P.  Dataset of Kaggle Competition Rossmann
+                                                                     Y. Meta-learning framework with applications to zero-
+  Store Sales, version 2, January 2019.    URL
+                                                                     shot time-series forecasting. arXiv:2002.02887 [cs, stat],
+  https://www.kaggle.com/pratyushakar/
+                                                                     February 2020a. URL http://arxiv.org/abs/
+  rossmann-store-sales.
+                                                                     2002.02887. arXiv: 2002.02887.
+Kim, J., Park, Y., Fox, J. D., Boyd, S. P., and Dally, W.          Oreshkin, B. N., Chapados, N., Carpov, D., and Bengio,
+  Optimal operation of a plug-in hybrid vehicle with bat-            Y. N-BEATS: Neural basis expansion analysis for inter-
+  tery thermal and degradation model. In 2020 American               pretable time series forecasting. International Conference
+  Control Conference (ACC), pp. 3083–3090. IEEE, 2020.               on Learning Representations, pp. 31, 2020b.
+Lai.   Dataset of Kaggle Competition Web Traffic                   Park, Y., Mahadik, K., Rossi, R. A., Wu, G., and Zhao,
+  Time Series Forecasting, Version 3, August 2017.                   H. Linear quadratic regulator for resource-efficient cloud
+  URL https://www.kaggle.com/ymlai87416/                             services. In Proceedings of the ACM Symposium on
+  wiktraffictimeseriesforecast/metadata.                             Cloud Computing, pp. 488–489, 2019.
+Li, C.-L., Chang, W.-C., Cheng, Y., Yang, Y., and                  Park, Y., Maddix, D., Aubet, F.-X., Kan, K., Gasthaus, J.,
+  Póczos, B. MMD GAN: towards deeper understand-                    and Wang, Y. Learning quantile functions without quan-
+  ing of moment matching network. In Proceedings of                  tile crossing for distribution-free time series forecasting.
+  the 31st International Conference on Neural Information            In International Conference on Artificial Intelligence and
+  Processing Systems, pp. 2200–2210, 2017.                           Statistics, pp. 8127–8150. PMLR, 2022.
+
+Li, S., Jin, X., Xuan, Y., Zhou, X., Chen, W., Wang, Y.-           Paszke, A., Gross, S., Massa, F., Lerer, A., Bradbury, J.,
+  X., and Yan, X. Enhancing the Locality and Breaking                Chanan, G., Killeen, T., Lin, Z., Gimelshein, N., Antiga,
+  the Memory Bottleneck of Transformer on Time Series                L., Desmaison, A., Kopf, A., Yang, E., DeVito, Z., Raison,
+  Forecasting. Advances in Neural Information Processing             M., Tejani, A., Chilamkurthy, S., Steiner, B., Fang, L.,
+  Systems, pp. 5243–5253, 2019.                                      Bai, J., and Chintala, S. PyTorch: An Imperative Style,
+                            Domain Adaptation for Time Series Forecasting via Attention Sharing
+
+  High-Performance Deep Learning Library. Advances in           Wang, R., Maddix, D., Faloutsos, C., Wang, Y., and Yu,
+  neural information processing systems, pp. 8026–8037,          R. Bridging Physics-based and Data-driven modeling for
+  2019.                                                          Learning Dynamical Systems. In Learning for Dynamics
+                                                                 and Control, pp. 385–398, 2021.
+Purushotham, S., Carvalho, W., Nilanon, T., and Liu, Y.
+  Variational Recurrent Adversarial Deep Domain Adap-           Wang, W., Van Gelder, P. H., and Vrijling, J. Some issues
+  tation. In 5th International Conference on Learning            about the generalization of neural networks for time se-
+  Representations, ICLR 2017, Toulon, France, April              ries prediction. In International Conference on Artificial
+  24-26, 2017, Conference Track Proceedings. OpenRe-             Neural Networks, pp. 559–564. Springer, 2005.
+  view.net, 2017. URL https://openreview.net/
+  forum?id=rk9eAFcxg.                                           Wang, Y., Smola, A., Maddix, D. C., Gasthaus, J., Foster, D.,
+                                                                 and Januschowski, T. Deep Factors for Forecasting. In
+Ramponi, A. and Plank, B. Neural Unsupervised Domain
+                                                                 International conference on machine learning, pp. 6607–
+  Adaptation in NLP—A Survey. arXiv:2006.00632 [cs],
+                                                                 6617, 2019.
+  May 2020. URL http://arxiv.org/abs/2006.
+  00632. arXiv: 2006.00632.                                     Wen, R., Torkkola, K., Narayanaswamy, B., and Madeka,
+Rangapuram, S. S., Seeger, M., Gasthaus, J., Stella, L.,         D. A Multi-Horizon Quantile Recurrent Forecaster.
+  Wang, Y., and Januschowski, T. Deep State Space Mod-           arXiv:1711.11053 [stat], November 2017.        URL
+  els for Time Series Forecasting. In Advances in neural         http://arxiv.org/abs/1711.11053. arXiv:
+  information processing systems, pp. 7785–7794, 2018.           1711.11053.
+
+Rietzler, A., Stabinger, S., Opitz, P., and Engl, S. Adapt or   Wilson, G. and Cook, D. J. A Survey of Unsupervised Deep
+  Get Left Behind: Domain Adaptation through BERT                Domain Adaptation. arXiv:1812.02849 [cs, stat], Febru-
+  Language Model Finetuning for Aspect-Target Senti-             ary 2020. URL http://arxiv.org/abs/1812.
+  ment Classification. Proceedings of The 12th Language          02849. arXiv: 1812.02849.
+  Resources and Evaluation Conference, pp. 4933–4941,
+  2020.                                                         Wilson, G., Doppa, J. R., and Cook, D. J. Multi-Source
+                                                                 Deep Domain Adaptation with Weak Supervision for
+Sen, R., Yu, H.-F., and Dhillon, I. Think Globally, Act          Time-Series Sensor Data. In Proceedings of the 26th
+  Locally: A Deep Neural Network Approach to High-               ACM SIGKDD International Conference on Knowledge
+  Dimensional Time Series Forecasting. Advances in               Discovery & Data Mining, pp. 1768–1778, Virtual Event
+  Neural Information Processing Systems, 32, 2019.               CA USA, August 2020. ACM. ISBN 978-1-4503-7998-4.
+                                                                 doi: 10.1145/3394486.3403228. URL https://dl.
+Shi, G., Feng, C., Huang, L., Zhang, B., Ji, H., Liao, L.,
+                                                                 acm.org/doi/10.1145/3394486.3403228.
+  and Huang, H. Genre Separation Network with Ad-
+  versarial Training for Cross-genre Relation Extraction.       Wright, D. and Augenstein, I.    Transformer Based
+  In Proceedings of the 2018 Conference on Empirical             Multi-Source Domain Adaptation. In Proceedings
+  Methods in Natural Language Processing, pp. 1018–              of the 2020 Conference on Empirical Methods in
+  1023, Brussels, Belgium, 2018. Association for Compu-          Natural Language Processing (EMNLP), pp. 7963–
+  tational Linguistics. doi: 10.18653/v1/D18-1125. URL           7974, Online, 2020. Association for Computational
+  http://aclweb.org/anthology/D18-1125.                          Linguistics. doi: 10.18653/v1/2020.emnlp-main.639.
+Tzeng, E., Hoffman, J., Saenko, K., and Darrell, T.              URL https://www.aclweb.org/anthology/
+  Adversarial Discriminative Domain Adaptation. In               2020.emnlp-main.639.
+  2017 IEEE Conference on Computer Vision and Pattern
+                                                                Wu, S., Xiao, X., Ding, Q., Zhao, P., Wei, Y., and Huang, J.
+  Recognition (CVPR), pp. 2962–2971, Honolulu, HI, July
+                                                                 Adversarial Sparse Transformer for Time Series Fore-
+  2017. IEEE. ISBN 978-1-5386-0457-1. doi: 10.1109/
+                                                                 casting. Advances in Neural Information Processing
+  CVPR.2017.316. URL http://ieeexplore.ieee.
+                                                                 Systems, 33:11, 2020.
+  org/document/8099799/.
+Vaswani, A., Shazeer, N., Parmar, N., Uszkoreit, J., Jones,     Xu, J., Wang, J., Long, M., and others. Autoformer: De-
+  L., Gomez, A. N., Kaiser, L., and Polosukhin, I. Attention      composition transformers with auto-correlation for long-
+  Is All You Need. In Advances in neural information              term series forecasting. Advances in Neural Information
+  processing systems, pp. 5998–6008, 2017.                        Processing Systems, 34, 2021.
+
+Wang, H., He, H., and Katabi, D. Continuously indexed           Xu, Z., Lee, G.-H., Wang, Y., Wang, H., et al. Graph-
+ domain adaptation. In ICML, 2020.                                relational domain adaptation. ICLR, 2022.
+                            Domain Adaptation for Time Series Forecasting via Attention Sharing
+
+Yao, Z., Wang, Y., Long, M., and Wang, J. Unsupervised
+  transfer learning for spatiotemporal predictive networks.
+  In International Conference on Machine Learning, pp.
+  10778–10788. PMLR, 2020.
+Yoon, T., Park, Y., Ryu, E. K., and Wang, Y. Robust
+  probabilistic time series forecasting. arXiv preprint
+  arXiv:2202.11910, 2022.
+
+Yu, H.-F., Rao, N., and Dhillon, I. S. Temporal Regularized
+  Matrix Factorization for High-dimensional Time Series
+  Prediction. NIPS, pp. 847–855, 2016.
+Zhao, H., Zhang, S., Wu, G., Moura, J. M. F., Costeira, J. P.,
+  and Gordon, G. J. Adversarial Multiple Source Domain
+  Adaptation. Advances in neural information processing
+  systems, pp. 8559–8570, 2018.
+Zhou, H., Zhang, S., Peng, J., Zhang, S., Li, J., Xiong,
+  H., and Zhang, W. Informer: Beyond Efficient Trans-
+  former for Long Sequence Time-Series Forecasting.
+  In Proceedings of the AAAI Conference on Artificial
+  Intelligence, 2021. URL http://arxiv.org/abs/
+  2012.07436. arXiv: 2012.07436.
+                                Domain Adaptation for Time Series Forecasting via Attention Sharing
+
+A. Dataset Details                                                     B. Implementation Details
+A.1. Synthetic Datasets                                                B.1. Baselines
+The synthetic datasets consist of sinusoidal signals with              In this subsection, we provide an overview of the follow-
+uniformly sampled parameters as follows:                               ing baseline models, including conventional single-domain
+                                                                       forecasters trained only on the target domain:
+ zi,t = Ai sin(2πωi t + ϕi ) + ci + ϵi,t ,        t ∈ [0, T + τ ],
+                                                                         • DeepAR (DAR): auto-regressive RNN-based model
+  Ai ∼ Unif(Amin , Amax ),          ci ∼ Unif(cmin , cmax ),
+                                                                           with LSTM units (we directly call DeepAR imple-
+  ωi ∼ Unif(ωmin , ωmax ),         ϕi ∼ Unif(−2π, 2π),                     mented by Amazon Sagemaker);
+
+                                                                         • Vanilla Transformer (VT): sequence-to-sequence
+where Amin , Amax ∈ R+ denote the amplitudes,
+                                                                           model based on common transformer architecture;
+cmin , cmax ∈ R denote the levels, and ωmin , ωmax ∈
+[ T1 , 20
+       T ] denote the frequencies. In addition, ϵi,t ∼ N (0, 0.2)        • ConvTrans (CT): attention-based forecaster that builds
+is a white noise term. In our experiments, we fix                          attention blocks on convolutional activations as DAF
+T = 144, τ = 18, Amin = 0.5, Amax = 5.0, cmin =                            does. Unlike DAF, it does not reconstruct the input, and
+−3.0, cmax = 3.0.                                                          only fits the future. From a probabilistic perspective, it
+                                                                           models the conditional distribution P (Y |X) instead of
+A.2. Real-World Datasets                                                   the joint distribution P (X, Y ) as DAF does, where X
+Table 4 summarizes the four benchmark real-world datasets                  and Y are history and future, respective. In addition, it
+that we use to evaluate our DAF model.                                     directly uses the outputs of the convolution as queries
+                                                                           and keys in the attention module;
+                               # Time   Average                          • AttF: single-domain version of DAF. It is equivalent
+  Dataset    Freq    Value                         Comment
+                               Series   Length                             to the branch of the sequence generator for the target
+                                                   Household
+                                                                           domain in DAF. It has access to the attention module,
+   elec     hourly       R+      370      3304     electricity
+                                                   consumption             but does not share it with another branch;
+                                                   Occupancy rate
+   traf     hourly   [0, 1]      963      360      of SF Bay Area        • N-BEATS: MLP-based forecaster. Similar to DAF, it
+                                                   highways                aims to forecast the future as well as to reconstruct
+                                                   Daily sales of          the given history. N-BEATS only consumes univariate
+   sales    daily        N+      500      1106     Rossmann                time series zi,t , and does not accept covariates ξi,t as
+                                                   grocery stores          input. In the original paper Oreshkin et al. (2020b), it
+                                                   Visit counts of
+                                                                           employs various objectives and ensembles to improve
+   wiki     daily        N+     9906       70      various Wikipedia
+                                                   pages                   the results. In our implementation, we use the ND
+                                                                           metric as the training objective, and do not use any
+            Table 4. Benchmark dataset descriptions.                       ensembling techniques for a fair comparison;
+
+                                                                       and cross-domain forecasters trained on both source and
+For evaluation, we follow Flunkert et al. (2020), and we               target domain:
+take moving windows of length T + τ starting at different
+points from the original time series in the datasets. For an             • MetaF: method with the same architecture as N-
+original time series [zi,t ]L
+                            t=1 of length L, we obtain a set of            BEATS. It trains a model on the source dataset, and
+moving windows:                                                            applies it to the target dataset in a zero-shot setting, i.e.
+                                                                           without any fine-tuning. Both MetaF and N-BEATS
+   {[zi,t ]n+T +τ −1
+                     ,        n = 1, 2, . . . , L − T − τ + 1}.            rely on given Fourier bases to fit seasonal patterns. For
+           t=n
+                                                                           instance, bases of period 24 and 168 are included for
+                                                                           hourly datasets, whereas bases of period 7 are included
+This procedure results in a set of fixed-length trajectory sam-            for daily datasets. The daily and weekly patterns are
+ples. Each sample is further split into historical observations            expected to be captured in all settings.
+X and forecasting targets Y , where the lengths of X and Y
+are T and τ , respectively. We randomly select samples from              • PreTrained Forecaster (PTF): method with the same
+the population by uniform sampling for training, validation                architecture as AttF for the target data. Unlike AttF,
+and test sets.                                                             PTF fits both source and target data. It is first pretrained
+                           Domain Adaptation for Time Series Forecasting via Attention Sharing
+
+    on the source dataset, and then finetuned on the target    B.2. Hyperparameters
+    dataset.
+                                                               The following hyperparameters of DAF and baseline models
+                                                               are selected by grid-search over the validation set:
+• SASA: Cai et al. (2021) is another related work that
+  we introduce in section 2, which focuses on time se-            • the hidden dimension h ∈ {32, 64, 128, 256} of all
+  ries classification and regression tasks, where a single          models;
+  exogenous label instead of a sequence of future val-
+  ues is predicted. We replace the original labels of the         • the number of MLP layers lMLP ∈ {4} for N-BEATS 2 ,
+  regression task with the next value of the respective             lMLP ∈ {1, 2, 3} for AttF, DAF and its variants;
+  time series, and autoregressively predicting the next           • the number of RNN layers lRNN ∈ {1, 3} in DAR and
+  step for multi-horizon forecasting. In the experiments,           RDA;
+  we revise the official code 1 accordingly and keep the
+  provided default hyperparameters.                               • the kernel sizes of convolutions s              ∈
+                                                                    {3, 13, (3, 5), (3, 17)} in AttF, DAF and its vari-
+• DATSING: a forecasting framework based on                         ants; 3
+  NBEATS (Oreshkin et al., 2020b) architecture. The               • the learning rate γ ∈ {0.001, 0.01, 0.1} for all models;
+  model is first pre-trained on the source dataset. Then a
+  subset of source data that includes nearest neighbors           • the trade-off coefficient λ ∈ {0.1, 1, 10} in equa-
+  to a target sample in terms of soft-DTW (Cuturi &                 tion (2) for DAF, RDA-ADDA;
+  Blondel, 2017) is selected to fine-tune the pre-trained         • In RDA-MMD, the factor of the MMD item in the
+  model before it is evaluated using the respective target          objective selected from {0.1, 1.0, 10.0}.
+  sample. During fine-tuning, a domain discriminator is
+  used to distinguish the nearest neighbors from the same      For RDA-DANN, we set a schedule
+  number of source samples drawn from the complement
+  set.                                                                                       2
+                                                                               λ=                    − 1,
+                                                                                     1 + exp(−10e/E)
+• RDA has the same overall structure as DAF, but re-           where e denotes the current epoch and E denotes the total
+  places the attention module in DAF with a LSTM mod-          number of epochs for the factor λ of the reversed gradient
+  ule. The encoder module produces a single encoding,          from the domain discriminator according to Ganin et al.
+  which is then consumed by the MLP-based decoder.             (2016).
+  We take three traditional methods for domain adapta-
+                                                               Table 5 summarizes the specific configurations of the hyper-
+  tion:
+                                                               parameters for our proposed DAF model in the experiments.
+       – RDA-DANN: The encoder and decoder are shared
+         across domains. The sequence generator is trained                          h     lMLP       s        γ        λ
+         to fit data from both domains. Meanwhile, the               cold-start
+         gradient of domain discriminator will be reversed                         64       1      (3,5)     1e-3     1.0
+                                                                     few-shot
+         before back-propagated to the encoder.                         elec       128      1        13      1e-3     1.0
+       – RDA-ADDF: The encoder and decoder are not                      traf        64      1      (3,17)    1e-2    10.0
+         shared across domains. During training, the                   wiki         64      2       (3,5)    1e-3     1.0
+         source encoder and decoder are first trained to               sales       128      2       (3,5)    1e-3     1.0
+         fit source data. Then encodings from both en-
+         coders are discriminated by the domain discrimi-      Table 5. Hyperparameters of DAF models in various synthetic and
+         nator with the source encoder parameters frozen.      real-world experiments.
+         Finally, the target encoder and decoder are trained
+         to fit target data with the target encoder parame-    The models are trained for at most 100K iterations, which
+         ters frozen.                                          we empirically find to be more than sufficient for the models
+       – RDA-MMD: Instead of a domain discriminators,          to converge. We use early stopping with respect to the ND
+         the Maximum Mean Discrepancy between source           metric on the validation set.
+         and target encodings is optimized with the se-            2
+                                                                     We set the other hyperparameters for N-BEATS as suggested
+         quence generators.                                    in the original paper Oreshkin et al. (2020b).
+                                                                   3
+                                                                     A single integer means a single convolution layer in the en-
+1
+    https://github.com/DMIRLAB-Group/SASA.                     coder module, while a tuple stands for multiple convolutions.
+                             Domain Adaptation for Time Series Forecasting via Attention Sharing
+
+C. Detailed Experiment Results
+Tables 6-7 display a comprehensive comparison of DAF
+with all the aforementioned baselines on the synthetic and
+real-world data, respectively. As a conclusion, we see that
+DAF outperforms or is on par with the baselines in all cases
+with RDA-ADDA being the most competitive in some cases.
+We also provide visualizations of forecasts for both syn-
+thetic and real-world experiments. Figure 8 provides more
+samples for the few-shot experiment where N = 20 as a
+complement to Figure 4. We see that DAF is able to ap-
+proximately capture the sinusoidal signals even if the input
+is contaminated by white noise in most cases, while AttF
+fails in many cases. Figure 9 illustrates the performance
+gap between DAF and AttF in the experiment with source
+data elec and target data traf as an example in real scenarios.
+While AttF generally captures daily patterns, DAF performs
+significantly better.
+                              Domain Adaptation for Time Series Forecasting via Attention Sharing
+
+
+                 Task                              Cold-start                                                 Few-shot
+                  N                                  5000                                     20                 50                 100
+                  T                36                 45                  54                                    144
+                  τ                                                               18
+              DeepAR        0.053±0.003           0.037±0.002       0.031±0.002        0.062±0.003       0.059±0.004        0.059±0.003
+              N-BEATS       0.044±0.001           0.044±0.001       0.042±0.001        0.079±0.001       0.060±0.001        0.054±0.002
+                 CT         0.042±0.001           0.041±0.004       0.038±0.005        0.095±0.003       0.074±0.005        0.071±0.002
+                AttF        0.042±0.001           0.041±0.004       0.038±0.005        0.095±0.003       0.074±0.005        0.071±0.002
+              MetaF         0.045±0.005           0.043±0.006       0.042±0.002        0.071±0.004       0.061±0.003        0.053±0.003
+               PTF          0.039±0.006           0.037±0.005       0.034±0.008        0.086±0.004       0.086±0.003        0.081±0.005
+             DATSING        0.039±0.004           0.039±0.002       0.037±0.001        0.078±0.005       0.076±0.006        0.058±0.005
+            RDA-ADDA        0.035±0.002           0.034±0.001       0.034±0.001        0.059±0.003       0.054±0.003        0.053±0.007
+               DAF          0.035±0.003           0.030±0.003       0.029±0.003        0.057±0.004       0.055±0.001        0.051±0.001
+
+Table 6. Performance comparison of DAF to all baselines on synthetic datasets. The winners and the competitive followers (the gap is
+smaller than its standard deviation over 5 runs) are bolded for reference.
+
+
+               DT                  traf                         elec                           wiki                         sales
+               DS           elec           wiki          traf          sales           traf           sales          elec            wiki
+               DAR             0.205±0.015                  0.141±0.023                   0.055±0.010                    0.305±0.005
+             N-BEATS           0.191±0.003                  0.147±0.004                   0.059±0.008                    0.299±0.005
+                VT             0.187±0.003                  0.144±0.004                   0.061±0.008                    0.293±0.005
+                CT             0.183±0.013                  0.131±0.005                   0.051±0.006                    0.324±0.013
+               AttF            0.182±0.007                  0.137±0.005                   0.050±0.003                    0.308±0.002
+              MetaF     0.190±0.005     0.188±0.002   0.151±0.004   0.144±0.004   0.061±0.003      0.059±0.005   0.311±0.001   0.329±0.002
+               PTF      0.184±0.003     0.185±0.004   0.144±0.005   0.138±0.007   0.044±0.003      0.047±0.002   0.287±0.004   0.292±0.007
+             DATSING    0.184±0.004     0.189±0.005   0.137±0.003   0.149±0.009   0.049±0.002      0.052±0.004   0.301±0.008   0.305±0.008
+            RDA-DANN    0.181±0.009     0.180±0.004   0.133±0.005   0.135±0.007   0.047±0.005      0.053±0.002   0.297±0.004   0.287±0.009
+            RDA-ADDA    0.174±0.005     0.181±0.003   0.134±0.002   0.142±0.003   0.045±0.003      0.049±0.003   0.281±0.001   0.287±0.002
+            RDA-MMD     0.186±0.004     0.179±0.004   0.140±0.006   0.144±0.003   0.045±0.003      0.052±0.004   0.291±0.004   0.289±0.003
+               DAF      0.169±0.002     0.176±0.004   0.125±0.008   0.123±0.005   0.042±0.004      0.049±0.003   0.277±0.005   0.280±0.007
+
+
+Table 7. Performance comparison of DAF to all baselines on real-world benchmark datasets. The winners and the competitive followers
+(the gap is smaller than its standard deviation over 5 runs) are bolded for reference.
+
+
+
+
+Figure 8. Test samples in the synthetic few-shot experiment where N = 20. The y-axis corresponding to the source is shown in grey, and
+that for the target in blue.
+                               Domain Adaptation for Time Series Forecasting via Attention Sharing
+
+
+
+
+Figure 9. Test samples with source data elec and target data traf experiment. The y-axis corresponding to the source is shown in grey, and
+that for the target in blue.
+
