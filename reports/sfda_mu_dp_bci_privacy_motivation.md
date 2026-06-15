@@ -573,3 +573,1066 @@ Machine unlearning 关注训练后删除指定数据对模型的影响，其背�
 2. 将 user/session/domain-level MU 引入 source-free EEG adaptation。
 3. 设计 utility/privacy 双目标评测：target decoding performance + membership/identity leakage。
 4. 讨论 DP 与 MU 的互补性，并用 DP-SGD 或 DP adaptation 作为 baseline。
+
+## 15. 非 BCI 领域使用 SFDA 的领域化背景
+
+这一节可以用于 related work 的第一段：说明 SFDA 不是 EEG 特有问题，而是多领域都面临的“源数据不可用 + 目标域漂移”问题。
+
+| 领域 | 源数据为什么不可用 | 目标域漂移是什么 | SFDA 聚焦问题 | EEG/BCI 可借鉴点 |
+| --- | --- | --- | --- | --- |
+| 医学影像 | 患者隐私、医院数据孤岛、法规限制 | 不同医院、扫描仪、协议、病人群体 | 无源数据跨医院适配、伪标签噪声、模型校准 | 源 EEG 来自医院/实验室，目标端只能拿模型 |
+| 自动驾驶 | 真实路测数据体量大且含个人/地理隐私 | 天气、城市、传感器、时间、车辆平台 | 语义分割/检测在新城市新天气适配 | BCI 跨设备、跨场景、跨日漂移类似 |
+| 遥感 | 原始图像巨大且可能涉敏感地理区域 | 地区、季节、传感器、分辨率 | 大规模无源目标适配、开放类别 | EEG 不同采集设备/通道 montage |
+| 工业检测 | 企业生产数据不可共享 | 产线、批次、设备老化、缺陷类型变化 | 小样本目标适配、异常/未知类 | 医疗 BCI 设备老化、电极阻抗变化 |
+| 多媒体/推荐 | 用户行为数据和图像视频受隐私限制 | 平台、用户群体、时间趋势 | 黑盒模型/API 适配 | 商业 BCI 平台可能只开放 API |
+| Foundation model | 大模型参数和预训练数据不可访问 | 下游目标域特定分布 | 冻结 backbone、prompt/proxy adaptation | EEG foundation model 只作为源模型交付 |
+
+对论文写作的启发：
+
+> SFDA 的“source-free”不是单纯技术设定，而是现实约束：源数据的隐私、合规、所有权和传输成本使得目标端只能拿到模型或预测器。EEG/BCI 是这一设定的强案例，因为源数据同时具有医学敏感性和个体可识别性。
+
+## 16. MU 的任务类型：不要把所有 unlearning 混为一谈
+
+MU 论文里“忘记”的对象并不总是同一种东西。写论文时必须说清楚 forget unit。
+
+| MU 类型 | Forget unit | 典型例子 | 期望 forget 行为 | 期望 retain 行为 | 是否适合 EEG 隐私 |
+| --- | --- | --- | --- | --- | --- |
+| Sample-level | 单个训练样本 | 删除某张图、某条记录 | 该样本 MIA 接近非成员 | 总体 accuracy 不变 | 可用于删除某些 EEG trials，但意义较弱 |
+| User-level | 某个用户全部数据 | 删除某用户贡献 | 无法判断该用户是否训练过 | 其他用户和目标用户性能保持 | 很适合 |
+| Session-level | 某次采集会话 | 删除某天/某次实验 | 会话特征不再被模型记忆 | 同用户其他会话/其他用户性能保持 | 很适合 |
+| Class-level | 某个类别 | 删除 `truck` 类 | 该类 accuracy 下降或被拒识 | 其他类 accuracy 保持 | EEG 隐私中不建议作为主设定 |
+| Domain-level | 某个域/医院/设备 | 删除某医院或设备域 | 域特征不可识别 | 其他域和目标域性能保持 | 很适合 |
+| Attribute-level | 某敏感属性 | 删除性别/年龄/疾病属性 | 属性预测下降 | 任务预测保持 | 很适合，但需要元数据 |
+
+对 EEG/BCI 的关键选择：
+
+```text
+推荐 forget unit: subject / session / hospital / device / sensitive attribute
+不推荐主设定: task class
+```
+
+原因：
+
+- BCI 的任务类别通常是系统功能本身，例如运动想象、P300、SSVEP 或情绪状态。
+- 如果删除任务类别，模型功能会缺失，不符合隐私保护目标。
+- 隐私保护更应删除“谁贡献了数据”或“数据来自哪个敏感域”，而不是删除“任务语义”。
+
+## 17. Source-Free MU + SFDA 的具体算法框架
+
+### 17.1 问题定义
+
+设源 EEG 数据为：
+
+```text
+D_s = {(x_i, y_i, u_i, e_i)}
+```
+
+其中：
+
+- `x_i`：EEG epoch / trial。
+- `y_i`：任务标签，例如 MI class、P300 target/non-target、emotion class。
+- `u_i`：subject ID。
+- `e_i`：session/device/hospital/domain metadata。
+
+训练好的源模型：
+
+```text
+M_s = C_s(G_s(x))
+```
+
+删除请求：
+
+```text
+D_f = {(x_i, y_i, u_i, e_i): u_i = u_f}
+```
+
+source-free unlearning 约束：
+
+```text
+available: M_s, D_f, D_t
+unavailable: D_r = D_s \ D_f
+```
+
+目标：
+
+```text
+M_u ≈ Train(D_s \ D_f)
+M_t = SFDA(M_u, D_t)
+```
+
+### 17.2 三阶段流程
+
+```text
+Stage 1: Source training
+  Train M_s on multi-subject source EEG D_s.
+
+Stage 2: Source-free machine unlearning
+  Given deletion request D_f, sanitize M_s -> M_u.
+  D_r is unavailable.
+
+Stage 3: Source-free / continual target adaptation
+  Adapt M_u to unlabeled target EEG stream D_t.
+```
+
+### 17.3 可写成论文算法的伪代码
+
+```text
+Algorithm: Forget-and-Adapt for EEG SFDA
+
+Input:
+  Source model M_s = G_s + C_s
+  Forget set D_f
+  Unlabeled target EEG stream D_t
+  Privacy attacker A_id or A_mia for evaluation
+
+Output:
+  Target-adapted sanitized model M_t
+
+1. Initialize M_u <- M_s
+2. For each unlearning step:
+     a. Compute forget loss L_f on D_f
+     b. Remove forget influence using one of:
+          - negative gradient
+          - random-label training
+          - influence/Hessian update
+          - representation erasure
+     c. Preserve non-forget behavior using:
+          - parameter regularization to M_s
+          - surrogate samples / target samples
+          - distillation on high-confidence target samples
+3. Initialize M_t <- M_u
+4. For each target adaptation step:
+     a. Predict target pseudo-labels
+     b. Minimize entropy or information-maximization loss
+     c. Maintain diversity / avoid collapse
+     d. Optionally update BN/statistics in CTTA manner
+5. Evaluate:
+     task utility on target
+     retain utility on non-forget subjects
+     privacy leakage on forget subject/session
+```
+
+### 17.4 可写的整体损失
+
+```text
+L_total = L_unlearn + λ_r L_retain_proxy + λ_t L_target_sfda + λ_p L_privacy
+```
+
+其中：
+
+```text
+L_unlearn:
+  negative CE on D_f, random-label CE, or influence/Hessian correction
+
+L_retain_proxy:
+  parameter regularization, Fisher/Hessian regularization, or distillation
+
+L_target_sfda:
+  entropy minimization + diversity + pseudo-label CE
+
+L_privacy:
+  identity confusion / adversarial subject classifier / MIA risk penalty
+```
+
+关键写作点：
+
+- `L_unlearn` 负责删除 forget influence。
+- `L_retain_proxy` 防止模型崩坏。
+- `L_target_sfda` 保证目标用户可用。
+- `L_privacy` 用来减少身份/成员泄露。
+
+## 18. 不同算法路线的优缺点
+
+| 路线 | 是否需要 D_f | 是否需要 D_r | 优点 | 缺点 | 适合写成主方法吗 |
+| --- | --- | --- | --- | --- | --- |
+| Oracle retrain | 是 | 是 | gold standard，最可信 | 不 source-free，成本高 | 只做上界 |
+| SISA | 是 | 局部 shard | 删除成本低，接近 exact | 训练前必须设计，模型多 | 可做背景 |
+| Negative gradient | 是 | 否 | 简单，适合 baseline | 容易毁掉 retain utility | baseline |
+| Random labels | 是 | 否 | 简单，forget class 常用 | 污染边界，缺理论 | baseline |
+| Distillation | 是/否 | 通常需要 surrogate | 保留 utility 好 | surrogate 选择困难 | 可组合 |
+| Hessian / influence | 是 | 传统需要，source-free 估计可不要 | 理论清楚，和 CVPR 2025 Source-Free MU 对齐 | 深度非凸模型近似强 | 适合主方法 |
+| Representation erasure | 需要 privacy labels | 不一定 | 适合 subject/domain 隐私 | 需要 identity/domain metadata | 很适合 EEG |
+| DP-SGD | 否 | 训练时全数据 | 有严格 DP 保证 | 不是 post-hoc deletion，utility 可能降 | baseline / complementary |
+
+建议方法路线：
+
+```text
+主方法 = source-free influence/Hessian-style unlearning + identity representation erasure + SHOT-style SFDA
+baseline = SFDA only, NegGrad+SFDA, RandomLabel+SFDA, DP-SGD+SFDA, OracleRetrain+SFDA
+```
+
+## 19. 评测矩阵：如何证明“忘掉了”且“还能用”
+
+### 19.1 Utility metrics
+
+| 指标 | 数据 | 说明 |
+| --- | --- | --- |
+| Target accuracy / balanced accuracy | `D_t` | 目标用户 BCI 解码是否可用 |
+| Retain source accuracy | `D_r`，只在评测端可用 | 其他源用户性能是否保持 |
+| Forget task accuracy | `D_f` | 如果 forget 是 user/session，不一定要求任务 accuracy 下降 |
+| Calibration / ECE | `D_t` | 实时设备输出置信度是否可信 |
+| CTTA stability | target stream | 连续适配是否漂移或崩塌 |
+| Latency / memory | device side | 实时 BCI 是否可部署 |
+
+### 19.2 Privacy metrics
+
+| 指标 | 攻击目标 | 期望 |
+| --- | --- | --- |
+| Membership inference AUC | 判断 forget subject/session 是否在训练集中 | 接近 0.5 |
+| Subject identity accuracy | 从 embedding 预测 subject ID | forget subject 下降；整体身份可分性下降 |
+| Attribute inference accuracy | 年龄/性别/疾病/设备/医院 | 下降 |
+| Model inversion / reconstruction | 从输出或 embedding 重建 EEG pattern | 质量下降 |
+| Distance to retrained model | 输出分布或参数差异 | 接近 Oracle retrain |
+
+### 19.3 关键解释：forget subject 的 task accuracy 是否应该下降
+
+如果 forget unit 是 subject/session，**不一定要求 forget subject 的 task accuracy 降低**。原因：
+
+- 隐私目标是删除该用户对模型的训练影响，而不是让模型故意不能识别该用户的任务。
+- 如果该用户作为未来 target user 重新使用系统，模型仍应能通过无标签适配恢复任务性能。
+- 更合理的目标是：成员关系、身份特征、会话特征不可被攻击者稳定识别。
+
+因此论文中应写：
+
+> In user-level EEG unlearning, forgetting does not necessarily mean misclassifying the user's BCI task labels. Instead, it means removing the user's contribution as training evidence while preserving general task semantics.
+
+## 20. 为什么“forget class 要打标签”这个问题容易混淆
+
+很多 MU 论文使用 CIFAR-10 / ImageNet，所以它们说 “forget class” 时通常指视觉类别，例如 airplane、truck、dog。这导致一个误解：MU 必须要 class label。
+
+实际上：
+
+```text
+MU 需要的是 forget-set definition，不一定是 task class label。
+```
+
+三种情况：
+
+1. **Class unlearning**  
+   forget set 由 task class label 定义，所以需要 `y=c`。
+
+2. **User unlearning**  
+   forget set 由 user ID 定义，需要 `u=u_f`，task label `y` 只用于保持 utility。
+
+3. **Domain unlearning**  
+   forget set 由 domain ID 定义，需要 `e=e_f`，例如医院/设备/会话。
+
+对 EEG 来说：
+
+- `y` 是任务标签，应被保留。
+- `u/e/a` 是隐私标签，应被去除或混淆。
+
+可以画成论文图：
+
+```text
+EEG x
+ ├── task factor y: should remain
+ ├── identity factor u: should be forgotten
+ ├── session/device factor e: should be adapted or removed
+ └── noise/artifacts: should be suppressed
+```
+
+## 21. 和 CTTA 的结合点
+
+用户之前提出了 CTTA，所以这里补上可用逻辑。
+
+### 21.1 为什么 EEG 需要 CTTA
+
+EEG 实时设备不是一次性 batch adaptation，而是持续流：
+
+- 电极阻抗随时间变化。
+- 用户疲劳、注意、情绪变化。
+- session 内和 session 间都有 non-stationarity。
+- 真实部署不能频繁要求用户重新标注。
+
+所以 CTTA 适合放在 deployment stage：
+
+```text
+source-free MU 先净化源模型
+SFDA 初始化目标用户
+CTTA 在实时流上持续更新统计量或少量参数
+```
+
+### 21.2 CTTA 的隐私风险
+
+CTTA 也可能带来新风险：
+
+- 持续更新可能把目标用户敏感特征写进模型。
+- 如果模型回传到云端，会形成新的隐私泄露通道。
+- 连续伪标签错误可能造成 drift 和安全风险。
+
+所以可以提出：
+
+> Privacy-preserving CTTA should include update constraints, replay-free adaptation, confidence gating, and periodic unlearning or model reset.
+
+## 22. 可直接写入论文的 Related Work 结构
+
+建议 Related Work 分四段：
+
+### 22.1 Source-Free Domain Adaptation
+
+写法：
+
+> Source-free domain adaptation addresses domain shifts when source data are inaccessible during adaptation. Existing methods such as SHOT, DINE, BETA, SF(DA)^2 and ProDe focus on pseudo-labeling, entropy/information maximization, black-box predictors, confirmation bias and proxy denoising. These works motivate our use of SFDA for EEG, where source EEG cannot be shared across users or institutions.
+
+### 22.2 Machine Unlearning
+
+写法：
+
+> Machine unlearning aims to remove the influence of specified training data from a trained model. Prior work ranges from exact retraining and SISA to certified removal, influence-based updates, representation erasure and source-free unlearning. However, existing MU studies are mostly evaluated on vision or language models, while privacy-preserving EEG adaptation requires user/session-level forgetting under source-free constraints.
+
+### 22.3 Privacy in EEG/BCI
+
+写法：
+
+> EEG signals can encode not only task-related neural responses but also user identity, familiar information, affective states and health-related attributes. Prior studies on BCI side channels, subliminal probing, EEG identity protection and neuroethics show that neural data leakage has privacy, safety and autonomy implications.
+
+### 22.4 Differential Privacy and Privacy Attacks
+
+写法：
+
+> Differential privacy provides training-time protection by bounding the contribution of individual samples, while privacy attacks such as membership inference and model inversion reveal that trained models may leak information about their training data. Our work is orthogonal to DP: we target post-training deletion requests and residual source-model leakage in source-free EEG adaptation.
+
+## 23. 可直接写入论文的 Introduction 大纲
+
+### 第一段：BCI 价值与实时部署
+
+BCI has shown promise in neurorehabilitation, assistive control, communication and affective computing. In real-time BCI systems, EEG decoding models must work across users, sessions and devices, but EEG signals are highly non-stationary and user-specific.
+
+### 第二段：domain shift 与 SFDA
+
+Traditional cross-subject adaptation assumes access to labeled source EEG. This assumption is unrealistic when EEG is collected by hospitals, laboratories or commercial devices under privacy and ownership constraints. SFDA provides a practical framework by adapting a source model to unlabeled target EEG without accessing raw source data.
+
+### 第三段：SFDA 的隐私缺口
+
+However, removing source data access does not remove source information from the model. The source model may encode subject identity, session-specific patterns or membership signals. This is particularly concerning for EEG, whose representations can reveal sensitive neural and health-related attributes.
+
+### 第四段：MU 的必要性
+
+Machine unlearning offers a post-training mechanism for removing the influence of specified data. In BCI, this corresponds to deletion requests from source users, sessions or institutions. Combining MU with SFDA allows a model to be sanitized before adapting to target EEG.
+
+### 第五段：本文贡献
+
+贡献可以写：
+
+1. We formulate privacy-aware EEG source-free adaptation with user/session-level unlearning.
+2. We propose a forget-and-adapt framework that removes source user influence without accessing retain source EEG.
+3. We evaluate both decoding utility and privacy leakage under membership and identity inference attacks.
+4. We analyze the complementarity between MU and DP in privacy-preserving BCI.
+
+## 24. ACM Reference Format：非计算机/医学/神经伦理文献
+
+下面条目偏 ACM Reference Format，正式投稿前需要用官方 BibTeX 补全页码、issue、DOI。
+
+[NCS-01] Rafael Yuste, Sara Goering, Blaise Agüera y Arcas, Guoqiang Bi, Jose M. Carmena, Adrian Carter, Joseph J. Fins, Phoebe Friesen, Jack Gallant, Jane E. Huggins, Philipp Kellmeyer, Eran Klein, Torsten O. Kringe, Christine Mitchell, Partha Mitra, David B. Ozar, Graeme Rainey, Erich Schadt, and Mackenzie M. Specker Sullivan. 2017. Four ethical priorities for neurotechnologies and AI. *Nature* 551, 7679 (2017), 159–163.
+
+[NCS-02] Liam Drew. 2019. The ethics of brain–computer interfaces. *Nature* 571 (2019), S19–S21.
+
+[NCS-03] Marcello Ienca and Pim Haselager. 2016. Hacking the brain: brain–computer interfacing technology and the ethics of neurosecurity. *Ethics and Information Technology* 18 (2016), 117–129.
+
+[NCS-04] Tamara Denning, Yoky Matsuoka, and Tadayoshi Kohno. 2009. Neurosecurity: security and privacy for neural devices. *Neurosurgical Focus* 27, 1 (2009), E7.
+
+[NCS-05] Pim Haselager, Rutger Vlek, Jeremy Hill, and Femke Nijboer. 2009. A note on ethical aspects of BCI. *Neural Networks* 22, 9 (2009), 1352–1357.
+
+[NCS-06] Femke Nijboer, Jens Clausen, Brendan Z. Allison, and Pim Haselager. 2013. The Asilomar Survey: Stakeholders' Opinions on Ethical Issues Related to Brain-Computer Interfacing. *Neuroethics* 6 (2013), 541–578.
+
+[NCS-07] Steffen Steinert and Orsolya Friedrich. 2020. Wired Emotions: Ethical Issues of Affective Brain–Computer Interfaces. *Science and Engineering Ethics* 26 (2020), 351–367.
+
+[NCS-08] Mark A. Attiah and Martha J. Farah. 2014. Minds, motherboards, and money: futurism and realism in the neuroethics of BCI technologies. *Frontiers in Systems Neuroscience* 8 (2014), Article 86.
+
+[NCS-09] Baraka Maiseli, Abdussalam A. Abdalla, Luqman C. Massawe, et al. 2023. Brain–computer interface: trend, challenges, and threats. *Brain Informatics* 10 (2023), Article 20.
+
+[NCS-10] Marcello Ienca and Roberto Andorno. 2017. Towards new human rights in the age of neuroscience and neurotechnology. *Life Sciences, Society and Policy* 13 (2017), Article 5.
+
+[NCS-11] Jens Clausen. 2009. Man, machine and in between. *Nature* 457 (2009), 1080–1081.
+
+[NCS-12] Ricardo Chavarriaga, Melanie Fried-Oken, Sarang Shaikhouni, and José del R. Millán. 2017. Heading for new shores! Overcoming pitfalls in BCI design. *Brain-Computer Interfaces* 4, 1–2 (2017), 60–73.
+
+## 25. 最后给论文定位的强论点
+
+如果只能保留一个最强论点，建议写：
+
+> SFDA is necessary but insufficient for privacy-preserving EEG adaptation. It removes the need to transfer raw source EEG, but the source model can still encode sensitive source-user information. Machine unlearning complements SFDA by providing a post-training mechanism to remove the influence of specified users, sessions, or domains before target adaptation.
+
+如果审稿人问“为什么不是 DP”，回答：
+
+> DP protects training globally and prospectively; MU deletes specified influence post hoc. In BCI, user consent can change after training, and raw source EEG may no longer be accessible. Therefore, MU addresses a privacy requirement that DP alone does not directly satisfy.
+
+如果审稿人问“忘记后 source class 性能怎么办”，回答：
+
+> In EEG privacy unlearning, we do not aim to forget task classes. We aim to forget privacy-bearing units such as subjects or sessions. Thus, task decoding performance on retain and target users should be preserved, while membership/identity leakage for the forgotten user should be reduced.
+
+## 26. 逐篇 SFDA 论文动机卡片
+
+这一节回答“其他领域为什么使用 SFDA，他们的背景和聚焦问题是什么”。可以直接拆到 related work。
+
+### 26.1 SHOT, ICML 2020
+
+- **背景**：传统 UDA 假设源数据和目标数据可以同时访问。但真实场景中，源数据可能因为隐私、数据传输、存储和商业原因无法访问。
+- **为什么 SFDA**：只利用训练好的 source model 和 unlabeled target data，避免目标适配时访问 source raw data。
+- **聚焦问题**：如何在没有 source data 的情况下保留 source classifier 的决策结构，并把 target feature 对齐到该结构。
+- **核心思想**：冻结 classifier，优化 target feature extractor；使用 information maximization 和 pseudo-labeling。
+- **对 EEG 的启发**：源实验室/医院只交付训练好的 EEG decoder，目标用户端通过无标签 EEG 做 adaptation。
+
+可写句子：
+
+> SHOT established a practical source-free setting where source data are unavailable during adaptation, motivating the use of a fixed source hypothesis and target-side self-training.
+
+### 26.2 DINE, CVPR 2022
+
+- **背景**：更强约束下，目标端甚至拿不到源模型参数，只能访问一个或多个 black-box predictors。
+- **为什么 SFDA/Black-box DA**：商业 API、医疗模型服务或第三方平台通常不会开放模型权重和源数据。
+- **聚焦问题**：如何从黑盒 predictor 输出中学习目标模型；如何处理 single-source 和 multi-source。
+- **核心思想**：从黑盒输出蒸馏目标模型，再利用目标数据结构优化。
+- **对 EEG 的启发**：商业 BCI 或医院模型可能只开放推理 API；目标端只能拿 prediction confidence 或 labels。
+
+可写句子：
+
+> Black-box SFDA further relaxes source access by assuming that only predictions from the source model are available, which matches third-party medical or commercial BCI services.
+
+### 26.3 BETA, ICLR 2023
+
+- **背景**：黑盒预测器在目标域产生 noisy pseudo-labels，直接自训练会导致 confirmation bias。
+- **为什么 SFDA**：source data/model parameters 不可用，只能根据 target data 和 predictor outputs 自我修正。
+- **聚焦问题**：伪标签错误如何避免被反复强化。
+- **核心思想**：把目标样本分成 easy/hard 子域，用互学习/双分支缓解错误标签传播。
+- **对 EEG 的启发**：跨被试 EEG 初始伪标签很容易错，尤其是低信噪比 trial；需要 confidence gating 或 easy-to-hard adaptation。
+
+可写句子：
+
+> In EEG SFDA, confirmation bias is particularly harmful because noisy target pseudo-labels can quickly dominate adaptation under low signal-to-noise ratios.
+
+### 26.4 RFC, AAAI 2024
+
+- **背景**：黑盒 DA 中，某些类别可能在目标域中被忽略或被错误压制，造成 class imbalance 和 forgotten classes。
+- **为什么相关**：源数据不可用时，模型难以判断哪些类别在目标域被低估。
+- **聚焦问题**：black-box adaptation 下如何重新发现/审查被遗忘类别。
+- **对 EEG 的启发**：BCI 中某些任务状态在目标用户上可能样本少或置信度低，容易被 adaptation 过程“抹掉”。
+
+### 26.5 SF(DA)^2, ICLR 2024
+
+- **背景**：SFDA 中缺少源数据，数据增强成为构造鲁棒目标表征的重要方式，但真实增强可能昂贵或不稳定。
+- **为什么 SFDA**：需要在无源数据下利用 target 数据局部结构和 feature-level augmentation。
+- **聚焦问题**：如何低成本增强目标域结构，避免过拟合单一目标分布。
+- **对 EEG 的启发**：EEG 可用时间窗扰动、频带扰动、通道 dropout、时频 masking 或 feature-space augmentation。
+
+### 26.6 Frozen Multimodal Foundation Model SFDA, CVPR 2024
+
+- **背景**：foundation model 越来越常用，但模型很大，预训练数据不可见，权重不宜大规模更新。
+- **为什么 SFDA**：下游目标域适配不能访问源训练数据，甚至希望冻结大模型。
+- **聚焦问题**：如何借助多模态语义知识完成 source-free adaptation。
+- **对 EEG 的启发**：EEG foundation model / brain foundation model 未来可能只作为 frozen backbone 提供；隐私适配要围绕 adapter、prompt、classifier 或 feature alignment 做。
+
+### 26.7 LEAD / Universal SFDA, CVPR 2024
+
+- **背景**：真实目标域类别空间可能和源域不一致，不一定是 closed-set。
+- **为什么 SFDA**：无源数据时，判定 shared/private/unknown classes 更困难。
+- **聚焦问题**：universal DA，识别目标私有类和源目标共享类。
+- **对 EEG 的启发**：目标用户可能出现源数据中没有的状态，例如疲劳、伪迹、非任务状态；实时 BCI 应有 unknown/reject 机制。
+
+### 26.8 ProDe, ICLR 2025
+
+- **背景**：SFDA 的核心瓶颈是 proxy/pseudo-label 噪声。
+- **为什么 SFDA**：无源数据下只能依赖目标样本结构和源模型输出构造 proxy。
+- **聚焦问题**：denoise proxy，提升自训练稳定性。
+- **对 EEG 的启发**：EEG target pseudo-label 的噪声比图像更严重，proxy denoising 可以作为目标适配模块。
+
+## 27. 逐篇 MU 论文动机卡片
+
+### 27.1 Making AI Forget You, NeurIPS 2019
+
+- **背景**：数据删除请求和隐私法规要求模型响应“删除我的数据”。
+- **为什么 MU**：模型一旦训练完成，简单删除数据库中的原始样本不能删除模型参数中的影响。
+- **聚焦问题**：训练数据删除的算法化处理，而不是每次从头训练。
+- **对 EEG 的启发**：用户撤回 EEG 使用授权后，原始 EEG 删除不等于 EEG decoder 删除了该用户影响。
+
+### 27.2 Certified Data Removal, ICML 2020
+
+- **背景**：需要比经验遗忘更严格的理论保证。
+- **为什么 MU**：删除后模型应与“从未使用待删数据训练”的模型近似不可区分。
+- **聚焦问题**：certified removal、参数不可区分、线性/凸模型下的理论界。
+- **对 EEG 的启发**：如果论文要声称强隐私，需要引用 certified removal；如果只做深度 EEG empirical 方法，不能夸大为 certified privacy。
+
+### 27.3 SISA / Machine Unlearning, IEEE S&P 2021
+
+- **背景**：大模型重训成本高，删除请求可能频繁发生。
+- **为什么 MU**：通过 shard/slice 训练结构减少重训范围。
+- **聚焦问题**：工程化 exact/近似删除，降低删除成本。
+- **对 EEG 的启发**：BCI 多用户模型可以按 subject shard 组织训练，方便 user-level deletion；但如果模型已经训练完且没有 shard 设计，SISA 不适用。
+
+### 27.4 Amnesiac Machine Learning, AAAI 2021
+
+- **背景**：模型训练过程中可记录更新信息，以后删除时撤销对应更新。
+- **为什么 MU**：避免从头重训。
+- **聚焦问题**：记录和逆转训练更新。
+- **对 EEG 的启发**：如果实时 BCI 在线学习时记录每个用户/session 的 update log，之后可做更精确的删除；但会增加存储和隐私日志风险。
+
+### 27.5 Remember What You Want to Forget, NeurIPS 2021
+
+- **背景**：MU 需要理论化，不同问题设定下删除难度不同。
+- **为什么 MU**：研究删除请求下的统计学习保证。
+- **聚焦问题**：遗忘算法的理论复杂度和泛化。
+- **对 EEG 的启发**：EEG 小样本和高噪声会让 unlearning 更不稳定，理论上 retain utility 与 forget quality 存在 trade-off。
+
+### 27.6 Towards Unbounded Machine Unlearning, NeurIPS 2023
+
+- **背景**：现有 MU benchmarks 不统一，很多方法只在有限 forget 请求下有效。
+- **为什么 MU**：需要评估连续/大量删除请求下模型是否还能保持效用。
+- **聚焦问题**：unbounded deletion、SCRUB、MIA-based privacy evaluation。
+- **对 EEG 的启发**：实时 BCI 可能发生多次撤回授权或 session 删除，不能只评估一次 forget。
+
+### 27.7 TOFU, ICLR 2024
+
+- **背景**：LLM 中需要删除具体知识、人物、事实或版权内容。
+- **为什么 MU**：删除知识不能简单靠从数据库移除文本。
+- **聚焦问题**：生成模型遗忘 benchmark 和评估。
+- **对 EEG 的启发**：虽然任务不同，但说明 MU 已从分类扩展到复杂模型；评估不能只看 accuracy，还要看泄露和保留能力。
+
+### 27.8 Selective Unlearning via Representation Erasure, ICLR 2025
+
+- **背景**：深度模型的隐私/偏见/域信息常藏在 representation 中，不一定只在输出层。
+- **为什么 MU**：需要选择性擦除某种表征因素，而不破坏其他任务能力。
+- **聚焦问题**：representation erasure、domain adversarial training。
+- **对 EEG 的启发**：EEG 隐私最像 representation erasure：删除 subject/domain identity，保留 task-relevant neural feature。
+
+### 27.9 Towards Source-Free Machine Unlearning, CVPR 2025
+
+- **背景**：传统 MU 需要 retain data；但实际中 retain/source training data 可能因隐私、存储或法规不可访问。
+- **为什么 MU**：只用 trained model 和 forget data 删除指定数据影响。
+- **聚焦问题**：source-free setting、retain Hessian estimation、theoretical guarantee。
+- **对 EEG 的启发**：这正是 EEG SFDA 的核心约束：目标端/模型拥有者没有 retain source EEG，但需要删除某个用户/会话影响。
+
+### 27.10 Approximate Domain Unlearning for VLMs, NeurIPS 2025
+
+- **背景**：大模型可能需要删除某个域、风格、数据源或敏感场景影响。
+- **为什么 MU**：domain-level 删除比 sample-level 更接近真实治理需求。
+- **聚焦问题**：domain unlearning、VLM utility preservation。
+- **对 EEG 的启发**：BCI 中可忘记某医院、某设备、某采集 protocol 的域影响。
+
+## 28. 论文中必须区分的四个概念
+
+### 28.1 Source-free 不等于 data-free
+
+SFDA 只是不访问 source data，但通常仍访问 target data。Source-free MU 通常仍访问 forget data。
+
+严谨写法：
+
+```text
+source-free adaptation: no raw source data during target adaptation
+source-free unlearning: no retain/source training data during unlearning, but forget data may be available
+```
+
+### 28.2 Forget data 不等于 retain data
+
+- `D_f`：要删除的数据。
+- `D_r`：要保留的数据。
+- `D_t`：目标域无标签数据。
+
+很多算法效果差，是因为删除 `D_f` 时没有保护 `D_r`。
+
+### 28.3 Forget class 不等于 privacy class
+
+视觉 MU 中 forget class 是语义类别；EEG 隐私中 forget target 应是用户/会话/域/属性。
+
+### 28.4 Privacy mitigation 不等于 privacy guarantee
+
+- 有 DP epsilon：可以说 differential privacy guarantee。
+- 有 certified removal theorem：可以说 certified unlearning under assumptions。
+- 只有 MIA/identity attack 下降：应说 empirical privacy leakage mitigation。
+
+## 29. 审稿人可能质疑与回答
+
+### Q1: SFDA 已经不访问源数据，为什么还需要 MU？
+
+回答：
+
+> SFDA removes raw source data access during adaptation, but the source model remains trained on sensitive source users. Model parameters and outputs may still encode membership, identity or domain-specific information. MU addresses this residual source-model leakage by removing specified source influence before adaptation.
+
+### Q2: 为什么不用 DP？
+
+回答：
+
+> DP is a training-time global protection mechanism, while MU is a post-training selective deletion mechanism. If a source model has already been trained or a user revokes consent after training, DP cannot directly remove that user's learned influence. MU and DP are complementary rather than mutually exclusive.
+
+### Q3: MU 后 forget data 的 task accuracy 是不是应该降到随机？
+
+回答：
+
+> Only for class-level unlearning. For user/session-level EEG privacy unlearning, the goal is not to make the model misclassify the user's task labels. The goal is to remove the user's contribution as training evidence and suppress membership/identity leakage while preserving task semantics.
+
+### Q4: 没有 retain data 怎么保证 retain performance？
+
+回答：
+
+> In a strict source-free setting, retain performance cannot be directly optimized using raw retain data. Existing approaches use parameter regularization, source model behavior preservation, Hessian/influence approximation, surrogate data, target-domain high-confidence samples, or theoretical approximations of the retain Hessian.
+
+### Q5: EEG 中 subject identity 和 task feature 能完全解耦吗？
+
+回答：
+
+> Not perfectly. EEG task and identity factors may be entangled. Therefore, the objective is a controlled trade-off: reduce identity/membership leakage while preserving sufficient task-discriminative information for BCI decoding.
+
+### Q6: 如果 forget subject 之后又作为 target user 使用系统怎么办？
+
+回答：
+
+> The model should not retain that subject's historical source contribution, but it may still adapt to the user's newly provided unlabeled target EEG under a fresh consent boundary. This distinction is important for BCI systems where users may re-enter as target users.
+
+### Q7: 为什么需要 forget set 标签？
+
+回答：
+
+> Unlearning requires a definition of what must be forgotten. In class unlearning this is a task label; in EEG privacy unlearning it is more naturally subject ID, session ID, device ID, hospital ID or consent metadata. Without such metadata, unlearning becomes weakly supervised and less reliable.
+
+## 30. 方法图建议
+
+可以画一张四块图：
+
+```text
+             Source Institution
+      multi-subject EEG source data
+                  |
+             source training
+                  v
+          source EEG model M_s
+                  |
+      deletion request: subject/session/domain
+                  |
+                  v
+       Source-Free Machine Unlearning
+       input: M_s + D_f, no D_r
+                  |
+                  v
+          sanitized model M_u
+                  |
+        unlabeled target EEG stream
+                  |
+                  v
+        SFDA / CTTA target adaptation
+                  |
+                  v
+        private and adaptive BCI decoder
+```
+
+图上标注：
+
+- raw source EEG not transferred。
+- retain source EEG unavailable。
+- forget influence removed。
+- target EEG processed locally。
+- attacks evaluated on membership / identity / attributes。
+
+## 31. 表格建议：论文实验结果应该怎么展示
+
+即使现在不跑实验，也可以先设计表格。
+
+### Table 1: Utility after unlearning and adaptation
+
+| Method | Source access | Forget access | Target acc | Retain acc | Forget task acc | ECE |
+| --- | --- | --- | ---: | ---: | ---: | ---: |
+| Source-only | no target adapt | no | - | - | - | - |
+| UDA oracle | source + target | no | high | high | high | low |
+| SFDA | no source | no | baseline | high | high | medium |
+| NegGrad + SFDA | no retain | yes | ? | lower | maybe lower | high |
+| RandomLabel + SFDA | no retain | yes | ? | lower | lower | high |
+| DP-SGD + SFDA | trained with DP | no | lower? | lower? | high | medium |
+| Ours MU + SFDA | no retain | yes | high | high | high if user-level | low |
+| Oracle retrain + SFDA | retain only | yes | upper bound | high | high if user-level | low |
+
+### Table 2: Privacy leakage after unlearning
+
+| Method | MIA AUC ↓ | Subject ID acc ↓ | Attribute acc ↓ | Reconstruction corr ↓ |
+| --- | ---: | ---: | ---: | ---: |
+| SFDA | high | high | high | high |
+| DP-SGD + SFDA | lower | lower | lower | lower |
+| NegGrad + SFDA | lower | medium | medium | medium |
+| Ours MU + SFDA | near random | low | low | low |
+| Oracle retrain + SFDA | near random | low | low | low |
+
+### Table 3: Ablation
+
+| Variant | Target acc | MIA AUC | Subject ID acc | Comment |
+| --- | ---: | ---: | ---: | --- |
+| w/o MU | high | high | high | privacy leakage remains |
+| w/o retain proxy | low | low | low | catastrophic forgetting |
+| w/o privacy adversary | high | medium | high | identity remains |
+| w/o SFDA | low target | low? | low? | adaptation missing |
+| full method | high | low | low | best trade-off |
+
+## 32. 最推荐的论文题目
+
+如果论文标题需要强调 BCI：
+
+1. **Source-Free and Forgettable EEG Adaptation for Privacy-Preserving Brain-Computer Interfaces**
+2. **Forgetting Source Users in Source-Free EEG Adaptation for Privacy-Preserving BCIs**
+3. **Privacy-Aware Source-Free EEG Domain Adaptation via User-Level Machine Unlearning**
+4. **Can Source-Free EEG Adaptation Protect Neural Privacy? A Machine Unlearning Perspective**
+5. **Forget-and-Adapt: Source-Free Machine Unlearning for Privacy-Preserving EEG-Based BCIs**
+
+最稳的是第 1 个或第 5 个：
+
+- 第 1 个更像正式论文。
+- 第 5 个更像方法名明确的 AI 会议论文。
+
+## 33. 可以直接给另一个 Codex 的任务说明
+
+如果要让另一个 Codex 写双栏 LaTeX，可以给它这个 prompt：
+
+```text
+请基于 reports/sfda_mu_dp_bci_privacy_motivation.md 和 reports/eeg_sfda_mu_paper_brief.md 起草一篇双栏 AI 会议风格论文初稿。
+
+论文题目暂定：Forget-and-Adapt: Source-Free Machine Unlearning for Privacy-Preserving EEG-Based BCIs。
+
+要求：
+1. 写 abstract, introduction, related work, problem formulation, method, experiment design, discussion, conclusion。
+2. 不编造实验结果，只写实验设计和 expected evaluation protocol。
+3. 强调 SFDA 减少 raw source EEG exposure，但不保证源模型隐私。
+4. 强调 MU 用于 user/session/domain-level post-training deletion，不是 task-class deletion。
+5. DP 作为 complementary baseline，不要说 MU 完全优于 DP。
+6. 使用 ACM/IEEE 风格引用占位符，可从 reports/top_ai_security_references_acm_1_55.md 和本文件第 24 节抽取。
+7. 所有隐私结论写成 empirical privacy leakage mitigation，除非明确引用 certified/DP 方法。
+```
+
+## 34. 研究假设与可验证问题
+
+可以把论文问题拆成 4 个 research questions。
+
+### RQ1: SFDA 是否足以保护 EEG 源用户隐私？
+
+假设：
+
+```text
+H1: SFDA reduces raw-source-data exposure but does not eliminate source-model privacy leakage.
+```
+
+验证方式：
+
+- 训练源模型后不暴露源 EEG，只做 SFDA。
+- 对源模型或 SFDA 后模型做 membership inference / subject identity inference。
+- 如果攻击成功率显著高于随机，说明 SFDA 仍有 residual leakage。
+
+### RQ2: User/session-level MU 是否能降低隐私泄露？
+
+假设：
+
+```text
+H2: User/session-level MU reduces membership and identity leakage of forgotten source users.
+```
+
+验证方式：
+
+- 选择一个 source subject/session 作为 `D_f`。
+- 进行 MU 后再测 MIA AUC 和 subject ID accuracy。
+- 与 SFDA-only、NegGrad、RandomLabel、DP-SGD 和 Oracle retrain 比较。
+
+### RQ3: MU 是否会破坏目标用户 BCI 解码？
+
+假设：
+
+```text
+H3: Proper retain-preserving MU maintains target adaptation utility better than naive forgetting baselines.
+```
+
+验证方式：
+
+- 对 target subject 做 SFDA / CTTA。
+- 比较 target accuracy、balanced accuracy、F1、ECE。
+- 观察 naive NegGrad 是否出现 retain/target performance collapse。
+
+### RQ4: DP 与 MU 是否互补？
+
+假设：
+
+```text
+H4: DP and MU protect different privacy dimensions; MU is more suitable for post-hoc deletion, while DP offers training-time global protection.
+```
+
+验证方式：
+
+- 加 `DP-SGD + SFDA` baseline。
+- 讨论 DP 对 EEG utility 的影响。
+- 不声称 MU 形式上强于 DP，只说明它满足不同需求。
+
+## 35. 方法变体：从简单到复杂的三档方案
+
+### 35.1 最小可写方案
+
+适合初稿，不需要实现复杂 Hessian。
+
+```text
+Source model -> User-level NegGrad/RandomLabel unlearning -> SHOT-style SFDA -> privacy attack evaluation
+```
+
+优点：容易讲清楚和实现。缺点：创新弱，retain utility 可能差。
+
+### 35.2 中等强度方案
+
+适合作为正式论文设计。
+
+```text
+Source model
+  -> source-free influence/Hessian-inspired unlearning
+  -> identity adversarial representation erasure
+  -> SHOT/ProDe-style target adaptation
+```
+
+特点：
+
+- 用 CVPR 2025 Source-Free MU 做理论支撑。
+- 用 representation erasure 贴合 EEG 隐私。
+- 用 SFDA 解决目标域适配。
+
+### 35.3 完整强方案
+
+适合后续扩展。
+
+```text
+Source model
+  -> certified/approx source-free MU
+  -> user/session/domain privacy attacker minimization
+  -> CTTA with confidence-gated updates
+  -> periodic target-user unlearning/reset
+```
+
+特点：
+
+- 同时考虑 source privacy 和 target streaming privacy。
+- 适合强调 real-time BCI deployment。
+- 成本和实现复杂度更高。
+
+## 36. EEG 实验中忘记对象如何设置
+
+### 36.1 Subject-level forgetting
+
+```text
+D_f = all trials from source subject k
+```
+
+适合证明：用户撤回授权。
+
+评测：
+
+- forget subject MIA。
+- forget subject ID inference。
+- retain subjects task accuracy。
+- target subject SFDA accuracy。
+
+### 36.2 Session-level forgetting
+
+```text
+D_f = all trials from session t of subject k
+```
+
+适合证明：某次采集会话含隐私/错误/异常数据，需要删除。
+
+评测：
+
+- session ID inference。
+- same subject other sessions utility。
+- cross-session robustness。
+
+### 36.3 Domain-level forgetting
+
+```text
+D_f = all trials from hospital/device/domain d
+```
+
+适合证明：机构退出数据合作，或某设备采集协议不再授权。
+
+评测：
+
+- domain classifier accuracy。
+- remaining domains utility。
+- target domain adaptation。
+
+### 36.4 Attribute-level forgetting
+
+```text
+D_f or privacy target = gender / age group / health condition / handedness
+```
+
+适合证明：敏感属性保护。
+
+注意：需要数据集有属性标签；否则不能编造。
+
+## 37. 传统 MU 中 source data class 的处理方式
+
+用户问“如果使用了 MU，那么他们对于模型在 source data class 上的性能是如何处理的”。这里要分情况。
+
+### 37.1 Class-level unlearning
+
+视觉分类常见设定：忘记某个 source class。
+
+处理方式：
+
+- `forget class`：希望准确率下降，或者输出不再包含该类。
+- `retain classes`：希望准确率保持。
+- `test set`：如果测试集仍含 forget class，要单独报告 forget/retain accuracy。
+- `oracle retrain`：用不含 forget class 的数据重训作为目标。
+
+典型表述：
+
+```text
+A successful class unlearning method should erase the model's ability to recognize the forgotten class while preserving performance on retained classes.
+```
+
+### 37.2 Instance/user-level unlearning
+
+如果忘记的是某些样本或用户，而不是任务类别：
+
+- task class 不应被删除。
+- forget samples 的 membership evidence 应下降。
+- retain/test accuracy 应保持。
+- forget samples 的分类 accuracy 不一定要下降，因为它们的语义仍属于正常任务类别。
+
+典型表述：
+
+```text
+For instance- or user-level unlearning, forget accuracy alone is not a sufficient privacy metric; membership inference and retraining equivalence are more meaningful.
+```
+
+### 37.3 EEG 中应采用的解释
+
+EEG 隐私保护最好采用 user-level/session-level：
+
+```text
+source data class = task labels should remain
+privacy class = subject/session/domain should be removed
+```
+
+这样就避免了“为了隐私把左手/右手任务类删掉”的荒谬问题。
+
+## 38. Forget influence 的几种定义
+
+不同论文对“影响”定义不完全一样。
+
+| 定义 | 数学/评估含义 | 优点 | 缺点 |
+| --- | --- | --- | --- |
+| Retraining equivalence | `M_u` 接近 `Train(D_s \ D_f)` | 最直观 | 需要 oracle retrain 才能评估 |
+| Parameter indistinguishability | unlearned 参数分布与 retrained 参数分布不可区分 | 理论强 | 通常只在特定模型/假设下成立 |
+| Output indistinguishability | 两模型在测试点输出接近 | 容易评估 | 不能保证参数不泄露 |
+| Membership privacy | MIA 无法判断 forget data 是否训练过 | 贴合隐私 | 依赖攻击强度 |
+| Representation erasure | embedding 不含 subject/domain 信息 | 适合 EEG | 难以证明完全删除 |
+| Performance removal | forget class accuracy 下降 | 简单 | 只适合 class unlearning |
+
+对 EEG 论文建议组合：
+
+```text
+primary: membership privacy + subject identity erasure + target utility
+secondary: output distance to oracle retrain if oracle available
+```
+
+## 39. 非计算机文献如何放进论文
+
+### 39.1 Nature / neuroethics 文献放 introduction
+
+用途：说明神经数据隐私不是单纯机器学习问题。
+
+可写：
+
+> Neurotechnology and AI raise ethical concerns around mental privacy, identity, agency and fairness, as emphasized by Yuste et al. in Nature. These concerns are amplified in BCI systems where neural data are directly acquired and interpreted by computational models.
+
+### 39.2 Neurosurgical Focus / medical device security 放安全动机
+
+用途：说明神经设备安全进入医疗安全范畴。
+
+可写：
+
+> Neural devices are increasingly networked and computationally mediated. Prior work on neurosecurity argues that security and privacy failures in neural devices can become patient-safety concerns rather than merely data-protection issues.
+
+### 39.3 Ethics and Information Technology 放 neurosecurity
+
+用途：说明 brain-hacking / neurocrime / unauthorized neural information access。
+
+可写：
+
+> Neurosecurity work has warned that BCI systems may expose users to unauthorized access to neural information or manipulation of neural interfaces, motivating privacy-aware model design.
+
+### 39.4 Science and Engineering Ethics 放情绪识别 BCI
+
+用途：如果论文任务选择 emotion recognition，引用 Wired Emotions。
+
+可写：
+
+> Affective BCIs create additional ethical concerns because inferred emotional states may be sensitive, context-dependent and vulnerable to misuse.
+
+## 40. 最容易写错的表述
+
+### 错误 1：SFDA protects privacy
+
+更正：
+
+```text
+SFDA reduces raw source data exposure, but does not provide formal privacy guarantees.
+```
+
+### 错误 2：MU guarantees privacy
+
+更正：
+
+```text
+Unless certified or exact unlearning is used, MU empirically mitigates privacy leakage rather than guaranteeing privacy.
+```
+
+### 错误 3：DP 和 MU 二选一
+
+更正：
+
+```text
+DP and MU address complementary privacy requirements: training-time global protection vs post-training selective deletion.
+```
+
+### 错误 4：forget class 必须是任务类别
+
+更正：
+
+```text
+The forget set can be defined by subject/session/domain metadata; in EEG privacy, this is usually more appropriate than task-class unlearning.
+```
+
+### 错误 5：forget subject 的 task accuracy 必须下降
+
+更正：
+
+```text
+For user-level forgetting, task accuracy on forget user's samples is not the primary privacy metric. Membership and identity leakage are more appropriate.
+```
+
+## 41. 一页版总结
+
+如果后续写论文只能记住一页内容，可以用下面这版。
+
+### Problem
+
+EEG/BCI models need cross-subject adaptation, but source EEG is sensitive and cannot be shared. SFDA solves source-data access during adaptation, but source models may still leak source-user information.
+
+### Gap
+
+Existing EEG SFDA methods focus on utility under source-free constraints. They rarely ask whether the source model still encodes subject identity, session signatures or membership information.
+
+### Proposed idea
+
+Before adapting to target EEG, perform source-free machine unlearning to remove the influence of specified source subjects/sessions/domains, then conduct SFDA/CTTA on unlabeled target EEG.
+
+### Why MU instead of DP
+
+DP is training-time global protection; MU is post-training selective deletion. User consent can change after model training, and source EEG may be unavailable. Therefore MU addresses a post-hoc privacy need that DP alone does not solve.
+
+### What to forget
+
+Forget users/sessions/domains, not task classes. The model should forget who contributed data while preserving what neural task patterns mean.
+
+### How to evaluate
+
+Report both utility and privacy:
+
+- target EEG decoding accuracy
+- retain subject accuracy
+- membership inference AUC
+- subject identity inference accuracy
+- attribute inference accuracy
+- distance to oracle retrain if possible
+
+### Safe claim
+
+This framework mitigates empirical privacy leakage in source-free EEG adaptation. It does not claim formal DP or certified removal unless those mechanisms are explicitly implemented.
