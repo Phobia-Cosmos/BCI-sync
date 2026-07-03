@@ -1,0 +1,215 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 1125" width="1800" height="1125" role="img" aria-labelledby="title desc">
+  <title id="title">Realistic Test-Time Data Poisoning (RTTDP) - Multi-User Attack Scenario</title>
+  <desc id="desc">Technical diagram of a multi-user realistic test-time data poisoning attack in test-time adaptation.</desc>
+  <defs>
+    <marker id="arrow-blue" markerWidth="16" markerHeight="16" refX="14" refY="8" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M2,2 L12,7 L2,12 Z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrow-red" markerWidth="16" markerHeight="16" refX="14" refY="8" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M2,2 L12,7 L2,12 Z" fill="#dc2626"/>
+    </marker>
+    <marker id="arrow-black" markerWidth="16" markerHeight="16" refX="14" refY="8" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M2,2 L12,7 L2,12 Z" fill="#111827"/>
+    </marker>
+    <marker id="arrow-gray" markerWidth="16" markerHeight="16" refX="14" refY="8" orient="auto" markerUnits="userSpaceOnUse">
+      <path d="M2,2 L12,7 L2,12 Z" fill="#64748b"/>
+    </marker>
+    <filter id="soft-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#0f172a" flood-opacity="0.13"/>
+    </filter>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { font-family: Inter, Arial, sans-serif; font-size: 35px; font-weight: 800; fill: #0f172a; letter-spacing: 0; }
+      .section { font-family: Inter, Arial, sans-serif; font-size: 20px; font-weight: 800; fill: #334155; letter-spacing: 0; }
+      .label { font-family: Inter, Arial, sans-serif; font-size: 18px; font-weight: 700; fill: #0f172a; letter-spacing: 0; }
+      .small { font-family: Inter, Arial, sans-serif; font-size: 15px; font-weight: 650; fill: #334155; letter-spacing: 0; }
+      .tiny { font-family: Inter, Arial, sans-serif; font-size: 13px; font-weight: 650; fill: #475569; letter-spacing: 0; }
+      .blue { fill: #2563eb; color: #2563eb; }
+      .blueText { fill: #1d4ed8; }
+      .red { fill: #dc2626; color: #dc2626; }
+      .redText { fill: #b91c1c; }
+      .whiteText { fill: #ffffff; }
+      .muted { fill: #64748b; }
+      .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; }
+      .modelPanel { fill: #ffffff; stroke: #334155; stroke-width: 3; }
+      .modelTop { fill: #0f172a; }
+      .layer { fill: #eef2ff; stroke: #6366f1; stroke-width: 2; }
+      .layerNeutral { fill: #f1f5f9; stroke: #94a3b8; stroke-width: 2; }
+      .layerRed { fill: #fee2e2; stroke: #dc2626; stroke-width: 3; }
+      .surrogate { fill: #f8fafc; stroke: #64748b; stroke-width: 2.5; stroke-dasharray: 9 7; }
+      .badgeBlue { fill: #dbeafe; stroke: #2563eb; stroke-width: 2; }
+      .badgeRed { fill: #fee2e2; stroke: #dc2626; stroke-width: 2; }
+      .badgeGray { fill: #f1f5f9; stroke: #64748b; stroke-width: 2; }
+      .arrowBlue { stroke: #2563eb; stroke-width: 4; fill: none; marker-end: url(#arrow-blue); stroke-linecap: round; stroke-linejoin: round; }
+      .arrowRed { stroke: #dc2626; stroke-width: 4.5; fill: none; marker-end: url(#arrow-red); stroke-linecap: round; stroke-linejoin: round; }
+      .arrowBlack { stroke: #111827; stroke-width: 3.5; fill: none; marker-end: url(#arrow-black); stroke-linecap: round; stroke-linejoin: round; }
+      .arrowGray { stroke: #64748b; stroke-width: 3; fill: none; marker-end: url(#arrow-gray); stroke-linecap: round; stroke-linejoin: round; }
+      .dashRed { stroke-dasharray: 10 8; }
+      .dashGray { stroke-dasharray: 7 8; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1800" height="1125"/>
+  <text class="title" x="900" y="62" text-anchor="middle">Realistic Test-Time Data Poisoning (RTTDP) - Multi-User Attack Scenario</text>
+
+  <text class="section" x="210" y="132" text-anchor="middle">LEFT: User inputs</text>
+  <text class="section" x="900" y="132" text-anchor="middle">CENTER: TTA Cloud Model</text>
+  <text class="section" x="1510" y="132" text-anchor="middle">RIGHT: Model outputs and effects</text>
+
+  <!-- Left side: benign users -->
+  <rect class="panel" x="45" y="160" width="365" height="420" rx="8" filter="url(#soft-shadow)"/>
+  <text class="label blueText" x="228" y="198" text-anchor="middle">Benign Users</text>
+
+  <g transform="translate(92 226)">
+    <circle cx="42" cy="28" r="24" fill="#dbeafe" stroke="#2563eb" stroke-width="3"/>
+    <circle cx="42" cy="22" r="9" fill="#2563eb"/>
+    <path d="M24 56 C30 41,54 41,60 56" fill="#2563eb"/>
+    <text class="small" x="95" y="35">Benign User 1</text>
+  </g>
+  <g transform="translate(92 333)">
+    <circle cx="42" cy="28" r="24" fill="#dbeafe" stroke="#2563eb" stroke-width="3"/>
+    <circle cx="42" cy="22" r="9" fill="#2563eb"/>
+    <path d="M24 56 C30 41,54 41,60 56" fill="#2563eb"/>
+    <text class="small" x="95" y="35">Benign User 2</text>
+  </g>
+  <g transform="translate(92 440)">
+    <circle cx="42" cy="28" r="24" fill="#dbeafe" stroke="#2563eb" stroke-width="3"/>
+    <circle cx="42" cy="22" r="9" fill="#2563eb"/>
+    <path d="M24 56 C30 41,54 41,60 56" fill="#2563eb"/>
+    <text class="small" x="95" y="35">Benign User 3</text>
+  </g>
+
+  <!-- Left side: adversary -->
+  <rect class="panel" x="45" y="625" width="365" height="365" rx="8" filter="url(#soft-shadow)"/>
+  <text class="label redText" x="228" y="664" text-anchor="middle">Adversary (Attack User)</text>
+  <g transform="translate(92 694)">
+    <circle cx="42" cy="28" r="25" fill="#fee2e2" stroke="#dc2626" stroke-width="3"/>
+    <circle cx="42" cy="22" r="9" fill="#dc2626"/>
+    <path d="M24 57 C30 41,54 41,60 57" fill="#dc2626"/>
+    <path d="M26 9 L17 0 M58 9 L67 0" stroke="#dc2626" stroke-width="4" stroke-linecap="round"/>
+    <text class="small" x="95" y="35">Attack User</text>
+  </g>
+  <rect class="badgeGray" x="82" y="806" width="286" height="56" rx="8"/>
+  <text class="small" x="225" y="829" text-anchor="middle">Clean samples (Bab)</text>
+  <text class="tiny" x="225" y="849" text-anchor="middle">Submitted before poisoning</text>
+  <rect class="badgeRed" x="82" y="884" width="286" height="72" rx="8"/>
+  <text class="small redText" x="225" y="910" text-anchor="middle">Poisoned samples (Ba)</text>
+  <text class="tiny redText" x="225" y="932" text-anchor="middle">Generated via PGD + Feature Consistency</text>
+
+  <rect class="badgeRed" x="86" y="1015" width="275" height="44" rx="22"/>
+  <text class="small redText" x="224" y="1042" text-anchor="middle">Online Grey-box Attack</text>
+
+  <!-- Merge node for stream -->
+  <circle cx="485" cy="506" r="32" fill="#ffffff" stroke="#111827" stroke-width="3"/>
+  <circle cx="485" cy="506" r="9" fill="#111827"/>
+  <rect x="383" y="413" width="205" height="56" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+  <text class="small" x="485" y="437" text-anchor="middle">Mixed Testing Stream</text>
+  <text class="tiny" x="485" y="457" text-anchor="middle">all users merged online</text>
+
+  <!-- Clean arrows from benign users -->
+  <path class="arrowBlue" d="M255 254 C330 254,380 328,454 486"/>
+  <text class="small blueText" x="345" y="287" text-anchor="middle">Clean samples (Bb)</text>
+  <path class="arrowBlue" d="M255 361 C330 370,388 420,454 501"/>
+  <text class="small blueText" x="348" y="393" text-anchor="middle">Clean samples (Bb)</text>
+  <path class="arrowBlue" d="M255 468 C330 468,388 502,454 520"/>
+  <text class="small blueText" x="348" y="501" text-anchor="middle">Clean samples (Bb)</text>
+
+  <!-- Adversary arrows to mixed stream -->
+  <path class="arrowGray" d="M368 834 C420 792,440 670,468 538"/>
+  <text class="small" x="426" y="722" text-anchor="middle">Clean samples (Bab)</text>
+  <path class="arrowRed" d="M368 920 C438 890,459 710,478 540"/>
+  <text class="small redText" x="466" y="817" text-anchor="middle">Poisoned samples (Ba)</text>
+
+  <!-- No direct access annotation -->
+  <path class="arrowGray dashGray" d="M248 693 C286 608,279 557,245 514"/>
+  <line x1="272" y1="603" x2="317" y2="648" stroke="#dc2626" stroke-width="6" stroke-linecap="round"/>
+  <line x1="317" y1="603" x2="272" y2="648" stroke="#dc2626" stroke-width="6" stroke-linecap="round"/>
+  <rect class="badgeGray" x="270" y="584" width="270" height="52" rx="8"/>
+  <text class="tiny" x="405" y="615" text-anchor="middle">No direct access to Benign Users' data</text>
+
+  <!-- Center model panel -->
+  <rect class="modelPanel" x="570" y="165" width="690" height="835" rx="10" filter="url(#soft-shadow)"/>
+  <rect class="modelTop" x="570" y="165" width="690" height="78" rx="10"/>
+  <path d="M570 233 H1260 V243 H570 Z" fill="#0f172a"/>
+  <text class="label whiteText" x="915" y="198" text-anchor="middle">TTA Cloud Model</text>
+  <text class="small whiteText" x="915" y="224" text-anchor="middle">(Online, continuously updating)</text>
+
+  <rect class="layer" x="650" y="285" width="530" height="86" rx="8"/>
+  <text class="label" x="915" y="338" text-anchor="middle">Initial Source Model</text>
+
+  <rect class="layerRed" x="650" y="420" width="530" height="105" rx="8"/>
+  <text class="label redText" x="915" y="459" text-anchor="middle">TTA Update</text>
+  <text class="small redText" x="915" y="486" text-anchor="middle">(BN Statistics + Partial Weights Update)</text>
+
+  <rect class="layerNeutral" x="650" y="575" width="530" height="86" rx="8"/>
+  <text class="label" x="915" y="628" text-anchor="middle">Mixed Minibatch (Bb + Ba)</text>
+
+  <path class="arrowGray" d="M915 575 L915 539"/>
+  <path class="arrowGray" d="M915 420 L915 385"/>
+  <path class="arrowRed dashRed" d="M704 655 C770 573,820 523,883 503"/>
+  <text class="small redText" x="790" y="560" text-anchor="middle">Poisoned Effect Propagates through TTA Updates</text>
+
+  <rect class="surrogate" x="650" y="775" width="530" height="128" rx="8"/>
+  <text class="label" x="915" y="824" text-anchor="middle">Surrogate Model</text>
+  <text class="small muted" x="915" y="852" text-anchor="middle">(Grey-box approximation)</text>
+  <text class="tiny muted" x="915" y="877" text-anchor="middle">initialized from source model; updated by feedback</text>
+
+  <path class="arrowBlack" d="M678 661 C610 706,606 812,650 842"/>
+  <text class="tiny" x="642" y="738" text-anchor="middle">Distillation via</text>
+  <text class="tiny" x="642" y="756" text-anchor="middle">KL-Divergence</text>
+
+  <path class="arrowRed dashRed" d="M340 956 C468 1035,690 1015,788 903"/>
+  <rect x="390" y="960" width="390" height="36" rx="8" fill="#f8fafc" stroke="#fecaca" stroke-width="1.5"/>
+  <text class="tiny redText" x="585" y="983" text-anchor="middle">Adversary uses Surrogate for crafting poisoned data</text>
+
+  <path class="arrowBlack" d="M650 865 C520 860,430 812,270 745"/>
+  <rect x="302" y="764" width="346" height="34" rx="8" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text class="tiny" x="475" y="786" text-anchor="middle">Prediction Feedback → Update Surrogate</text>
+
+  <!-- Mixed stream enters model -->
+  <path class="arrowBlack" d="M517 506 C558 506,597 598,647 618"/>
+  <text class="small" x="584" y="544" text-anchor="middle">Mixed Testing Stream</text>
+
+  <!-- Right outputs -->
+  <rect class="panel" x="1330" y="165" width="420" height="835" rx="10" filter="url(#soft-shadow)"/>
+  <text class="label" x="1540" y="210" text-anchor="middle">Model Outputs</text>
+
+  <rect class="badgeBlue" x="1380" y="275" width="320" height="90" rx="8"/>
+  <text class="small blueText" x="1540" y="327" text-anchor="middle">Clean predictions (before attack)</text>
+
+  <rect class="badgeRed" x="1380" y="515" width="320" height="95" rx="8"/>
+  <text class="small redText" x="1540" y="568" text-anchor="middle">Degraded predictions (after poisoning)</text>
+
+  <g transform="translate(1424 756)">
+    <circle cx="42" cy="28" r="24" fill="#dbeafe" stroke="#2563eb" stroke-width="3"/>
+    <circle cx="42" cy="22" r="9" fill="#2563eb"/>
+    <path d="M24 56 C30 41,54 41,60 56" fill="#2563eb"/>
+    <circle cx="144" cy="28" r="24" fill="#dbeafe" stroke="#2563eb" stroke-width="3"/>
+    <circle cx="144" cy="22" r="9" fill="#2563eb"/>
+    <path d="M126 56 C132 41,156 41,162 56" fill="#2563eb"/>
+    <circle cx="246" cy="28" r="24" fill="#dbeafe" stroke="#2563eb" stroke-width="3"/>
+    <circle cx="246" cy="22" r="9" fill="#2563eb"/>
+    <path d="M228 56 C234 41,258 41,264 56" fill="#2563eb"/>
+    <text class="label blueText" x="144" y="102" text-anchor="middle">Benign Users</text>
+  </g>
+
+  <path class="arrowBlue" d="M1260 326 C1304 326,1332 320,1376 320"/>
+  <path class="arrowBlue" d="M1540 365 C1540 418,1358 418,1358 690 C1358 740,1394 770,1440 780"/>
+  <text class="tiny blueText" x="1406" y="455" text-anchor="middle">Clean predictions (before attack)</text>
+
+  <path class="arrowRed" d="M1260 480 C1304 480,1332 560,1376 560"/>
+  <path class="arrowRed" d="M1540 610 L1540 742"/>
+  <text class="tiny redText" x="1645" y="675" text-anchor="middle">Degraded predictions (after poisoning)</text>
+
+  <rect class="badgeRed" x="1368" y="900" width="344" height="60" rx="8"/>
+  <text class="small redText" x="1540" y="936" text-anchor="middle">↓ Increased Error on Benign Samples</text>
+
+  <!-- Footer legend -->
+  <rect x="616" y="1030" width="568" height="52" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+  <line x1="650" y1="1056" x2="720" y2="1056" class="arrowBlue"/>
+  <text class="tiny" x="730" y="1061">Benign clean path</text>
+  <line x1="870" y1="1056" x2="940" y2="1056" class="arrowRed"/>
+  <text class="tiny" x="950" y="1061">Attack / poisoned path</text>
+  <line x1="1110" y1="1056" x2="1160" y2="1056" class="arrowBlack"/>
+  <text class="tiny" x="1170" y="1061">Model feedback</text>
+</svg>
