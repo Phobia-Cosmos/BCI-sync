@@ -124,6 +124,80 @@
 \end{equation}
 它问的是：当前模型 \(w\) 和最优全局模型相比，多损失了多少。
 
+\subsection{第一个风险公式逐符号解释}
+
+公式 \eqref{eq:global-risk} 是论文最早出现、也最容易让人迷路的公式。把它拆开看：
+\[
+  \calR_T(w)
+  =
+  \underbrace{\sum_{t=1}^T \E_{z\sim\calD_t}[\ell(w,z)]}_{\text{当前模型 }w\text{ 在所有任务上的总期望损失}}
+  -
+  \underbrace{\min_{u}\sum_{t=1}^T\E_{z\sim\calD_t}[\ell(u,z)]}_{\text{所有模型里能达到的最小总期望损失}} .
+\]
+这里每个符号的含义是：
+\begin{itemize}
+  \item \(T\)：总任务数。
+  \item \(t\)：任务下标，\(t=1,\dots,T\)。
+  \item \(\calD_t\)：第 \(t\) 个任务背后的真实数据分布。它不是数据集本身，而是产生数据的概率规律。
+  \item \(z\)：一个样本的简写。全文默认 \(z=(x,y)\)，其中 \(x\) 是输入特征，\(y\) 是标签或响应。
+  \item \(z\sim\calD_t\)：从第 \(t\) 个任务的数据分布中随机抽一个样本。
+  \item \(\ell(w,z)\)：模型参数为 \(w\) 时，在样本 \(z=(x,y)\) 上的损失。例如平方损失是
+  \[
+    \ell(w,(x,y))=\frac12\norm{x^\top w-y}_2^2 .
+  \]
+  \item \(\E_{z\sim\calD_t}[\ell(w,z)]\)：模型 \(w\) 在第 \(t\) 个任务上的平均损失。注意这是对真实分布求平均，不只是对训练集求平均。
+  \item \(\sum_{t=1}^T\)：把所有任务的损失加起来。
+  \item \(\min_u\)：在所有可能参数 \(u\) 里找总损失最小的那个值。这里用 \(u\) 是为了避免和真正选出的最优模型混淆。
+\end{itemize}
+
+所谓\textbf{最优全局模型}就是
+\[
+  w_{\mathrm{glob}}^\star
+  \in
+  \argmin_u
+  \sum_{t=1}^T\E_{z\sim\calD_t}[\ell(u,z)] .
+\]
+它是“如果你事先知道所有任务的真实分布，并且可以一次性训练，那么最好的参数”。CL 算法实际只能顺序看到任务，所以 \(w_T\) 通常达不到 \(w_{\mathrm{glob}}^\star\)。超额风险 \(\calR_T(w_T)\) 就是在衡量差距。
+
+如果最优解不唯一，理论里常见做法是任选一个最优解，或者在所有最优解里选范数最小的那个。论文后面的线性回归设置通常直接假设存在共享真实参数 \(w^\star\)，这时 \(w^\star\) 就扮演全局目标模型。
+
+\subsection{经验损失、\(Z_t\)、\(\calL(w_t,Z_\tau)\)}
+
+真实期望 \(\E_{z\sim\calD_t}\) 通常算不出来，因为我们不知道 \(\calD_t\)。训练时能用的是数据集
+\[
+  D_t=\{z_t^1,\dots,z_t^{n_t}\},
+  \qquad
+  z_t^i=(x_t^i,y_t^i).
+\]
+论文有时用 \(Z_t\) 表示“把任务 \(t\) 的全部样本拼起来形成的数据矩阵/数据集合”。你可以先把 \(Z_t\) 理解成 \(D_t\) 的矩阵版。
+
+任务 \(t\) 的\textbf{经验损失}定义为
+\[
+  \calL(w,Z_t)
+  =
+  \frac1{n_t}\sum_{i=1}^{n_t}\ell(w,z_t^i).
+\]
+所以
+\[
+  \calL(w_t,Z_\tau)
+  =
+  \frac1{n_\tau}\sum_{i=1}^{n_\tau}\ell(w_t,z_\tau^i)
+\]
+的意思是：把“第 \(t\) 步得到的模型 \(w_t\)”拿去评估“第 \(\tau\) 个任务的数据 \(Z_\tau\)”上的平均损失。
+
+论文中出现的经验损失和
+\[
+  \sum_{\tau=1}^t\calL(w_t,Z_\tau)
+\]
+就是
+\[
+  \calL(w_t,Z_1)+\calL(w_t,Z_2)+\cdots+\calL(w_t,Z_t),
+\]
+意思是：当前模型 \(w_t\) 在已经见过的所有任务训练集上的总经验损失。它是下面这个真实全局风险的可计算替代物：
+\[
+  \sum_{\tau=1}^t\E_{z\sim\calD_\tau}[\ell(w_t,z)].
+\]
+
 \subsection{正则化式 CL 更新}
 
 论文研究的核心算法族是
@@ -142,11 +216,53 @@
 第一项要求模型适配当前任务；第二项惩罚离开上一轮模型 \(w_{t-1}\) 太远。
 矩阵 \(H_t\succeq 0\) 决定哪些参数方向更该被保护。
 
+为什么“适配当前任务”对应第一项？如果完全不考虑旧任务，第 \(t\) 步最自然的训练目标就是最小化当前任务训练集上的平均损失：
+\[
+  \min_{w'}\frac1{n_t}\sum_{z\in D_t}\ell(w',z).
+\]
+这就是普通监督学习的经验风险最小化。CL 的问题是不能只管当前任务，否则会忘掉过去。因此论文在这个目标后面加上
+\[
+  \frac12\norm{w'-w_{t-1}}_{H_t}^2,
+\]
+要求新参数 \(w'\) 不要离上一轮参数 \(w_{t-1}\) 太远。
+
+为什么要引入 \(H_t\)？如果只用一个标量 \(\lambda\norm{w'-w_{t-1}}_2^2\)，所有参数方向被同等保护。但真实模型里有些方向对旧任务很重要，有些方向不重要。矩阵 \(H_t\) 可以给不同方向不同惩罚强度。若 \(H_t\) 在某个方向上特征值大，模型就很难沿那个方向移动；若特征值小，模型可以更自由地更新。
+
 直觉上：
 \begin{itemize}
   \item \(H_t=0\)：只管新任务，容易忘旧任务。
   \item \(H_t\) 很大：几乎冻结模型，旧知识保住了，但学不动新任务。
   \item \(H_t\) 是矩阵而不是标量：不同特征方向可以有不同保护强度。
+\end{itemize}
+
+\subsection{范数符号：两个竖线和下标是什么意思}
+
+论文里大量出现 \(\norm{\cdot}\)、\(\norm{\cdot}_2\)、\(\fnorm{\cdot}\)、\(\norm{\cdot}_{H}\)。它们都表示“大小”，但对象不同。
+
+\begin{itemize}
+  \item 向量二范数：
+  \[
+    \norm{v}_2=\sqrt{v_1^2+\cdots+v_d^2}.
+  \]
+  下标 \(2\) 表示平方和再开方。没有下标时，很多论文默认也是二范数。
+
+  \item 矩阵 Frobenius 范数：
+  \[
+    \norm{A}_F=\sqrt{\sum_{i,j}A_{ij}^2}.
+  \]
+  它就是把矩阵所有元素平方求和再开方。
+
+  \item 矩阵谱范数：
+  \[
+    \norm{A}_2=\max_{\norm{x}_2=1}\norm{Ax}_2.
+  \]
+  它表示矩阵最多能把一个单位向量放大多少倍，也等于最大奇异值。
+
+  \item 加权范数：
+  \[
+    \norm{u}_{H}^2=u^\top Hu.
+  \]
+  若 \(H=I\)，它就是普通二范数平方；若 \(H\neq I\)，不同方向被赋予不同权重。
 \end{itemize}
 
 \subsection{数据投毒的三个维度}
@@ -164,6 +280,18 @@
 \[
   \E[\tilde\eta_t\mid\calI_t]=0 .
 \]
+为什么扰动既写在 \(x\) 又写在 \(y\)？因为训练数据样本是 \((x,y)\)。现实攻击可以改输入，例如图像里加触发器、传感器特征被污染；也可以改标签，例如把类别标错或在线性回归中改变响应值。论文先给出最一般的投毒形式
+\[
+  (x_t^i,y_t^i)\mapsto(x_t^i+\eta_{x,t}^i,\;y_t^i+\eta_{y,t}^i),
+\]
+后面为了可证明性，在线性回归理论分析中主要研究 label poisoning，也就是只改 \(y\)，不改 \(x\)。
+
+零均值随机扰动
+\[
+  \E[\tilde\eta_t\mid\calI_t]=0
+\]
+的意思是：在攻击者已经知道历史、当前模型、当前数据等信息 \(\calI_t\) 之后，\(\tilde\eta_t\) 的条件平均仍然是 0。它不持续把数据往某个固定方向推偏，但可以增加方差。举例：\(\tilde\eta_t\) 以一半概率取 \(+a\)，一半概率取 \(-a\)，平均就是 0。
+
 三个攻击维度是：
 
 \begin{center}
@@ -177,6 +305,72 @@
 \bottomrule
 \end{tabular}
 \end{center}
+
+\subsection{在线 minimax 问题是什么}
+
+minimax 的字面意思是“我先选策略，使得对手在最坏情况下造成的损失最小”。形式上常写成
+\[
+  \min_{\text{防御策略}}\max_{\text{攻击策略}}\;\text{损失}.
+\]
+在这篇论文里，每个时刻 \(t\) 都有一次对抗：
+\[
+  \min_{H_t}\max_{\eta_t}\calR_t(w_t),
+\]
+防御者选正则化矩阵 \(H_t\)，攻击者选投毒扰动 \(\eta_t\)，双方围绕最终风险对抗。
+
+为什么叫\textbf{在线}？因为任务按时间到达。第 \(t\) 轮只能用当前和历史信息，不能提前知道未来任务。在线 minimax 通常有几类解决方法：
+\begin{itemize}
+  \item 直接求 saddle point，即找一组策略让双方都无法单方面改进。
+  \item 把内层最大化先解掉，变成一个单独的最小化问题。
+  \item 用凸优化和 KKT 条件求闭式解。
+  \item 在矩阵问题太复杂时，通过对角化把矩阵问题拆成多个一维标量问题。
+\end{itemize}
+
+这篇论文为什么需要对角化？因为 \(H_t\)、\(X_t^\top X_t\)、协方差矩阵都是高维矩阵，直接求解 minimax 很难。如果假设这些 Hessian 可以同时对角化，那么每个特征方向 \(u_j\) 互不耦合，整个问题就变成“给每个方向选一个标量 \(\lambda_j^t\)”的问题。这样才能用 KKT 条件推出 Proposition 5.2 的闭式水位解。
+
+\subsection{Taylor 展开、一阶最优性和曲率}
+
+一维 Taylor 展开是
+\[
+  f(a+h)
+  =
+  f(a)+f'(a)h+\frac12f''(a)h^2+O(h^3).
+\]
+多维情形中，若 \(w\) 是向量，在点 \(w_0\) 附近展开：
+\[
+  f(w)
+  =
+  f(w_0)
+  +\nabla f(w_0)^\top(w-w_0)
+  +\frac12(w-w_0)^\top\nabla^2f(w_0)(w-w_0)
+  +O(\norm{w-w_0}^3).
+\]
+这里：
+\begin{itemize}
+  \item \(\nabla f(w_0)\) 是梯度，一阶导数向量。
+  \item \(\nabla^2 f(w_0)\) 是 Hessian，二阶导数组成的矩阵。
+  \item 曲率通常就指二阶导数或 Hessian。曲率大表示函数在这个方向变化很快，参数稍微动一点损失就变很多。
+\end{itemize}
+
+一阶最优性条件是：如果可微函数 \(f(w)\) 在内部点 \(w^\star\) 取得局部最小值，那么
+\[
+  \nabla f(w^\star)=0.
+\]
+直观上，最小点附近不能再有“下降方向”，所以所有一阶方向导数都为 0。论文里每次写
+\[
+  \nabla_w\calL(w_t,Z_t+\eta_t)+H_t(w_t-w_{t-1})=0
+\]
+就是对正则化目标
+\[
+  \calL(w,Z_t+\eta_t)+\frac12\norm{w-w_{t-1}}_{H_t}^2
+\]
+求梯度并令其为 0。第二项的梯度是
+\[
+  \nabla_w\frac12(w-w_{t-1})^\top H_t(w-w_{t-1})
+  =
+  H_t(w-w_{t-1}),
+\]
+这里使用了 \(H_t\) 对称这一事实。
 
 \subsection{为什么会出现 Hessian、伪逆和混合二阶导}
 
@@ -206,6 +400,125 @@
   \nabla_{wZ}^2\calL_t .
 \]
 
+这里的“敏感矩阵”指的是：输入一个数据扰动 \(\eta_t\)，它输出由此造成的参数偏移或风险偏移。若这个矩阵在某个方向上放大倍数很大，攻击者就会优先沿这个方向投毒。
+
+为什么是“数据曲率 + 正则化曲率” \(S_t=Q_t+H_t\)？因为总训练目标是
+\[
+  \calL(w,Z_t)+\frac12\norm{w-w_{t-1}}_{H_t}^2 .
+\]
+第一项对 \(w\) 的 Hessian 是 \(Q_t\)，第二项对 \(w\) 的 Hessian 是 \(H_t\)。两者相加就是总目标对参数的局部二阶变化：
+\[
+  \nabla_{ww}^2
+  \left[
+  \calL(w,Z_t)+\frac12\norm{w-w_{t-1}}_{H_t}^2
+  \right]
+  =
+  Q_t+H_t.
+\]
+
+为什么 \(G_t=\nabla_{wZ}^2\calL\) 是“先对 \(w\) 再对 \(Z\)”？因为最优性条件首先是关于参数梯度的：
+\[
+  \nabla_w\calL(w,Z)=0.
+\]
+当数据从 \(Z_t\) 变成 \(Z_t+\eta_t\) 时，真正受影响的是这个参数梯度。于是我们看“参数梯度 \(\nabla_w\calL\) 对数据 \(Z\) 的导数”，这就是混合导数
+\[
+  \nabla_Z(\nabla_w\calL)=\nabla_{wZ}^2\calL.
+\]
+在足够光滑时，先对 \(w\) 再对 \(Z\) 或先对 \(Z\) 再对 \(w\) 本质上是同一个混合二阶信息；论文的写法强调它是“数据扰动如何改变参数梯度”。
+
+\subsection{Moore--Penrose 伪逆是什么}
+
+普通逆矩阵 \(A^{-1}\) 只有在 \(A\) 是方阵且满秩时才存在。但机器学习里常有过参数化模型，Hessian 可能奇异或不满秩。这时方程
+\[
+  Ax=b
+\]
+可能没有唯一解，甚至没有精确解。Moore--Penrose 伪逆 \(A^+\) 给出一个统一处理方式：
+\begin{itemize}
+  \item 如果 \(A\) 可逆，那么 \(A^+=A^{-1}\)。
+  \item 如果 \(Ax=b\) 有很多解，\(A^+b\) 是范数最小的解。
+  \item 如果没有精确解，\(A^+b\) 给出最小二乘意义下的解。
+\end{itemize}
+
+论文里出现 \(S_t^+\) 是因为线性化后要解
+\[
+  S_t(w_t-w_t^\star)
+  \approx
+  \text{某个由历史项和投毒项组成的向量}.
+\]
+若 \(S_t\) 不可逆，就不能写 \(S_t^{-1}\)，只能写更一般的 \(S_t^+\)。
+
+为什么说“投毒先影响梯度，再通过伪逆变成参数偏移”？因为训练后的参数由一阶最优性条件决定。数据一变，梯度方程的右边先变；为了重新满足“梯度为 0”，参数必须移动。局部线性化后这个关系就是
+\[
+  S_t\cdot(\text{参数移动})
+  +
+  G_t\cdot(\text{数据扰动})
+  \approx 0,
+\]
+所以
+\[
+  \text{参数移动}
+  \approx
+  -S_t^+G_t\cdot(\text{数据扰动}).
+\]
+
+\subsection{Kronecker 积、\(I_{p_2}\) 和最大奇异方向}
+
+\(I_{p_2}\) 是 \(p_2\times p_2\) 的单位矩阵。例如 \(p_2=3\) 时，
+\[
+  I_3=
+  \begin{bmatrix}
+  1&0&0\\
+  0&1&0\\
+  0&0&1
+  \end{bmatrix}.
+\]
+
+Kronecker 积 \(\otimes\) 是一种把两个矩阵扩展成大矩阵的运算。若
+\[
+  A=
+  \begin{bmatrix}
+  a&b\\
+  c&d
+  \end{bmatrix},
+  \qquad
+  B=
+  \begin{bmatrix}
+  1&2\\
+  3&4
+  \end{bmatrix},
+\]
+则
+\[
+  A\otimes B=
+  \begin{bmatrix}
+  aB&bB\\
+  cB&dB
+  \end{bmatrix}.
+\]
+在线性回归里，如果输出 \(y\) 是 \(p_2\) 维向量，参数 \(w\) 是矩阵。为了使用普通向量公式，论文把 \(w\) 拉直成 \(\vect(w)\)，并用
+\[
+  \mathbf X_t=I_{p_2}\otimes X_t
+\]
+构造一个大设计矩阵，使得
+\[
+  \vect(Y_t)=\mathbf X_t\vect(w^\star)+\vect(\varepsilon_t).
+\]
+
+任意矩阵 \(A\) 都可以做奇异值分解
+\[
+  A=U\Sigma V^\top,
+\]
+其中 \(\Sigma\) 对角线上的非负数叫奇异值：
+\[
+  \sigma_1\ge\sigma_2\ge\cdots\ge0.
+\]
+最大奇异值 \(\sigma_1\) 表示
+\[
+  \max_{\norm{x}_2=1}\norm{Ax}_2.
+\]
+达到这个最大值的输入方向 \(v_1\) 就是最大右奇异方向。攻击者若有预算
+\(\E\norm{\eta}^2\le M\)，而目标近似为 \(\E\norm{A\eta}^2\)，那么把扰动放在 \(v_1\) 方向最划算，因为它被 \(A\) 放大最多。
+
 \subsection{线性回归设置}
 
 为了得到闭式证明，论文后半部分使用多输出线性回归：
@@ -230,6 +543,470 @@
 \[
   \vect(Y_t)=\mathbf X_t\vect(w^\star)+\vect(\varepsilon_t).
 \]
+
+\section{进一步答疑：把概念和例子补齐}
+
+\subsection{顺序到来的任务里，怎么谈全局最优}
+
+在 CL 过程中，算法通常\textbf{不能真正求出最终全局最优}，因为它在第 \(t\) 步只看到了 \(1,\dots,t\) 的任务，还不知道未来任务 \(t+1,\dots,T\)。论文里的全局最优更多是一个\textbf{评价基准}：
+\[
+  w_{\mathrm{glob},T}^\star
+  \in
+  \argmin_w
+  \sum_{s=1}^T\E_{z\sim\calD_s}[\ell(w,z)].
+\]
+它表示“如果所有任务都已经给出，并且可以联合训练，最好的模型是什么”。
+
+如果只看已经到来的任务，也可以定义一个随时间变化的在线最优：
+\[
+  w_{\mathrm{glob},t}^\star
+  \in
+  \argmin_w
+  \sum_{s=1}^t\E_{z\sim\calD_s}[\ell(w,z)].
+\]
+这个 \(w_{\mathrm{glob},t}^\star\) 一般会随 \(t\) 改变，因为新任务加入后，优化目标变了。
+
+所以要区分三类“最优点”：
+\begin{itemize}
+  \item \(w_{\mathrm{glob},T}^\star\)：最终所有任务的全局最优，主要用于评价。
+  \item \(w_{\mathrm{glob},t}^\star\)：截至第 \(t\) 个任务的全局最优，会随任务到来变化。
+  \item \(w_t^\star\)：只针对第 \(t\) 个任务本身的最优点，
+  \[
+    w_t^\star\in\argmin_w\calL(w,Z_t).
+  \]
+  它不是累计任务的最优，而是单任务最优。
+\end{itemize}
+
+在论文的线性回归理论部分，作者额外假设存在一个共享真实参数 \(w^\star\)，所有任务都由
+\[
+  Y_t=X_tw^\star+\varepsilon_t
+\]
+生成。这个 \(w^\star\) 默认不随 \(t\) 改变。一般 CL 情形里不同任务可以有不同 \(w_t^\star\)，但线性理论为了得到闭式收敛界，使用了共享 \(w^\star\) 的简化模型。
+
+\subsection{为什么最优解可能不唯一，最小范数是什么意思}
+
+最优解不唯一的意思是：可能有很多个 \(w\) 都让损失达到同样的最小值。
+最简单的例子是欠定线性回归。假设只有一个方程
+\[
+  w_1+w_2=1.
+\]
+那么
+\[
+  (w_1,w_2)=(1,0),(0,1),(1/2,1/2)
+\]
+都能完全拟合数据。它们都是最优解。
+
+范数就是“大小”。例如向量 \(w=(w_1,w_2)\) 的二范数是
+\[
+  \norm{w}_2=\sqrt{w_1^2+w_2^2}.
+\]
+如果最优解有很多个，最小范数解就是在所有最优解里选长度最短的那个：
+\[
+  \argmin_w \norm{w}_2
+  \quad
+  \text{s.t. } w\text{ 已经达到最小损失}.
+\]
+这样做可以让目标模型唯一化，也常常对应更平滑或更简单的模型。
+
+\subsection{论文到底用不用平方损失}
+
+论文前面的系统模型写得比较一般，用任意损失 \(\ell(w,z)\) 表达 CL 和攻击框架。后面的严格证明，尤其是 T2T 和鲁棒特征防御的闭式推导，使用的是平方损失：
+\[
+  \ell(w,(x,y))=\frac12\norm{x^\top w-y}_2^2.
+\]
+原因是平方损失的梯度、Hessian、线性回归递推都能写成显式矩阵公式。
+
+\subsection{\(H_t\) 的维度怎么确定}
+
+如果参数 \(w\in\R^p\) 是一个 \(p\) 维向量，那么
+\[
+  H_t\in\R^{p\times p}.
+\]
+这是由正则化项的形状决定的：
+\[
+  \norm{w-w_{t-1}}_{H_t}^2
+  =
+  (w-w_{t-1})^\top H_t(w-w_{t-1}).
+\]
+其中 \(w-w_{t-1}\) 是 \(p\times1\)，左边转置是 \(1\times p\)。为了最后得到一个标量，\(H_t\) 必须是 \(p\times p\)。
+
+在线性回归多输出情形，原始参数 \(w\in\R^{p_1\times p_2}\) 是矩阵。向量化后
+\[
+  \vect(w)\in\R^{p_1p_2},
+\]
+所以这时
+\[
+  H_t\in\R^{p_1p_2\times p_1p_2}.
+\]
+
+\subsection{全局超额风险和正则化更新公式的关系}
+
+全局超额风险是\textbf{评价指标}：
+\[
+  \calR_T(w_T)
+  =
+  \text{模型 }w_T\text{ 比最终全局最优差多少}.
+\]
+正则化更新公式是\textbf{训练算法}：
+\[
+  w_t\in\argmin_w
+  \left\{
+  \calL(w,Z_t)+\frac12\norm{w-w_{t-1}}_{H_t}^2
+  \right\}.
+\]
+二者不是同一个东西。理想上我们想直接最小化全局风险，但 CL 中旧任务数据和未来任务不可用，所以算法只能用“当前任务经验损失 + 不要偏离旧模型太远”的方式间接控制最终全局风险。
+
+\subsection{label poisoning 是训练阶段攻击吗}
+
+是的，label poisoning 是训练阶段攻击。攻击者不是在测试时改输入，而是在模型训练时提供被污染的数据或标签。
+
+现实例子包括：
+\begin{itemize}
+  \item 众包标注平台中，恶意标注者提交错误标签。
+  \item 联邦学习或在线学习中，某些客户端上传带错误标签的数据。
+  \item 用户反馈系统中，模型把用户提供的反馈当作新训练标签，而攻击者伪造反馈。
+  \item 医疗、BCI、传感器系统中，训练数据标签来自人工或外部系统，攻击者污染标签记录。
+\end{itemize}
+所以“正常使用的模型是否接受用户 label”取决于应用。有些系统只接收人工标注数据，有些系统会把用户反馈、交互结果或弱监督信号纳入后续训练。一旦训练管线信任这些标签，就存在 label poisoning 风险。
+
+\subsection{零均值扰动是否代表分布不变}
+
+不代表。零均值只表示平均方向不变：
+\[
+  \E[\tilde\eta_t\mid\calI_t]=0.
+\]
+它不保证整个分布不变。一个简单例子：
+\[
+  \tilde\eta=
+  \begin{cases}
+  +10,&\text{概率 }1/2,\\
+  -10,&\text{概率 }1/2.
+  \end{cases}
+\]
+它的均值是 0，但方差很大，数据会变得更分散、更噪。对训练来说，方差增大会让梯度更抖、估计更不稳定、收敛更慢，甚至让模型沿脆弱方向产生大误差。
+
+所以论文的 non-shifted attack 不是说数据分布完全不变，而是说“不改变条件均值”。它仍然可以改变方差、尾部、相关结构等。
+
+\subsection{攻击者知道什么}
+
+论文采用强攻击者假设：攻击者知道当前 CL 模型状态和当前数据，可以策略性选择扰动。记号
+\[
+  \calI_t
+\]
+表示攻击者选择扰动时可用的信息，通常包括历史、当前模型状态和当前任务数据。
+
+这不一定表示模型系统真的保存了所有旧数据；它是理论中的强对手建模。用强对手证明防御有效，结论更保守。如果现实攻击者不知道这么多，防御通常只会更容易。
+
+\subsection{这些矩阵都是 Hessian 吗}
+
+不是。论文里有几类矩阵：
+\begin{itemize}
+  \item \(Q_t=\nabla_{ww}^2\calL(w_t^\star,Z_t)\)：这是 Hessian，表示任务损失对参数 \(w\) 的二阶导。
+  \item \(H_t\)：这是正则化矩阵，不是从数据损失直接求 Hessian 得到的，但它是正则化项的 Hessian。
+  \item \(S_t=Q_t+H_t\)：这是总目标的局部 Hessian。
+  \item \(G_t=\nabla_{wZ}^2\calL(w_t^\star,Z_t)\)：这是混合二阶导，表示数据变化如何影响参数梯度，不是单纯对 \(w\) 的 Hessian。
+  \item \(P_t=\sum_{s=1}^tQ_s\)：这是累计 Hessian，用来衡量模型偏移对所有已见任务损失的总影响。
+\end{itemize}
+
+\subsection{KKT 条件是什么}
+
+KKT 条件是带约束优化的一阶最优性条件。它把“目标函数最小”和“约束满足”同时写出来。
+例如问题
+\[
+  \min_x f(x)\quad\text{s.t.}\quad g(x)\le0
+\]
+的拉格朗日函数是
+\[
+  \mathcal J(x,\lambda)=f(x)+\lambda g(x),\qquad \lambda\ge0.
+\]
+KKT 条件包括：
+\begin{itemize}
+  \item stationarity：\(\nabla_x\mathcal J(x,\lambda)=0\)；
+  \item primal feasibility：\(g(x)\le0\)；
+  \item dual feasibility：\(\lambda\ge0\)；
+  \item complementary slackness：\(\lambda g(x)=0\)。
+\end{itemize}
+Proposition 5.2 中的 protected set 就是通过 KKT 条件判断哪些方向的攻击敏感度约束是“活跃”的。
+
+\subsection{为什么向量 Taylor 展开要有转置}
+
+若 \(w\in\R^p\)，则 \(w-w_0\) 是 \(p\times1\) 向量，Hessian \(\nabla^2f(w_0)\) 是 \(p\times p\) 矩阵。二阶项必须是标量，所以写成
+\[
+  (w-w_0)^\top\nabla^2f(w_0)(w-w_0).
+\]
+维度是
+\[
+  (1\times p)(p\times p)(p\times1)=1\times1.
+\]
+这就是为什么前面要有转置。
+
+\subsection{一阶最优性等式不能随便写}
+
+等式
+\[
+  \nabla_w\calL(w_t,Z_t+\eta_t)+H_t(w_t-w_{t-1})=0
+\]
+不是随便写的，也不是因为“各阶导数都为 0”。它只表示：\(w_t\) 是下面这个正则化训练目标的极小点：
+\[
+  J_t(w)
+  =
+  \calL(w,Z_t+\eta_t)
+  +\frac12(w-w_{t-1})^\top H_t(w-w_{t-1}).
+\]
+为什么会突然出现这个目标？因为这就是论文一开始定义的正则化式 CL 更新：
+\[
+  \text{当前任务损失}+\text{不要离上一轮模型太远的惩罚}.
+\]
+没有攻击时当前数据是 \(Z_t\)；有投毒时训练系统实际收到的是 \(Z_t+\eta_t\)，所以当前任务损失从 \(\calL(w,Z_t)\) 变成 \(\calL(w,Z_t+\eta_t)\)。正则化项不变，因为它是算法自己加的稳定项。
+
+对 \(J_t(w)\) 求梯度：
+\[
+  \nabla_wJ_t(w)
+  =
+  \nabla_w\calL(w,Z_t+\eta_t)
+  +
+  H_t(w-w_{t-1}).
+\]
+这个求导分两部分：
+\begin{itemize}
+  \item 第一部分 \(\calL(w,Z_t+\eta_t)\) 对 \(w\) 的导数，就是 \(\nabla_w\calL(w,Z_t+\eta_t)\)。
+  \item 第二部分是二次惩罚。令 \(u=w-w_{t-1}\)，则
+  \[
+    \frac12u^\top H_tu
+  \]
+  对 \(u\) 的导数是 \(H_tu\)；又因为 \(u=w-w_{t-1}\)，对 \(w\) 求导还是 \(H_t(w-w_{t-1})\)。
+\end{itemize}
+在最优点 \(w=w_t\)，一阶最优性条件给出
+\[
+  \nabla_wJ_t(w_t)=0,
+\]
+于是得到论文的等式。这里为 0 的是\textbf{一阶导数/梯度}，不是所有高阶导数。二阶导数通常不为 0，它反而给出曲率信息。
+
+第二项的 Hessian 为什么是 \(H_t\)？因为
+\[
+  \nabla_w\frac12(w-w_{t-1})^\top H_t(w-w_{t-1})
+  =
+  H_t(w-w_{t-1}),
+\]
+再对 \(w\) 求一次导数就是
+\[
+  \nabla_w^2\frac12(w-w_{t-1})^\top H_t(w-w_{t-1})
+  =
+  H_t.
+\]
+
+\subsection{\(G_t\) 的作用用一个线性回归例子看}
+
+平方损失下
+\[
+  \calL(w,X,Y)=\frac1{2n}\norm{Xw-Y}_2^2.
+\]
+对 \(w\) 求梯度：
+\[
+  \nabla_w\calL(w,X,Y)=\frac1nX^\top(Xw-Y).
+\]
+如果 label 被投毒，\(Y\) 变成 \(Y+\eta\)，那么
+\[
+  \nabla_w\calL(w,X,Y+\eta)
+  =
+  \frac1nX^\top(Xw-Y-\eta)
+  =
+  \nabla_w\calL(w,X,Y)-\frac1nX^\top\eta.
+\]
+所以 label 扰动对梯度的影响是
+\[
+  -\frac1nX^\top\eta.
+\]
+这就是 \(G_t\vect(\eta_t)\) 在一般公式里的作用：它把“数据扰动”转换成“梯度扰动”。
+
+\subsection{奇异、不满秩会造成什么影响}
+
+矩阵奇异表示它不可逆。对方阵 \(A\)，奇异等价于
+\[
+  \det(A)=0.
+\]
+\(\det(A)\) 叫行列式，是一个把方阵映射成数字的运算。二维矩阵
+\[
+  A=
+  \begin{bmatrix}
+  a&b\\
+  c&d
+  \end{bmatrix}
+\]
+的行列式是
+\[
+  \det(A)=ad-bc.
+\]
+几何上，\(|\det(A)|\) 表示这个矩阵把面积放大了多少倍。如果 \(\det(A)=0\)，说明某个方向被压扁，面积变成 0，信息丢了，所以矩阵没有逆。
+
+奇异也等价于存在非零向量 \(v\) 使得
+\[
+  Av=0.
+\]
+这说明某些方向被矩阵压成 0，信息丢失。
+
+不满秩表示矩阵的独立行或列不够多。比如
+\[
+  A=
+  \begin{bmatrix}
+  1&2\\
+  2&4
+  \end{bmatrix}
+\]
+第二行是第一行的 2 倍，所以秩只有 1，不满秩，也不可逆。
+
+在优化里，Hessian 奇异意味着某些方向曲率为 0，损失在这些方向很平坦。结果是：
+\begin{itemize}
+  \item 最优解可能不唯一；
+  \item 普通逆矩阵不存在；
+  \item 参数扰动方程不能用 \(S_t^{-1}\) 解，只能用伪逆 \(S_t^+\)。
+\end{itemize}
+
+\subsection{为什么把 \(w\) 拉直成 \(\vect(w)\)}
+
+多输出线性回归中，\(w\) 本来是矩阵：
+\[
+  w\in\R^{p_1\times p_2}.
+\]
+当然可以直接用矩阵微积分推导，但写均值、协方差、Hessian、minimax 时会很繁琐。把矩阵拉直成向量
+\[
+  \vect(w)\in\R^{p_1p_2}
+\]
+后，就可以统一使用普通向量公式：
+\[
+  \Cov(\vect(w_t-w^\star)),\qquad
+  H_t\in\R^{p_1p_2\times p_1p_2}.
+\]
+这只是记号和计算上的方便，不是改变模型本身。
+
+\subsection{为什么要做奇异值分解}
+
+奇异值分解把矩阵 \(A\) 写成
+\[
+  A=U\Sigma V^\top.
+\]
+可以理解成三步：
+\[
+  \text{先旋转输入 }(V^\top),\quad
+  \text{按不同轴缩放 }(\Sigma),\quad
+  \text{再旋转输出 }(U).
+\]
+如果
+\[
+  \Sigma=\diag(5,1),
+\]
+那么第一个奇异方向会被放大 5 倍，第二个方向只放大 1 倍。攻击者要最大化 \(\norm{A\eta}\)，当然会把预算放到第一个方向。
+
+这就是论文说“最大奇异方向”的原因。它不是为了分解矩阵好看，而是为了解
+\[
+  \max_{\E\norm{\eta}^2\le M}\E\norm{A\eta}^2.
+\]
+
+\subsection{噪声协方差公式是什么意思}
+
+论文假设
+\[
+  \E[\varepsilon_t^i(\varepsilon_t^i)^\top\mid x_t^i]=\sigma^2I.
+\]
+这里 \(\varepsilon_t^i\) 是第 \(i\) 个样本的输出噪声向量。如果输出是一维，公式退化成
+\[
+  \E[(\varepsilon_t^i)^2\mid x_t^i]=\sigma^2.
+\]
+如果输出是多维，它表示噪声协方差是 \(\sigma^2I\)，即：
+\begin{itemize}
+  \item 每个输出维度的噪声方差都是 \(\sigma^2\)；
+  \item 不同输出维度之间不相关；
+  \item 噪声强度不依赖具体输入 \(x_t^i\)。
+\end{itemize}
+
+\subsection{为什么写 \(P_t\)}
+
+在 Proposition 2.4 中，
+\[
+  P_t=\sum_{\tau=1}^tQ_\tau,
+  \qquad
+  Q_\tau=\nabla_{ww}^2\calL(w_\tau^\star,Z_\tau).
+\]
+它来自把所有已见任务的经验损失都做二阶 Taylor 展开：
+\[
+  \sum_{\tau=1}^t
+  \frac12(w_t-w_\tau^\star)^\top Q_\tau(w_t-w_\tau^\star).
+\]
+如果只看攻击造成的共同参数偏移 \(\delta\)，这些二次项会累加成
+\[
+  \frac12\delta^\top
+  \left(\sum_{\tau=1}^tQ_\tau\right)
+  \delta
+  =
+  \frac12\norm{\delta}_{P_t}^2.
+\]
+所以 \(P_t\) 是“所有旧任务对参数偏移的累计惩罚权重”。
+
+\subsection{从正则化目标到论文式(4)的思路}
+
+论文式(4)是攻防问题：
+\[
+  \min_{H_t}\max_{\hat\eta_t,\tilde\eta_t}
+  \calR_t(w_t)
+  \quad
+  \text{s.t. }
+  \E[\norm{\hat\eta_t+\tilde\eta_t}_F^2]\le M.
+\]
+它不是从正则化目标“直接求导”得到的，而是把两件事合起来建模：
+\begin{itemize}
+  \item 给定 \(H_t\) 和攻击扰动，模型 \(w_t\) 由正则化训练目标产生；
+  \item 防御者想让最终风险小，攻击者想让最终风险大。
+\end{itemize}
+所以正则化目标决定 \(w_t\) 如何依赖 \(H_t,\eta_t\)；式(4)再把这种依赖放进风险 \(\calR_t(w_t)\)，形成外层的 minimax 游戏。
+
+\subsection{攻击预算为什么用 Frobenius 范数}
+
+一个任务里有 \(n_t\) 个样本，每个样本的标签可能是多维的，所以 label perturbation \(\eta_t\) 通常是矩阵：
+\[
+  \eta_t\in\R^{n_t\times p_2}.
+\]
+Frobenius 范数
+\[
+  \norm{\eta_t}_F^2=\sum_{i,j}(\eta_t^{i,j})^2
+\]
+就是把所有样本、所有输出维度上的扰动能量加起来。它自然表示“这次攻击总共用了多少扰动预算”。
+
+\subsection{攻击预算为什么会放到最大奇异方向}
+
+把 Proposition 2.4 的主导攻击项抽象成
+\[
+  \max_{\eta}\;\E\norm{A\eta}_2^2
+  \quad
+  \text{s.t.}\quad
+  \E\norm{\eta}_2^2\le M,
+\]
+其中
+\[
+  A=P_t^{1/2}S_t^+G_t.
+\]
+若攻击是随机零均值扰动，令协方差
+\[
+  \Sigma=\E[\eta\eta^\top],
+  \qquad
+  \tr(\Sigma)=\E\norm{\eta}_2^2\le M.
+\]
+目标函数变成
+\[
+  \E\norm{A\eta}_2^2
+  =
+  \E[\eta^\top A^\top A\eta]
+  =
+  \tr(A^\top A\Sigma).
+\]
+设 \(A^\top A\) 的最大特征值是 \(\lambda_{\max}\)，对应单位特征向量是 \(v_1\)。因为 \(\Sigma\succeq0\)，在预算 \(\tr(\Sigma)\le M\) 下，最大化
+\[
+  \tr(A^\top A\Sigma)
+\]
+的最优选择是
+\[
+  \Sigma=Mv_1v_1^\top.
+\]
+也就是说，攻击者把全部方差预算放在 \(v_1\) 方向。这个 \(v_1\) 正是 \(A\) 的最大右奇异方向，因为 \(A^\top A\) 的特征向量就是 \(A\) 的右奇异向量。
 
 \section{命题 2.4 / 附录命题 A.1：攻击目标的近似公式}
 
@@ -303,6 +1080,18 @@
   \nabla_w\calL(w_t,Z_t+\eta_t)+H_t(w_t-w_{t-1})=0 .
 \]
 在 \((w_t^\star,Z_t)\) 附近展开：
+\[
+  \nabla_w\calL(w_t,Z_t+\eta_t)
+  \approx
+  \underbrace{\nabla_w\calL(w_t^\star,Z_t)}_{=0}
+  +
+  \underbrace{\nabla_{ww}^2\calL(w_t^\star,Z_t)}_{Q_t}
+  (w_t-w_t^\star)
+  +
+  \underbrace{\nabla_{wZ}^2\calL(w_t^\star,Z_t)}_{G_t}
+  \vect(\eta_t).
+\]
+第一项为 0，是因为 \(w_t^\star\) 是干净任务 \(t\) 的经验损失最小点。把这个展开代回一阶最优性条件，就得到
 \begin{equation}
   Q_t(w_t-w_t^\star)
   +G_t\vect(\eta_t)
@@ -311,7 +1100,38 @@
   \label{eq:linearized-foc}
 \end{equation}
 其中 \(G_t=\nabla_{wZ}^2\calL(w_t^\star,Z_t)\)。
-整理得到，对任意旧任务 \(\tau\)，
+下面把 \eqref{eq:linearized-foc} 整理成论文使用的形式。目标是求 \(w_t-w_\tau^\star\)，其中 \(\tau\le t\) 是任意一个历史任务。令
+\[
+  a_\tau:=w_t-w_\tau^\star.
+\]
+那么
+\[
+  w_t-w_t^\star
+  =
+  a_\tau-(w_t^\star-w_\tau^\star),
+  \qquad
+  w_t-w_{t-1}
+  =
+  a_\tau-(w_{t-1}-w_\tau^\star).
+\]
+代入 \eqref{eq:linearized-foc}：
+\begin{align*}
+  &Q_t\bigl[a_\tau-(w_t^\star-w_\tau^\star)\bigr]
+  +G_t\vect(\eta_t)
+  +H_t\bigl[a_\tau-(w_{t-1}-w_\tau^\star)\bigr]
+  +\text{高阶项}
+  =0.
+\end{align*}
+把含 \(a_\tau\) 的项放左边，其余项放右边：
+\[
+  (Q_t+H_t)a_\tau
+  =
+  Q_t(w_t^\star-w_\tau^\star)
+  +H_t(w_{t-1}-w_\tau^\star)
+  -G_t\vect(\eta_t)
+  +\text{高阶项}.
+\]
+记 \(S_t=Q_t+H_t\)。若 \(S_t\) 可逆，就左乘 \(S_t^{-1}\)；若不可逆，就用伪逆 \(S_t^+\)。于是
 \begin{align}
   w_t-w_\tau^\star
   =&
@@ -324,7 +1144,7 @@
   +O(\norm{w_t-w_t^\star}_2^2+\fnorm{\eta_t}^2),
   \label{eq:update-shift}
 \end{align}
-其中 \(S_t=Q_t+H_t\)。
+这就是局部线性方程的来源。
 
 \paragraph{第四步：代回二次风险。}
 把 \eqref{eq:update-shift} 代入 \eqref{eq:taylor-risk}，所有和 \(\eta_t\) 无关的项对攻击者不重要，可以丢掉。留下的攻击相关部分是
@@ -346,14 +1166,92 @@
   \label{eq:attack-expansion}
 \end{align}
 
+这一行可以按下面的方式一步步看。先定义
+\[
+  b_\tau
+  =
+  S_t^+
+  \left[
+    Q_t(w_t^\star-w_\tau^\star)
+    +H_t(w_{t-1}-w_\tau^\star)
+  \right],
+  \qquad
+  r_t=S_t^+G_t\vect(\eta_t).
+\]
+那么忽略高阶项时
+\[
+  w_t-w_\tau^\star=b_\tau-r_t.
+\]
+二次型记号是
+\[
+  \norm{x}_{Q_\tau}^2=x^\top Q_\tau x.
+\]
+所以 Taylor 二次项变成
+\[
+  \frac12\sum_{\tau=1}^t\norm{b_\tau-r_t}_{Q_\tau}^2.
+\]
+展开一个平方：
+\[
+  \norm{b_\tau-r_t}_{Q_\tau}^2
+  =
+  (b_\tau-r_t)^\top Q_\tau(b_\tau-r_t)
+  =
+  b_\tau^\top Q_\tau b_\tau
+  -2r_t^\top Q_\tau b_\tau
+  +r_t^\top Q_\tau r_t.
+\]
+三类项的含义是：
+\begin{itemize}
+  \item \(b_\tau^\top Q_\tau b_\tau\)：不含 \(\eta_t\)，攻击者无法通过当前扰动改变，分析攻击目标时可以丢掉。
+  \item \(-2r_t^\top Q_\tau b_\tau\)：含一个 \(r_t\)，所以是关于 \(\eta_t\) 的线性项。
+  \item \(r_t^\top Q_\tau r_t\)：含两个 \(r_t\)，所以是关于 \(\eta_t\) 的二次项。
+\end{itemize}
+把二次项对 \(\tau\) 求和：
+\[
+  \frac12\sum_{\tau=1}^t r_t^\top Q_\tau r_t
+  =
+  \frac12 r_t^\top
+  \left(\sum_{\tau=1}^tQ_\tau\right)
+  r_t
+  =
+  \frac12\norm{r_t}_{P_t}^2.
+\]
+再代回 \(r_t=S_t^+G_t\vect(\eta_t)\)，就得到
+\[
+  \frac12\norm{S_t^+G_t\vect(\eta_t)}_{P_t}^2.
+\]
+线性项对 \(\tau\) 求和后就是 \eqref{eq:attack-expansion} 中的第二项。由于 \(S_t\) 是对称矩阵，伪逆 \(S_t^+\) 也可按对称矩阵处理，所以转置记号可以简化成论文里的形式。
+
 \paragraph{第五步：为什么 non-shifted 攻击没有线性项。}
 若
 \[
   \eta_t=\hat\eta_t+\tilde\eta_t,\qquad
   \E[\tilde\eta_t\mid Z_{1:t},w_{t-1}]=0,
 \]
-那么 \eqref{eq:attack-expansion} 中关于 \(\tilde\eta_t\) 的线性项取期望后为 0。
-因此 non-shifted 攻击的主导项只剩二次型，即 \eqref{eq:attack-surrogate}。
+把 \(\eta_t=\tilde\eta_t\) 代入 \eqref{eq:attack-expansion}。其中第一项是二次型：
+\[
+  \frac12\norm{S_t^+G_t\vect(\tilde\eta_t)}_{P_t}^2.
+\]
+第二项是线性项，可以写成
+\[
+  -\vect(\tilde\eta_t)^\top a_t,
+\]
+其中 \(a_t\) 是由 \(G_t,S_t,Q_\tau,w_t^\star,w_\tau^\star,w_{t-1}\) 组成的、在条件信息 \(Z_{1:t},w_{t-1}\) 下已经确定的向量。于是
+\[
+  \E[-\vect(\tilde\eta_t)^\top a_t\mid Z_{1:t},w_{t-1}]
+  =
+  -\E[\vect(\tilde\eta_t)\mid Z_{1:t},w_{t-1}]^\top a_t
+  =
+  0.
+\]
+所以对 non-shifted 攻击，取期望后线性项消失，主导项只剩
+\[
+  \frac12
+  \E\left[
+  \norm{S_t^+G_t\vect(\tilde\eta_t)}_{P_t}^2
+  \right],
+\]
+这正是 \eqref{eq:attack-surrogate}。
 shifted 攻击 \(\hat\eta_t\) 会保留线性项，所以它更危险：它能直接把模型均值推向错误方向。
 
 \section{定理 3.1：为什么有些攻击根本防不住}
@@ -367,6 +1265,16 @@ shifted 攻击 \(\hat\eta_t\) 会保留线性项，所以它更危险：它能�
 \end{itemize}
 证明只需要构造一维线性回归反例。
 
+反例证明的原理是：如果一个结论声称“任何正则化式 CL 方法都能防住”，那么只要找出一个非常简单的问题，使得任意 \(H_t\) 选择都会失败，就能推翻这个声称。一维问题已经足够，因为正则化更新会退化成一个简单的加权平均：
+\[
+  \text{新模型}
+  =
+  \text{当前数据权重}\times\text{当前观测}
+  +
+  \text{旧模型权重}\times\text{旧模型}.
+\]
+攻击者正是利用这个加权平均：如果算法不断吸收新数据，就会吸收攻击；如果算法不吸收新数据，又无法消除初始误差。
+
 \subsection{一维反例}
 
 设
@@ -374,7 +1282,33 @@ shifted 攻击 \(\hat\eta_t\) 会保留线性项，所以它更危险：它能�
   p_1=p_2=n_t=1,\qquad x_t=1,\qquad y_t=w^\star+\varepsilon_t,
 \]
 平方损失 \(\ell(w,z_t)=(w-y_t)^2\)。
-正则化更新化为
+这里 \(w^\star\) 是真实的一维参数。因为 \(x_t=1\)，干净数据满足 \(y_t=w^\star+\varepsilon_t\)，所以如果没有噪声和攻击，最好的模型就是 \(w=w^\star\)。
+
+若任务 \(t\) 被投毒，训练标签变成 \(y_t+\eta_t\)。正则化更新目标是
+\[
+  \min_w
+  \left\{
+  (w-(y_t+\eta_t))^2
+  +\frac12H_t(w-w_{t-1})^2
+  \right\}.
+\]
+对 \(w\) 求导并令其为 0：
+\[
+  2(w-(y_t+\eta_t))+H_t(w-w_{t-1})=0.
+\]
+展开：
+\[
+  (2+H_t)w=2(y_t+\eta_t)+H_tw_{t-1}.
+\]
+因此
+\[
+  w_t
+  =
+  \frac{2}{2+H_t}(y_t+\eta_t)
+  +
+  \frac{H_t}{2+H_t}w_{t-1}.
+\]
+论文说“吸收常数因子”，意思是把常数 \(2\) 合并进正则化参数的记号里。因为这里要证明的是不可能性，常数倍不影响结论，于是等价写成
 \[
   w_t
   =
@@ -386,7 +1320,25 @@ shifted 攻击 \(\hat\eta_t\) 会保留线性项，所以它更危险：它能�
 \[
   c_t=\frac{H_t}{1+H_t}\in[0,1],
 \]
-则
+则 \(1-c_t=1/(1+H_t)\)。把 \(y_t=w^\star+\varepsilon_t\) 代入：
+\[
+  w_t
+  =
+  (1-c_t)(w^\star+\varepsilon_t+\eta_t)+c_tw_{t-1}.
+\]
+两边减去 \(w^\star\)：
+\[
+  w_t-w^\star
+  =
+  c_t(w_{t-1}-w^\star)
+  +(1-c_t)(\varepsilon_t+\eta_t)
+  +(1-c_t)w^\star+c_tw^\star-w^\star.
+\]
+最后三项中关于 \(w^\star\) 的部分抵消，因为
+\[
+  (1-c_t)w^\star+c_tw^\star-w^\star=0.
+\]
+因此
 \begin{equation}
   w_t-w^\star
   =
@@ -411,17 +1363,34 @@ shifted 攻击 \(\hat\eta_t\) 会保留线性项，所以它更危险：它能�
 \[
   m_t-\Delta=c_t(m_{t-1}-\Delta),
 \]
-所以
+这个式子每往前展开一次，就多乘一个 \(c\)。例如：
+\[
+  m_T-\Delta
+  =
+  c_T(m_{T-1}-\Delta)
+  =
+  c_Tc_{T-1}(m_{T-2}-\Delta)
+  =
+  \cdots
+  =
+  \left(\prod_{t=1}^Tc_t\right)(m_0-\Delta).
+\]
+而 \(m_0=\E[w_0-w^\star]=w_0-w^\star\)，所以
 \[
   m_T=\Delta+\left(\prod_{t=1}^Tc_t\right)(w_0-w^\star-\Delta).
 \]
 现在分两种情况：
 \begin{itemize}
   \item 若 \(\prod_{t=1}^Tc_t\not\to0\)，则即使无攻击无噪声，初始偏差也不能被完全遗忘，算法本来就不保证收敛。
-  \item 若 \(\prod_{t=1}^Tc_t\to0\)，则在 shifted 攻击下 \(m_T\to\Delta\)，于是
+  \item 若 \(\prod_{t=1}^Tc_t\to0\)，则上式第二项趋于 0，所以在 shifted 攻击下 \(m_T\to\Delta\)，于是
   \[
     \E[(w_T-w^\star)^2]\ge (\E[w_T-w^\star])^2\to\Delta^2>0 .
   \]
+  这里用的是
+  \[
+    \E[X^2]=\operatorname{Var}(X)+(\E X)^2\ge(\E X)^2.
+  \]
+  令 \(X=w_T-w^\star\)。如果均值已经趋向 \(\Delta\)，那么平方误差的期望至少趋向 \(\Delta^2\)，不可能收敛到 0。
 \end{itemize}
 因此无论正则化策略如何选，总有一种情形无法收敛。
 
@@ -433,6 +1402,12 @@ shifted 攻击 \(\hat\eta_t\) 会保留线性项，所以它更危险：它能�
   \E[\tilde\eta_t^2]=M_T,\qquad
   M_T=\Omega(T).
 \]
+\(\E[\tilde\eta_t^2]=M_T\) 在一维零均值情况下就是“攻击扰动的方差等于 \(M_T\)”。\(M_T=\Omega(T)\) 的意思是：存在常数 \(c>0\) 和足够大的 \(T\)，使得
+\[
+  M_T\ge cT.
+\]
+也就是说，单次攻击预算至少和任务总数 \(T\) 同阶增长，所以这是 unbounded attack。
+
 展开 \eqref{eq:scalar-recursion}：
 \[
   w_T-w^\star
@@ -446,12 +1421,61 @@ shifted 攻击 \(\hat\eta_t\) 会保留线性项，所以它更危险：它能�
 \[
   \beta_{s,T}=(1-c_s)\prod_{r=s+1}^Tc_r .
 \]
+\(\beta_{s,T}\) 来自反复代入递推。比如写到 \(T=3\)：
+\begin{align*}
+  w_3-w^\star
+  =&c_3(w_2-w^\star)+(1-c_3)(\varepsilon_3+\tilde\eta_3)\\
+  =&c_3c_2(w_1-w^\star)
+    +c_3(1-c_2)(\varepsilon_2+\tilde\eta_2)
+    +(1-c_3)(\varepsilon_3+\tilde\eta_3)\\
+  =&c_3c_2c_1(w_0-w^\star)
+    +c_3c_2(1-c_1)(\varepsilon_1+\tilde\eta_1)\\
+  &\quad
+    +c_3(1-c_2)(\varepsilon_2+\tilde\eta_2)
+    +(1-c_3)(\varepsilon_3+\tilde\eta_3).
+\end{align*}
+因此第 \(s\) 步噪声前面的系数就是“进入时的 \(1-c_s\)”乘上“之后每一步保留下来的 \(c\)”。
+
+\(\beta_{s,T}\) 的含义是：第 \(s\) 步噪声进入模型时先乘当前数据权重 \(1-c_s\)，之后从 \(s+1\) 到 \(T\) 每一步又被旧模型保留权重 \(c_{s+1},\dots,c_T\) 继续传递，所以总权重是
+\[
+  (1-c_s)c_{s+1}c_{s+2}\cdots c_T.
+\]
+当 \(s=T\) 时，后面已经没有 \(c_{T+1},\dots,c_T\) 可以乘。数学上把这种“没有任何项可乘”的乘积定义为 1，叫空乘积：
+\[
+  \prod_{r=T+1}^Tc_r=1.
+\]
+所以
+\[
+  \beta_{T,T}=1-c_T.
+\]
 这些权重满足望远镜恒等式
 \[
   \sum_{s=1}^T\beta_{s,T}
   =
   1-\prod_{r=1}^Tc_r .
 \]
+为什么叫望远镜？因为
+\[
+  \beta_{s,T}
+  =
+  (1-c_s)\prod_{r=s+1}^Tc_r
+  =
+  \prod_{r=s+1}^Tc_r-\prod_{r=s}^Tc_r.
+\]
+于是求和时中间项会一正一负相互抵消：
+\begin{align*}
+  \sum_{s=1}^T\beta_{s,T}
+  &=
+  (c_2\cdots c_T-c_1c_2\cdots c_T)
+  +(c_3\cdots c_T-c_2c_3\cdots c_T)
+  +\cdots
+  +(1-c_T)\\
+  &=
+  1-c_1c_2\cdots c_T
+  =
+  1-\prod_{r=1}^Tc_r.
+\end{align*}
+
 如果 \(\prod c_r\not\to0\)，初始偏差仍然不消失；否则
 \[
   \sum_{s=1}^T\beta_{s,T}\to1 .
@@ -464,6 +1488,17 @@ shifted 攻击 \(\hat\eta_t\) 会保留线性项，所以它更危险：它能�
   =
   \frac{(1-\prod_{r=1}^Tc_r)^2}{T}.
 \]
+Cauchy 在这里用的是基础形式：
+\[
+  \left(\sum_{s=1}^T a_s\cdot 1\right)^2
+  \le
+  \left(\sum_{s=1}^T a_s^2\right)
+  \left(\sum_{s=1}^T 1^2\right)
+  =
+  T\sum_{s=1}^T a_s^2.
+\]
+把 \(a_s=\beta_{s,T}\) 代入并移项，就得到上面的下界。
+
 攻击方差给最终风险贡献至少
 \[
   M_T\sum_{s=1}^T\beta_{s,T}^2
@@ -477,6 +1512,75 @@ shifted 攻击 \(\hat\eta_t\) 会保留线性项，所以它更危险：它能�
 \end{remark}
 
 \section{T2T 防御：少量但强攻击的检测与证明}
+
+\subsection{先不看公式：T2T 到底想做什么}
+
+T2T 的问题不是“模型有没有变”，而是“最近两个任务里有没有异常投毒”。只看
+\[
+  w_t-w_{t-1}
+\]
+不够，因为这个更新可能同时混有三种来源：
+\begin{itemize}
+  \item 当前任务 \(t\) 的正常学习信号；
+  \item 当前或上一任务的投毒信号；
+  \item 更早历史模型 \(w_{t-2}\) 留下的影响。
+\end{itemize}
+第三种历史影响会干扰判断。T2T 的核心就是：用连续两次更新互相对照，把共同的历史影响抵消掉，只留下最近两个任务造成的局部变化。
+
+可以把两次更新写成一种口语化形式：
+\[
+  \text{当前更新}
+  \approx
+  A_t\times\text{旧历史状态}
+  +\text{最近任务差异}
+  +\text{最近投毒},
+\]
+\[
+  \text{上一次更新}
+  \approx
+  B_t\times\text{旧历史状态}
+  +\text{上一任务投毒}.
+\]
+这里的 \(A_t\) 和 \(B_t\) 不是随机构造的变量，它们是由正则化更新的线性化推出来的\textbf{历史传播矩阵}：
+\begin{itemize}
+  \item \(A_t\)：旧状态 \(w_{t-2}\) 经过任务 \(t-1\) 再影响任务 \(t\) 的路径。
+  \item \(B_t\)：旧状态 \(w_{t-2}\) 影响上一轮更新 \(w_{t-1}-w_{t-2}\) 的路径。
+\end{itemize}
+换句话说，\(A_t\) 和 \(B_t\) 描述的是“同一个历史状态分别在两次更新里长成什么样”。
+
+那为什么检测分数要乘 \(D_t^1,D_t^2\)？因为当前更新里的历史项是 \(A_t\times\text{旧历史状态}\)，上一更新里的历史项是 \(B_t\times\text{旧历史状态}\)。它们形状不同，不能直接相减。于是我们找两个线性变换 \(D_t^1,D_t^2\)，让
+\[
+  D_t^1A_t=D_t^2B_t.
+\]
+这样一来，两次更新经过 \(D_t^1,D_t^2\) 处理后，历史项变成同一个东西，相减时就消掉了。
+
+所以 T2T 检测分数的逻辑是：
+\[
+  \text{检测分数}
+  =
+  \norm{
+  \text{处理后的当前更新}
+  -
+  \text{处理后的上一次更新}
+  }.
+\]
+如果没有攻击，这个差值主要来自相邻任务本身的正常差异和随机噪声，应该比较稳定；如果最近两个任务中有强投毒，这个差值会突然变大。
+
+论文中的 \(C_t\) 也不是随机构造。它是为了在满足
+\[
+  D_t^1A_t=D_t^2B_t
+\]
+的同时，让 \(D_t^1\) 尽量像 \(A_t^+\)，让 \(D_t^2\) 尽量像 \(B_t^+\)。直观上，\(A_t^+\) 和 \(B_t^+\) 是“尽量把 \(A_t,B_t\) 的影响反解回去”的工具；但只用伪逆不一定能让历史项完全抵消，所以论文加了 \(C_t\) 来修正。
+
+\((I-B_t)\) 的作用也不是普通意义上“把长度归一化”。这里 \(I\) 是单位矩阵，\(I-B_t\) 表示“保留原向量，再减去 \(B_t\) 能解释的那部分”。可以把它理解成一个线性过滤器：它削弱上一任务动力学已经能解释的分量，让检测分数更关注新出现的局部异常。论文把它放在 \(D_t^1,D_t^2\) 前面，是为了让两个投影后的更新处在更可比较的局部空间里。
+
+如果你说的公式 16、17、18 对应这一段，那么它们的关系应这样读：
+\begin{itemize}
+  \item 检测分数公式：定义“比较什么”。
+  \item \(D_t^1,D_t^2,C_t\) 公式：定义“如何把两次更新变到同一空间再比较”。
+  \item \(A_t,B_t\) 公式：说明“历史状态在两次更新里分别如何传播”。
+\end{itemize}
+先有检测目标，再有抵消历史项的需求，最后才有这些矩阵公式。
 
 \subsection{检测分数的设计}
 
@@ -573,6 +1677,311 @@ T2T 使用两个连续更新：
 \]
 解出来就是 \eqref{eq:Dt} 中的形式，再乘上 \((I-B_t)\) 做归一化。
 代回 \eqref{eq:t2t-update1}--\eqref{eq:t2t-update2} 后，历史项抵消，只剩最近两个任务的任务差异和攻击项。
+
+\subsection{把 T2T 公式 10--25 连成一条推导链}
+
+这一小节按“为什么需要这个公式”的顺序讲，而不是按论文出现顺序讲。
+
+\paragraph{第一步：从单步正则化更新得到线性化更新。}
+对任意任务 \(s\)，正则化训练目标是一阶最优：
+\[
+  \nabla_w\calL(w_s,Z_s+\eta_s)+H_s(w_s-w_{s-1})=0.
+\]
+在干净单任务最优点 \((w_s^\star,Z_s)\) 附近展开梯度：
+\[
+  \nabla_w\calL(w_s,Z_s+\eta_s)
+  \approx
+  Q_s(w_s-w_s^\star)+G_s\vect(\eta_s),
+\]
+其中
+\[
+  Q_s=\nabla_{ww}^2\calL(w_s^\star,Z_s),
+  \qquad
+  G_s=\nabla_{wZ}^2\calL(w_s^\star,Z_s),
+  \qquad
+  S_s=Q_s+H_s.
+\]
+代回最优性条件并整理：
+\[
+  S_s(w_s-w_a^\star)
+  \approx
+  Q_s(w_s^\star-w_a^\star)
+  +H_s(w_{s-1}-w_a^\star)
+  -G_s\vect(\eta_s).
+\]
+这里 \(w_a^\star\) 是我们选来作参照的某个任务最优点。左乘 \(S_s^+\) 得到
+\[
+  w_s-w_a^\star
+  \approx
+  S_s^+
+  \left[
+  Q_s(w_s^\star-w_a^\star)
+  +H_s(w_{s-1}-w_a^\star)
+  -G_s\vect(\eta_s)
+  \right].
+\]
+这就是“线性化更新”：原本复杂的训练结果 \(w_s\)，被近似写成历史模型、任务差异、投毒扰动的线性组合。
+
+\paragraph{第二步：为什么 \(A_t,B_t\) 是那样定义的。}
+现在我们关心两次更新：
+\[
+  w_t-w_{t-1},
+  \qquad
+  w_{t-1}-w_{t-2}.
+\]
+先看上一轮更新。把上面的公式用于任务 \(t-1\)，并把参照点取为 \(w_{t-1}^\star\)，得到
+\[
+  w_{t-1}-w_{t-2}
+  \approx
+  -S_{t-1}^+Q_{t-1}(w_{t-2}-w_{t-1}^\star)
+  -S_{t-1}^+G_{t-1}\vect(\eta_{t-1}).
+\]
+所以自然定义
+\[
+  B_t=S_{t-1}^+Q_{t-1}.
+\]
+\(B_t\) 的意义是：旧历史状态 \(w_{t-2}\) 如何进入上一轮更新。
+
+再看当前更新。当前更新 \(w_t-w_{t-1}\) 里会含有 \(w_{t-1}\)，而 \(w_{t-1}\) 又由上一任务从 \(w_{t-2}\) 更新而来。把上一轮线性化结果继续代入当前轮，就会得到一条从 \(w_{t-2}\) 到 \(w_t-w_{t-1}\) 的路径：
+\[
+  A_t=S_t^+Q_tS_{t-1}^+H_{t-1}.
+\]
+\(A_t\) 的意义是：旧历史状态 \(w_{t-2}\) 经过上一轮正则化保留项 \(H_{t-1}\)，再经过当前任务曲率 \(Q_t\)，最后影响当前更新。
+
+因此 \(A_t,B_t\) 不是随便定义的，它们分别是“同一个历史状态在当前更新和上一更新中的传播矩阵”。
+
+\paragraph{第三步：公式 17 和 18 的来源。}
+把上面的线性化代数完整代入，就得到两条关键关系：
+\begin{align*}
+  w_t-w_{t-1}
+  \approx&
+  -A_t(w_{t-2}-w_t^\star)
+  +S_t^+Q_tS_{t-1}^+Q_{t-1}(w_t^\star-w_{t-1}^\star)\\
+  &+
+  S_t^+Q_tS_{t-1}^+G_{t-1}\vect(\eta_{t-1})
+  -S_t^+G_t\vect(\eta_t),
+  \\
+  w_{t-1}-w_{t-2}
+  \approx&
+  -B_t(w_{t-2}-w_{t-1}^\star)
+  -S_{t-1}^+G_{t-1}\vect(\eta_{t-1}).
+\end{align*}
+这两条就是 T2T 的原材料。它们告诉我们：两次更新里都带着旧历史状态 \(w_{t-2}\)，只是一个被 \(A_t\) 处理，一个被 \(B_t\) 处理。
+
+\paragraph{第四步：为什么要 \(D_t^1A_t=D_t^2B_t\)。}
+检测时要相减：
+\[
+  D_t^1(w_t-w_{t-1})-D_t^2(w_{t-1}-w_{t-2}).
+\]
+如果只看历史项，它们分别是
+\[
+  -D_t^1A_t(w_{t-2}-\cdots),
+  \qquad
+  -D_t^2B_t(w_{t-2}-\cdots).
+\]
+要让同一个旧历史状态在相减时抵消，必须让它们前面的线性变换一致：
+\[
+  D_t^1A_t=D_t^2B_t.
+\]
+这就是 T2T 的核心约束。没有这个约束，检测分数仍然会混入很早以前的模型状态，无法只看最近两个任务。
+
+\paragraph{第五步：为什么变成最小二乘投影问题。}
+满足 \(D_t^1A_t=D_t^2B_t\) 的 \(D_t^1,D_t^2\) 可能有很多组。论文还希望它们尽量保留原更新里的信息，而不是随便把所有东西都压成 0。自然的选择是：让 \(D_t^1\) 尽量接近 \(A_t^+\)，让 \(D_t^2\) 尽量接近 \(B_t^+\)。这就得到
+\[
+  \min_{\bar D_t^1,\bar D_t^2}
+  \norm{\bar D_t^1-A_t^+}_F^2
+  +\norm{\bar D_t^2-B_t^+}_F^2
+  \quad
+  \text{s.t.}\quad
+  \bar D_t^1A_t=\bar D_t^2B_t.
+\]
+这不是为了形式复杂，而是在做一件很直观的事：既要抵消历史，又要尽量少扭曲两次更新。
+
+\paragraph{第六步：为什么解里会出现 \(C_t\)，以及为什么一个是减号一个是加号。}
+令
+\[
+  R_t=A_t^+A_t-B_t^+B_t.
+\]
+如果直接取 \(\bar D_t^1=A_t^+\)、\(\bar D_t^2=B_t^+\)，约束左边和右边相差 \(R_t\)。所以要给二者加修正量，让一个往回减，另一个往前加：
+\[
+  \bar D_t^1=A_t^+-R_tK_tA_t^\top,
+  \qquad
+  \bar D_t^2=B_t^+ +R_tK_tB_t^\top.
+\]
+这就是 \(D^1\) 中是减号、\(D^2\) 中是加号的原因：两个修正朝相反方向移动，才能把中间差距补上。
+
+把它们乘上 \(A_t,B_t\)：
+\[
+  \bar D_t^1A_t-\bar D_t^2B_t
+  =
+  R_t-R_tK_t(A_t^\top A_t+B_t^\top B_t).
+\]
+为了让这个差为 0，需要
+\[
+  K_t(A_t^\top A_t+B_t^\top B_t)
+  \approx I
+\]
+在相关子空间上成立。最小范数意义下的解就是
+\[
+  K_t=(A_t^\top A_t+B_t^\top B_t)^+.
+\]
+论文为了少写一个 \(R_tK_t\)，把两者合并记作
+\[
+  C_t=(A_t^+A_t-B_t^+B_t)(A_t^\top A_t+B_t^\top B_t)^+
+\]
+于是 \(\bar D_t^1=A_t^+-C_tA_t^\top\)，\(\bar D_t^2=B_t^++C_tB_t^\top\)。它本质上就是“用最小二乘方式补齐 \(A_t^+A_t\) 和 \(B_t^+B_t\) 的差距”。
+
+\paragraph{第七步：代回后为什么得到 \(E_t^1,E_t^2,E_t^3\)。}
+把两条线性化更新代回检测差：
+\[
+  D_t^1(w_t-w_{t-1})-D_t^2(w_{t-1}-w_{t-2}).
+\]
+历史项因为 \(D_t^1A_t=D_t^2B_t\) 消掉。剩下的项按来源分组：
+\begin{itemize}
+  \item 和任务差异 \(w_t^\star-w_{t-1}^\star\) 相乘的所有矩阵，合并叫 \(E_t^1\)。
+  \item 和上一任务攻击 \(\vect(\eta_{t-1})\) 相乘的所有矩阵，合并叫 \(E_t^2\)。
+  \item 和当前任务攻击 \(\vect(\eta_t)\) 相乘的所有矩阵，合并叫 \(E_t^3\)。
+  \item Taylor 展开的高阶残差，合并叫 \(\mathcal E_t\)。
+\end{itemize}
+于是得到
+\[
+  E_t^1(w_t^\star-w_{t-1}^\star)
+  +E_t^2\vect(\eta_{t-1})
+  +E_t^3\vect(\eta_t)
+  +\mathcal E_t.
+\]
+这就是你问的公式 16 的来源：不是凭空来的，而是“历史项抵消后，把剩余项按来源重新命名”。
+
+\paragraph{第八步：为什么良性任务时 \(d_t^2=\|E_t^2e_{t-1}+E_t^3e_t\|^2\)。}
+在线性回归理论分析里，良性任务没有攻击，只有自然噪声：
+\[
+  \mathbf n_{t-1}=0,\qquad \mathbf n_t=0.
+\]
+这里 \(\mathbf n_t\) 表示攻击额外加到标签上的扰动。良性时它为 0，但标签观测里仍然有自然噪声 \(\mathbf e_t\)。自然噪声和 label perturbation 一样都会通过标签通道影响梯度，所以在 T2T 分数里出现 \(\mathbf e_{t-1},\mathbf e_t\)。共享参数模型下任务最优点的系统差异项被简化，检测分数主要变成
+\[
+  d_t^2
+  =
+  \norm{E_t^2\mathbf e_{t-1}+E_t^3\mathbf e_t}_2^2.
+\]
+它的含义是：没有攻击时，检测分数只由最近两个任务的自然噪声造成。
+
+\paragraph{第九步：交叉项期望为什么为 0。}
+展开平方：
+\begin{align*}
+  d_t^2
+  =&
+  \norm{E_t^2\mathbf e_{t-1}}^2
+  +\norm{E_t^3\mathbf e_t}^2
+  +2(E_t^2\mathbf e_{t-1})^\top(E_t^3\mathbf e_t).
+\end{align*}
+最后一项叫交叉项。因为 \(e_{t-1}\) 和 \(e_t\) 来自不同任务，条件在特征矩阵上它们独立且均值为 0，所以
+\[
+  \E[\mathbf e_{t-1}\mathbf e_t^\top\mid X_{t-1},X_t]=0.
+\]
+因此交叉项期望为 0。
+
+噪声协方差假设
+\[
+  \E[\mathbf e_s\mathbf e_s^\top\mid X_s]=\sigma^2I
+\]
+表示：噪声平均为 0，每个方向的方差都是 \(\sigma^2\)，不同方向之间不相关。利用这个假设可得
+\[
+  \E[\norm{E_t^2e_{t-1}}^2\mid X_{t-1}]
+  =
+  \sigma^2\tr((E_t^2)^\top E_t^2),
+\]
+同理得到 \(E_t^3\) 那一项。两项相加就是公式 19。
+
+\paragraph{第十步：为什么用 Markov 不等式，以及公式 20 怎么来。}
+我们想给良性任务的检测分数找一个阈值，保证良性任务大概率不会被误报。\(d_t^2\) 是非负随机变量，所以最直接可用 Markov 不等式：
+\[
+  \Pr(X>a)\le\frac{\E[X]}{a}.
+\]
+令 \(X=d_t^2\)。希望单个时刻误报概率不超过 \(\epsilon/T\)，就取
+\[
+  a=\frac{T}{\epsilon}\E[d_t^2].
+\]
+也就是
+\[
+  \theta_t^2
+  =
+  \frac{T}{\epsilon}
+  \sigma^2
+  \left[
+  \tr((E_t^2)^\top E_t^2)
+  +
+  \tr((E_t^3)^\top E_t^3)
+  \right].
+\]
+开平方就得到公式 20。再对所有 \(t\) 用 union bound，就能保证整个训练过程中良性任务同时不过阈值的概率至少为 \(1-\epsilon\)。
+
+\paragraph{第十一步：sub-Gaussian 和 Hanson--Wright 是什么。}
+Markov 不等式很通用，但很松。若噪声是 sub-Gaussian，说明它的尾部像高斯分布一样下降很快，不容易出现极端大值。直观上：
+\[
+  \Pr(|X|>u)
+\]
+会随 \(u\) 增大快速下降。
+
+Hanson--Wright 不等式专门控制 sub-Gaussian 随机向量的二次型：
+\[
+  \xi^\top A\xi.
+\]
+而这里
+\[
+  d_t^2
+  =
+  \xi_t^\top R_t^\top R_t\xi_t
+\]
+正是二次型。因此若噪声 sub-Gaussian，就可以用 Hanson--Wright 给出比 Markov 更紧的阈值，通常从 \(T/\epsilon\) 量级改善到 \(\log(T/\epsilon)\) 量级。
+
+\paragraph{第十二步：正则化矩阵公式 21 从哪里来。}
+T2T 最终收敛证明选用
+\[
+  H_t=\frac1{n_t}
+  \left(
+  \frac{\sigma^2}{W}I+\sum_{s=1}^{t-1}X_s^\top X_s
+  \right).
+\]
+这个选择可以理解成“历史数据信息的累计”。\(\sum_{s=1}^{t-1}X_s^\top X_s\) 是过去任务给出的总曲率/信息量；\(\sigma^2/W\) 像一个初始先验强度，避免一开始矩阵不可逆；前面的 \(1/n_t\) 是为了和当前任务损失里的 \(X_t^\top X_t/n_t\) 尺度一致。
+
+这个 \(H_t\) 的好处是递推会望远镜式简化，最终 \(w_T-w^\star\) 可以写成所有任务噪声和攻击的加权和，方便证明收敛。
+
+\paragraph{第十三步：式 22 从哪里来。}
+在线性回归中，带标签扰动的目标是
+\[
+  \frac1{2n_t}\norm{X_tw-(X_tw^\star+\mathbf e_t+\mathbf n_t)}^2
+  +\frac12\norm{w-w_{t-1}}_{H_t}^2.
+\]
+对 \(w\) 求梯度并令 0：
+\[
+  \frac{X_t^\top}{n_t}
+  \left[
+  X_t(w-w^\star)-(\mathbf e_t+\mathbf n_t)
+  \right]
+  +H_t(w-w_{t-1})=0.
+\]
+把 \(w=w_t\)，并把含 \(w_t-w^\star\) 的项放左边：
+\[
+  \left(
+  \frac{X_t^\top X_t}{n_t}+H_t
+  \right)(w_t-w^\star)
+  =
+  \frac{X_t^\top(\mathbf e_t+\mathbf n_t)}{n_t}
+  +H_t(w_{t-1}-w^\star).
+\]
+左乘逆矩阵，就得到式 22：
+\[
+  w_t-w^\star
+  =
+  \left(
+  \frac{X_t^\top X_t}{n_t}+H_t
+  \right)^{-1}
+  \left[
+  \frac{X_t^\top(\mathbf e_t+\mathbf n_t)}{n_t}
+  +H_t(w_{t-1}-w^\star)
+  \right].
+\]
+这说明最终递推仍然来自同一个原则：正则化训练目标求梯度等于 0。
 
 \subsection{检测阈值：Lemma 4.3}
 
@@ -714,6 +2123,43 @@ T2T 使用两个连续更新：
 当 \(K=O(1)\) 时，最终误差收敛到 0。
 
 \section{频繁有界零均值攻击：鲁棒特征防御}
+
+\subsection{先不看公式：第二种防御的整体逻辑}
+
+T2T 适合“攻击次数少但每次可能很强”的情况。它的策略像安检：发现可疑任务就丢掉或回滚。
+
+但如果攻击很频繁，几乎每个任务都有一点污染，安检式防御就不适合了。因为你不能把大部分任务都丢掉，否则模型没有数据可学。所以第二种防御换了思路：不再主要判断“哪个任务坏了”，而是让模型在训练时自动降低对脆弱特征方向的敏感性。
+
+可以把模型参数空间想象成很多方向：
+\[
+  u_1,u_2,\dots,u_p.
+\]
+有些方向数据很充分、噪声影响小；有些方向数据很弱、攻击稍微一推就会造成大误差。攻击者最喜欢打后者。
+
+正则化矩阵 \(H_t\) 在这里就像一组方向刹车：
+\begin{itemize}
+  \item 某个方向的正则化强，模型就不容易沿这个方向被当前任务数据拉走。
+  \item 某个方向的正则化弱，模型就更愿意吸收当前任务在这个方向的信息。
+\end{itemize}
+鲁棒特征防御要做的是：给每个方向选择合适的刹车强度，让攻击者即使知道模型，也很难找到一个特别脆弱的方向集中攻击。
+
+这一节的符号可以这样理解：
+\begin{itemize}
+  \item \(u_j\)：第 \(j\) 个特征方向。
+  \item \(\gamma_j^t\)：任务 \(t\) 在方向 \(u_j\) 上提供了多少数据信息。越大，说明这个方向数据越有力。
+  \item \(\lambda_j^t\)：防御者在方向 \(u_j\) 上设置的正则化强度，也就是刹车强度。
+  \item \(\calR_j^t\)：模型在方向 \(u_j\) 上还剩多少误差。
+  \item \(M\)：攻击者总预算。
+\end{itemize}
+
+为什么要对角化？如果不对角化，各方向混在一起，一个方向的更新会影响另一个方向，分析非常复杂。对角化的目的不是炫技，而是把一个高维矩阵问题拆成许多一维问题：
+\[
+  \text{第 }1\text{ 个方向怎么设刹车，}
+  \text{第 }2\text{ 个方向怎么设刹车，}\dots
+\]
+这样才能解释“攻击者会打哪个方向”和“防御者应该保护哪些方向”。
+
+为什么会有 protected set？因为攻击者预算有限，不会平均打所有方向，而会集中攻击最敏感的一组方向。防御者识别出这组方向后，把它们作为 protected set，专门调整这些方向的正则化强度，避免最坏方向单独决定总误差。
 
 \subsection{为什么不能继续靠检测}
 
