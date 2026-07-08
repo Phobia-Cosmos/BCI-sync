@@ -1,0 +1,421 @@
+\documentclass[11pt]{article}
+
+\usepackage[a4paper,margin=2.3cm]{geometry}
+\usepackage{fontspec}
+\usepackage{xeCJK}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{titlesec}
+
+\setmainfont{Noto Serif CJK SC}
+\setsansfont{Noto Sans CJK SC}
+\setmonofont{DejaVu Sans Mono}
+\setCJKmainfont{Noto Serif CJK SC}
+\setCJKsansfont{Noto Sans CJK SC}
+\setCJKmonofont{Noto Sans Mono CJK SC}
+\XeTeXlinebreaklocale "zh"
+\XeTeXlinebreakskip = 0pt plus 1pt
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!50!black,
+  urlcolor=blue!60!black
+}
+
+\titleformat{\section}{\large\bfseries\sffamily}{\thesection}{0.8em}{}
+\titleformat{\subsection}{\normalsize\bfseries\sffamily}{\thesubsection}{0.8em}{}
+\setlist[itemize]{leftmargin=1.8em,itemsep=0.25em,topsep=0.25em}
+\setlist[enumerate]{leftmargin=1.8em,itemsep=0.25em,topsep=0.25em}
+
+\title{\textbf{BrainWash 补充问题 2：Model Inversion 细节与 EEG 先验}}
+\author{}
+\date{2024 CVPR BrainWash}
+
+\begin{document}
+\maketitle
+
+\section{MI 时到底需要知道什么}
+
+在 BrainWash 的 Model Inversion (MI) 阶段，攻击者至少需要：
+
+\begin{itemize}
+  \item 已训练好的 victim model，尤其是旧任务后的 backbone 参数
+  \(\theta_{1:T-1}^{*}\)；
+  \item 第 \(t\) 个旧任务 head 的参数 \(\psi_t^{*}\)；
+  \item 第 \(t\) 个 head 的输出维度 \(K_t\)，也就是该任务类别数；
+  \item 能够对输入 \(x\) 反向传播梯度。
+\end{itemize}
+
+论文默认是 white-box 或近似 white-box 的设定：
+攻击者能访问模型结构和参数，因此可以固定模型参数，
+然后对输入 \(x\) 做梯度优化。
+如果只能黑盒查询输出概率，也存在其他 confidence-based MI 方法，
+但 BrainWash 本文采用的是类似 DeepInversion 的梯度式输入优化。
+
+\section{目标标签和输入是不是都随机给}
+
+是，但要分清 ``随机初始化'' 和 ``最终合成结果''。
+
+对旧任务 \(t\)，攻击者先随机采样一批目标 one-hot 标签：
+
+\[
+\{\hat{y}_t^i\}_{i=1}^{M},
+\quad
+\hat{y}_t^i\in\mathcal{Y}_t
+=
+\{1,\ldots,K_t\}.
+\]
+
+例如如果第 \(t\) 个 head 有 \(K_t=10\) 个 logits，
+攻击者可以随机指定第 \(i\) 个合成样本的目标类别为第 7 类：
+
+\[
+\hat{y}_t^i
+=
+[0,0,0,0,0,0,1,0,0,0]^\top.
+\]
+
+输入 \(x_i\) 通常也从随机噪声初始化：
+
+\[
+x_i^{(0)}
+\sim
+\mathcal{N}(0,I)
+\quad
+\text{或}
+\quad
+x_i^{(0)}
+\sim
+\mathcal{U}(0,1).
+\]
+
+但最终的 \(\hat{x}_t^i\) 不是随机噪声。
+它是经过梯度下降优化后的输入：
+
+\[
+\hat{x}_t^i
+=
+x_i^{(S)},
+\]
+
+其中 \(S\) 是 MI 优化步数。
+
+\section{输入优化是在真实运行的模型上做的吗}
+
+这里的 ``真实运行的模型'' 应理解为：
+攻击者拿到 victim 已经训练好的模型副本，
+在这个模型上做前向传播和反向传播。
+训练好的模型参数保持不变，优化变量只有输入。
+
+第 \(s\) 步可以写成：
+
+\[
+x_i^{(s+1)}
+=
+\Pi_{\mathcal{X}}
+\left[
+x_i^{(s)}
+-
+\gamma
+\nabla_{x_i}
+\mathcal{J}_{\mathrm{MI}}
+(x_i^{(s)},\hat{y}_t^i;
+\theta_{1:T-1}^{*},\psi_t^{*})
+\right],
+\]
+
+其中：
+
+\begin{itemize}
+  \item \(\gamma\) 是 MI 的输入优化步长；
+  \item \(\Pi_{\mathcal{X}}\) 是把输入投影回合法输入范围，例如图像像素范围 \([0,1]\)；
+  \item \(\theta_{1:T-1}^{*},\psi_t^{*}\) 固定不更新；
+  \item 更新的是 \(x_i\)，不是模型参数。
+\end{itemize}
+
+MI 的完整优化目标可以写成：
+
+\[
+\begin{aligned}
+\mathcal{J}_{\mathrm{MI}}
+=
+&
+\mathcal{L}
+\left(
+x_i,\hat{y}_t^i,\theta_{1:T-1}^{*},\psi_t^{*}
+\right) \\
+&+
+R_{\mathrm{prior}}(x_i)
++
+\alpha_f
+R_{\mathrm{feat}}(\{x_i\}_{i=1}^{M},\theta_{1:T-1}^{*}).
+\end{aligned}
+\]
+
+所以，MI 不是在继续训练 victim model。
+它是在一个 frozen victim model 上反向优化输入，
+让输入触发模型内部已经学到的旧任务类别模式。
+
+\section{是不是把伪标签或污染错误标签绑定到输入上}
+
+严格地说，不是 ``把污染的错误标签绑定到输入上''。
+在 BrainWash 中需要区分两类数据：
+
+\begin{enumerate}
+  \item MI 合成的旧任务代理数据：
+  \[
+  \hat{D}_t
+  =
+  \{(\hat{x}_t^i,\hat{y}_t^i)\}_{i=1}^{M}.
+  \]
+  这里的 \(\hat{y}_t^i\) 是攻击者指定的目标标签，
+  用于让 frozen model 把合成输入判成该类。
+  它是 proxy label，不是 victim 训练时接收的 poisoned wrong label。
+
+  \item 真正投毒给 victim 的当前任务数据：
+  \[
+  \tilde{D}_T
+  =
+  \{(x_T^i+\delta^i,y_T^i)\}_{i=1}^{N_T}.
+  \]
+  这里标签 \(y_T^i\) 仍然是当前任务的原始标签。
+  BrainWash 的主攻击是 input poisoning，即添加输入扰动 \(\delta^i\)，
+  不是 label-flipping attack。
+\end{enumerate}
+
+MI 阶段的 \(\hat{y}_t^i\) 更准确地说是 ``目标类标签'' 或
+``代理标签''。它的作用是告诉优化器：
+请找到一个输入 \(\hat{x}_t^i\)，使得旧任务 head \(h_t\) 认为它属于这个类别。
+
+\section{合成样本要让某个 head 判成特定 class 还是随机 class}
+
+对每个旧任务 \(t\)，BrainWash 会针对第 \(t\) 个 head 生成代理数据。
+也就是说，合成样本需要被对应旧任务 head \(h_t\) 判成目标类别。
+
+目标类别本身是随机采样的：
+
+\[
+\hat{y}_t^i
+\sim
+\operatorname{Uniform}(\mathcal{Y}_t).
+\]
+
+给定这个随机采样出来的目标类别后，优化目标就是特定的：
+
+\[
+\hat{x}_t^i
+\approx
+\arg\min_{x_i}
+\operatorname{CE}
+\left(
+\operatorname{softmax}
+\left(
+h_t(f(x_i;\theta_{1:T-1}^{*});\psi_t^{*})
+\right),
+\hat{y}_t^i
+\right)
++
+\text{regularization}.
+\]
+
+因此答案是：
+类别在生成前随机采样；
+一旦采样完成，该样本就要被优化成让指定 head 判为这个特定 class。
+不是让任意 head 随便判成任意 class。
+
+\section{攻击者是否利用已知结构和参数优化输入}
+
+是。BrainWash 的 MI 过程依赖已训练模型的结构和参数。
+攻击者利用：
+
+\begin{itemize}
+  \item backbone \(f(\cdot;\theta_{1:T-1}^{*})\) 的梯度；
+  \item 旧任务 head \(h_t(\cdot;\psi_t^{*})\) 的梯度；
+  \item BatchNorm running mean/variance 等模型内部统计；
+  \item 第 \(t\) 个 head 的 logits 维度 \(K_t\)。
+\end{itemize}
+
+但是这一步的目标不是修改模型，
+而是从模型中 ``反演'' 出能代表旧任务类别的代理输入。
+
+\section{图像先验与 EEG 先验}
+
+图像领域常用自然图像先验，例如 total variation、像素范数、
+BatchNorm 特征统计：
+
+\[
+R_{\mathrm{prior}}(x)
+=
+\alpha_{\mathrm{TV}}R_{\mathrm{TV}}(x)
++
+\alpha_{\ell_2}R_{\ell_2}(x).
+\]
+
+EEG 领域没有一个像自然图像先验那样通用、标准化的先验，
+但可以设计领域相关的约束。常见方向如下。
+
+\subsection{幅值范围与归一化先验}
+
+EEG 信号有合理的幅值范围。
+如果模型输入是归一化后的 EEG，可以约束：
+
+\[
+x \in [x_{\min},x_{\max}]
+\quad
+\text{或}
+\quad
+\|x\|_2^2 \leq c.
+\]
+
+这类似图像中的像素范围和 \(\ell_2\) 范数约束。
+
+\subsection{时间平滑先验}
+
+EEG 是连续时间信号，过强的相邻采样点跳变通常不自然。
+可以使用一阶或二阶差分正则：
+
+\[
+R_{\mathrm{time}}(x)
+=
+\sum_{c=1}^{C}
+\sum_{\tau=2}^{L}
+\left(
+x_{c,\tau}-x_{c,\tau-1}
+\right)^2.
+\]
+
+其中 \(C\) 是通道数，\(L\) 是时间长度。
+
+\subsection{频带先验}
+
+EEG 常关注特定频段，例如 delta、theta、alpha、beta、gamma。
+可以惩罚不合理频段的能量：
+
+\[
+R_{\mathrm{band}}(x)
+=
+\sum_{c=1}^{C}
+\sum_{f\notin\mathcal{B}}
+\left|
+\mathcal{F}(x_c)(f)
+\right|^2,
+\]
+
+其中 \(\mathcal{F}\) 是 Fourier transform，
+\(\mathcal{B}\) 是任务相关的合理频带集合。
+例如 motor imagery 常关注 \(\mu\) rhythm 和 beta band；
+P300/ERP 任务则可能更关注特定 latency window 内的时域成分。
+
+\subsection{功率谱密度匹配}
+
+如果攻击者知道或能估计 EEG 的平均功率谱密度，
+可以要求合成信号的 PSD 接近参考统计：
+
+\[
+R_{\mathrm{PSD}}(x)
+=
+\left\|
+\operatorname{PSD}(x)
+-
+\bar{P}
+\right\|_2^2.
+\]
+
+这里 \(\bar{P}\) 可以来自公开 EEG 数据集、当前任务数据、
+或模型内部统计的近似估计。
+
+\subsection{空间协方差先验}
+
+EEG 多通道之间存在空间相关性。
+可以对通道协方差矩阵加约束：
+
+\[
+\Sigma(x)
+=
+\frac{1}{L}
+xx^\top
+\in
+\mathbb{S}_{++}^{C},
+\]
+
+\[
+R_{\mathrm{cov}}(x)
+=
+d_{\mathrm{SPD}}
+\left(
+\Sigma(x),\bar{\Sigma}
+\right)^2.
+\]
+
+\(\bar{\Sigma}\) 是参考空间协方差，
+\(d_{\mathrm{SPD}}\) 可以是 log-Euclidean 或 affine-invariant Riemannian distance。
+这类先验对基于协方差特征或 Riemannian geometry 的 BCI 模型尤其自然。
+
+\subsection{电极拓扑平滑先验}
+
+相邻电极的信号通常有一定空间连续性。
+如果已知电极图结构 \(G\)，可以使用图拉普拉斯正则：
+
+\[
+R_{\mathrm{graph}}(x)
+=
+\sum_{\tau=1}^{L}
+x_{:,\tau}^{\top}
+\mathcal{L}_G
+x_{:,\tau},
+\]
+
+其中 \(\mathcal{L}_G\) 是电极邻接图的 graph Laplacian。
+
+\subsection{EEG 版 MI 的一个可能目标}
+
+如果把 BrainWash 的 MI 思路迁移到 EEG，可以把输入从图像换成 EEG trial：
+
+\[
+x\in\mathbb{R}^{C\times L}.
+\]
+
+一个可能的 EEG-MI 目标是：
+
+\[
+\begin{aligned}
+\hat{x}_t^i
+=
+\arg\min_{x_i}
+&
+\operatorname{CE}
+\left(
+\operatorname{softmax}
+\left(
+h_t(f(x_i;\theta_{1:T-1}^{*});\psi_t^{*})
+\right),
+\hat{y}_t^i
+\right)\\
+&+
+\lambda_{\mathrm{time}}R_{\mathrm{time}}(x_i)
++
+\lambda_{\mathrm{band}}R_{\mathrm{band}}(x_i)
++
+\lambda_{\mathrm{cov}}R_{\mathrm{cov}}(x_i)
++
+\lambda_{\mathrm{graph}}R_{\mathrm{graph}}(x_i).
+\end{aligned}
+\]
+
+这些正则项不是 BrainWash 原文使用的内容，
+而是将其 MI 思路迁移到 EEG/BCI 场景时可以考虑的领域先验。
+
+\section{结论}
+
+\begin{itemize}
+  \item MI 时攻击者不需要知道旧任务真实样本，但需要访问训练好的模型结构和参数。
+  \item 目标标签是随机采样的 one-hot 类别；输入从随机噪声初始化。
+  \item MI 优化发生在 frozen victim model 上，更新输入，不更新模型。
+  \item 合成样本要让对应旧任务 head \(h_t\) 判成采样到的特定 class。
+  \item MI 中的目标标签不是真正投毒给 victim 的错误标签；BrainWash 真正投毒的是当前任务输入 \(x_T^i+\delta^i\)，标签通常保持 \(y_T^i\) 不变。
+  \item EEG 中可以构造幅值、时间平滑、频带、PSD、空间协方差、电极拓扑等先验，但没有一个完全等价于自然图像先验的通用标准。
+\end{itemize}
+
+\end{document}

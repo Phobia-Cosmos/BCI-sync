@@ -1,0 +1,1202 @@
+\documentclass[UTF8,fontset=none,11pt]{ctexart}
+
+\usepackage[a4paper,margin=2.2cm]{geometry}
+\usepackage{amsmath,amssymb,amsthm,mathtools,bm}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{microtype}
+\usepackage{array}
+
+\setCJKmainfont{Noto Serif CJK SC}
+\setCJKsansfont{Noto Sans CJK SC}
+\setCJKmonofont{Noto Sans CJK SC}
+\setmainfont{DejaVu Serif}
+\setsansfont{DejaVu Sans}
+\setmonofont{DejaVu Sans Mono}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!55!black,
+  citecolor=blue!55!black,
+  urlcolor=blue!55!black
+}
+
+\allowdisplaybreaks
+\setlist[itemize]{leftmargin=1.8em,itemsep=0.25em,topsep=0.25em}
+\setlist[enumerate]{leftmargin=2.0em,itemsep=0.25em,topsep=0.25em}
+\renewcommand{\arraystretch}{1.18}
+
+\newtheoremstyle{cnstyle}
+  {0.6em}{0.6em}{\normalfont}{}{\bfseries}{.}{0.5em}{}
+\theoremstyle{cnstyle}
+\newtheorem{theorem}{定理}[section]
+\newtheorem{lemma}[theorem]{引理}
+\newtheorem{proposition}[theorem]{命题}
+\newtheorem{assumption}[theorem]{假设}
+\newtheorem{definition}[theorem]{定义}
+\newtheorem{remark}[theorem]{说明}
+
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\Cov}{\operatorname{Cov}}
+\newcommand{\tr}{\operatorname{tr}}
+\newcommand{\rank}{\operatorname{rank}}
+\newcommand{\diag}{\operatorname{diag}}
+\newcommand{\vect}{\operatorname{vec}}
+\newcommand{\argmin}{\operatorname*{arg\,min}}
+\newcommand{\argmax}{\operatorname*{arg\,max}}
+\newcommand{\calR}{\mathcal{R}}
+\newcommand{\calL}{\mathcal{L}}
+\newcommand{\calD}{\mathcal{D}}
+\newcommand{\calI}{\mathcal{I}}
+\newcommand{\ip}[2]{\left\langle #1,#2\right\rangle}
+\newcommand{\norm}[1]{\left\lVert #1\right\rVert}
+\newcommand{\fnorm}[1]{\left\lVert #1\right\rVert_F}
+\newcommand{\twonorm}[1]{\left\lVert #1\right\rVert_2}
+\newcommand{\psinv}{^{+}}
+\newcommand{\st}{\;\mathrm{s.t.}\;}
+\newcommand{\dd}{\,\mathrm{d}}
+
+\title{\bfseries 论文公式与证明导读\\
+{\large Theory of Continual Learning Against Data Poisoning Attacks}}
+\author{阅读笔记与证明讲解}
+\date{\today}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\section{先给结论：这篇论文到底在证明什么}
+
+这篇论文研究的是：在连续学习（continual learning, CL）中，模型按任务序列
+\(1,2,\dots,T\) 依次训练。如果攻击者在部分任务的数据里加入投毒扰动，
+正则化式连续学习方法什么时候一定防不住，什么时候可以设计出有证明保证的防御。
+
+论文的三条主线如下。
+
+\begin{enumerate}
+  \item \textbf{不可防御边界。}
+  如果攻击很频繁，并且攻击能改变数据均值（shifted attack），或者虽然不改变均值但每次攻击方差预算随 \(T\) 线性增长，那么任何形如
+  \[
+    w_t\in\argmin_w
+    \left\{
+      \frac{1}{n_t}\sum_{z\in D_t}\ell(w,z)
+      +\frac12\norm{w-w_{t-1}}_{H_t}^2
+    \right\}
+  \]
+  的正则化式 CL 方法都无法保证最终误差收敛到 0。
+
+  \item \textbf{少量但可能无限强的攻击可以用检测加回滚防御。}
+  对于只攻击有限多个任务但单次攻击强度可以很大的情形，论文设计了 task-to-task verification（T2T）检测分数 \(d_t\)。它通过两个相邻更新
+  \(w_t-w_{t-1}\) 与 \(w_{t-1}-w_{t-2}\) 的投影组合，消去历史状态
+  \(w_{t-2}\) 的影响。最终证明：只要攻击任务数 \(K\) 不随 \(T\) 线性增长，最终误差可达到
+  \[
+    \calR(w_T)=O\!\left(\frac{K^2}{\epsilon T}\right)
+  \]
+  量级。
+
+  \item \textbf{频繁但有界、零均值攻击需要鲁棒特征正则化。}
+  如果几乎每个任务都可能被投毒，但攻击是 non-shifted 且有界，单纯检测会丢掉太多任务。论文把防御写成在线 minimax 问题，并在可对角化假设下给出每个特征方向的最优正则化强度。结论是：鲁棒正则化不让攻击集中打最脆弱的单一方向，而是把风险分摊到一组 protected directions。
+\end{enumerate}
+
+\section{背景知识补充}
+
+\subsection{连续学习与灾难性遗忘}
+
+连续学习的特点是数据不是一次性给出，而是按任务序列到达。第 \(t\) 个任务有数据集
+\[
+  D_t=\{(x_t^i,y_t^i)\}_{i=1}^{n_t},\qquad
+  x_t^i\in\mathcal X,\; y_t^i\in\mathcal Y .
+\]
+训练第 \(t\) 个任务时，通常不能再完整访问旧任务数据。因此模型既要学习新任务，又不能忘掉旧任务，这就是稳定性-可塑性权衡。
+
+论文用全局超额风险衡量最终模型：
+\begin{equation}
+  \calR_T(w)
+  =
+  \sum_{t=1}^T \E_{z\sim\calD_t}[\ell(w,z)]
+  -
+  \min_{w^\star}\sum_{t=1}^T\E_{z\sim\calD_t}[\ell(w^\star,z)] .
+  \label{eq:global-risk}
+\end{equation}
+它问的是：当前模型 \(w\) 和最优全局模型相比，多损失了多少。
+
+\subsection{正则化式 CL 更新}
+
+论文研究的核心算法族是
+\begin{equation}
+  w_t\in\argmin_{w'}
+  \left\{
+  \frac{1}{n_t}\sum_{z\in D_t}\ell(w',z)
+  +\frac12\norm{w'-w_{t-1}}_{H_t}^2
+  \right\},
+  \label{eq:regularized-cl}
+\end{equation}
+其中
+\[
+  \norm{u}_{H_t}^2=u^\top H_tu .
+\]
+第一项要求模型适配当前任务；第二项惩罚离开上一轮模型 \(w_{t-1}\) 太远。
+矩阵 \(H_t\succeq 0\) 决定哪些参数方向更该被保护。
+
+直觉上：
+\begin{itemize}
+  \item \(H_t=0\)：只管新任务，容易忘旧任务。
+  \item \(H_t\) 很大：几乎冻结模型，旧知识保住了，但学不动新任务。
+  \item \(H_t\) 是矩阵而不是标量：不同特征方向可以有不同保护强度。
+\end{itemize}
+
+\subsection{数据投毒的三个维度}
+
+攻击者在任务 \(t\) 上加入扰动
+\[
+  \eta_t=(\eta_{x,t},\eta_{y,t}),\qquad
+  \E[\fnorm{\eta_t}^2]\le M .
+\]
+论文把扰动分解成
+\[
+  \eta_t=\hat\eta_t+\tilde\eta_t ,
+\]
+其中 \(\hat\eta_t\) 是条件均值偏移，\(\tilde\eta_t\) 是零均值随机扰动：
+\[
+  \E[\tilde\eta_t\mid\calI_t]=0 .
+\]
+三个攻击维度是：
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+维度 & 类型 & 含义 \\
+\midrule
+频率 & frequent / infrequent & 攻击任务数 \(K=\Theta(T)\) 或 \(K=O(1)\) \\
+强度 & unbounded / bounded & 单次预算 \(M=\Omega(T)\) 或 \(M=o(T)\) \\
+模式 & shifted / non-shifted & 是否有均值偏移 \(\hat\eta_t\neq 0\) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{为什么会出现 Hessian、伪逆和混合二阶导}
+
+很多公式看起来复杂，是因为论文把“数据扰动如何影响参数更新”局部线性化。
+若
+\[
+  Q_t=\nabla_{ww}^2\calL(w_t^\star,Z_t),
+  \qquad
+  G_t=\nabla_{wZ}^2\calL(w_t^\star,Z_t),
+  \qquad
+  S_t=Q_t+H_t,
+\]
+那么：
+\begin{itemize}
+  \item \(Q_t\) 是当前任务损失对参数的曲率；
+  \item \(G_t\) 衡量数据 \(Z_t\) 变化如何改变参数梯度；
+  \item \(S_t=Q_t+H_t\) 是“数据曲率 + 正则化曲率”；
+  \item \(S_t^+\) 是 Moore-Penrose 伪逆，用来处理 \(S_t\) 不满秩的情况。
+\end{itemize}
+
+局部看，投毒先通过 \(G_t\eta_t\) 改变梯度，再通过 \(S_t^+\) 转化为参数偏移。
+所以敏感矩阵经常长成
+\[
+  S_t^+G_t
+  =
+  (\nabla_{ww}^2\calL_t+H_t)^+
+  \nabla_{wZ}^2\calL_t .
+\]
+
+\subsection{线性回归设置}
+
+为了得到闭式证明，论文后半部分使用多输出线性回归：
+\begin{equation}
+  Y_t=X_tw^\star+\varepsilon_t,
+  \qquad
+  \E[\varepsilon_t^i\mid x_t^i]=0,
+  \qquad
+  \E[\varepsilon_t^i(\varepsilon_t^i)^\top\mid x_t^i]=\sigma^2I .
+  \label{eq:linear-model}
+\end{equation}
+平方损失是
+\[
+  \ell(w,(x,y))=\frac12\norm{x^\top w-y}_2^2 .
+\]
+论文在这个设置下把参数矩阵向量化：
+\[
+  \mathbf w_t=\vect(w_t),\qquad
+  \mathbf X_t=I_{p_2}\otimes X_t .
+\]
+这里的 \(\otimes\) 是 Kronecker 积。它的作用是把多输出线性回归写成普通向量形式：
+\[
+  \vect(Y_t)=\mathbf X_t\vect(w^\star)+\vect(\varepsilon_t).
+\]
+
+\section{命题 2.4 / 附录命题 A.1：攻击目标的近似公式}
+
+\subsection{结论形式}
+
+令
+\[
+  \calL(w,Z_t)=\frac{1}{n_t}\sum_{z\in D_t}\ell(w,z),
+  \qquad
+  w_t^\star\in\argmin_w\calL(w,Z_t),
+\]
+并记
+\[
+  P_t=\sum_{s=1}^t\nabla_{ww}^2\calL(w_s^\star,Z_s).
+\]
+对 non-shifted 攻击 \(\tilde\eta_t\)，论文得到近似目标：
+\begin{align}
+  \max_{\tilde\eta_t}\quad
+  &\frac12
+  \E\!\left[
+  \left\|
+  (\nabla_{ww}^2\calL_t+H_t)^+
+  \nabla_{wZ}^2\calL_t
+  \vect(\tilde\eta_t)
+  \right\|_{P_t}^2
+  \right]
+  +\text{高阶余项}
+  \notag\\
+  \st&
+  \E[\fnorm{\tilde\eta_t}^2]\le M .
+  \label{eq:attack-surrogate}
+\end{align}
+其中 \(\calL_t\) 是 \(\calL(w_t^\star,Z_t)\) 的简写。
+
+这条公式表达了一个核心事实：攻击者会把预算放到
+\[
+  P_t^{1/2}
+  (\nabla_{ww}^2\calL_t+H_t)^+
+  \nabla_{wZ}^2\calL_t
+\]
+的最大奇异方向上，因为这个方向让相同扰动造成最大的累计风险增量。
+
+\subsection{证明拆解}
+
+\paragraph{第一步：用经验风险替代真实风险。}
+真实风险 \(\calR_t(w_t)\) 依赖未知分布 \(\calD_1,\dots,\calD_t\)。CL 中旧数据也不可访问。因此论文先用已经出现任务的经验损失和来近似：
+\[
+  \sum_{\tau=1}^t\calL(w_t,Z_\tau).
+\]
+
+\paragraph{第二步：在每个任务最优点 \(w_\tau^\star\) 附近 Taylor 展开。}
+因为 \(w_\tau^\star\) 是任务 \(\tau\) 的经验损失极小点，
+\[
+  \nabla_w\calL(w_\tau^\star,Z_\tau)=0 .
+\]
+所以二阶展开给出
+\begin{align}
+  \sum_{\tau=1}^t\calL(w_t,Z_\tau)
+  =
+  \sum_{\tau=1}^t\calL(w_\tau^\star,Z_\tau)
+  +\frac12\sum_{\tau=1}^t
+  (w_t-w_\tau^\star)^\top Q_\tau(w_t-w_\tau^\star)
+  +O\!\left(\sum_{\tau=1}^t\norm{w_t-w_\tau^\star}_2^3\right),
+  \label{eq:taylor-risk}
+\end{align}
+其中 \(Q_\tau=\nabla_{ww}^2\calL(w_\tau^\star,Z_\tau)\)。
+
+\paragraph{第三步：把投毒导致的更新写成局部线性方程。}
+带投毒数据 \(Z_t+\eta_t\) 的一阶最优性条件是
+\[
+  \nabla_w\calL(w_t,Z_t+\eta_t)+H_t(w_t-w_{t-1})=0 .
+\]
+在 \((w_t^\star,Z_t)\) 附近展开：
+\begin{equation}
+  Q_t(w_t-w_t^\star)
+  +G_t\vect(\eta_t)
+  +H_t(w_t-w_{t-1})
+  +O(\norm{w_t-w_t^\star}_2^2+\fnorm{\eta_t}^2)=0,
+  \label{eq:linearized-foc}
+\end{equation}
+其中 \(G_t=\nabla_{wZ}^2\calL(w_t^\star,Z_t)\)。
+整理得到，对任意旧任务 \(\tau\)，
+\begin{align}
+  w_t-w_\tau^\star
+  =&
+  S_t^+
+  \left[
+    Q_t(w_t^\star-w_\tau^\star)
+    +H_t(w_{t-1}-w_\tau^\star)
+    -G_t\vect(\eta_t)
+  \right]
+  +O(\norm{w_t-w_t^\star}_2^2+\fnorm{\eta_t}^2),
+  \label{eq:update-shift}
+\end{align}
+其中 \(S_t=Q_t+H_t\)。
+
+\paragraph{第四步：代回二次风险。}
+把 \eqref{eq:update-shift} 代入 \eqref{eq:taylor-risk}，所有和 \(\eta_t\) 无关的项对攻击者不重要，可以丢掉。留下的攻击相关部分是
+\begin{align}
+  &
+  \frac12\norm{S_t^+G_t\vect(\eta_t)}_{P_t}^2
+  -
+  \vect(\eta_t)^\top G_t^\top S_t^+
+  \sum_{\tau=1}^t
+  Q_\tau S_t^+
+  \left[
+    Q_t(w_t^\star-w_\tau^\star)
+    +H_t(w_{t-1}-w_\tau^\star)
+  \right]
+  \notag\\
+  &\quad
+  +O(\fnorm{\eta_t}^2+\norm{w_t-w_t^\star}_2^2)
+  +O\!\left(\sum_{\tau=1}^t\norm{w_t-w_\tau^\star}_2^3\right).
+  \label{eq:attack-expansion}
+\end{align}
+
+\paragraph{第五步：为什么 non-shifted 攻击没有线性项。}
+若
+\[
+  \eta_t=\hat\eta_t+\tilde\eta_t,\qquad
+  \E[\tilde\eta_t\mid Z_{1:t},w_{t-1}]=0,
+\]
+那么 \eqref{eq:attack-expansion} 中关于 \(\tilde\eta_t\) 的线性项取期望后为 0。
+因此 non-shifted 攻击的主导项只剩二次型，即 \eqref{eq:attack-surrogate}。
+shifted 攻击 \(\hat\eta_t\) 会保留线性项，所以它更危险：它能直接把模型均值推向错误方向。
+
+\section{定理 3.1：为什么有些攻击根本防不住}
+
+\subsection{定理含义}
+
+论文证明：存在一些问题实例，使得任意正则化式 CL 方法 \eqref{eq:regularized-cl} 都无法保证收敛。两类攻击是：
+\begin{itemize}
+  \item frequent + shifted；
+  \item frequent + unbounded + non-shifted。
+\end{itemize}
+证明只需要构造一维线性回归反例。
+
+\subsection{一维反例}
+
+设
+\[
+  p_1=p_2=n_t=1,\qquad x_t=1,\qquad y_t=w^\star+\varepsilon_t,
+\]
+平方损失 \(\ell(w,z_t)=(w-y_t)^2\)。
+正则化更新化为
+\[
+  w_t
+  =
+  \frac{1}{1+H_t}(y_t+\eta_t)
+  +
+  \frac{H_t}{1+H_t}w_{t-1}.
+\]
+定义
+\[
+  c_t=\frac{H_t}{1+H_t}\in[0,1],
+\]
+则
+\begin{equation}
+  w_t-w^\star
+  =
+  c_t(w_{t-1}-w^\star)
+  +(1-c_t)(\varepsilon_t+\eta_t).
+  \label{eq:scalar-recursion}
+\end{equation}
+这个递推是整条证明的核心。
+
+\subsection{frequent shifted 攻击}
+
+令攻击每个任务，并取常数偏移 \(\eta_t=\Delta\neq 0\)。
+设
+\[
+  m_t=\E[w_t-w^\star],
+\]
+由 \eqref{eq:scalar-recursion} 得
+\[
+  m_t=c_tm_{t-1}+(1-c_t)\Delta .
+\]
+减去 \(\Delta\)：
+\[
+  m_t-\Delta=c_t(m_{t-1}-\Delta),
+\]
+所以
+\[
+  m_T=\Delta+\left(\prod_{t=1}^Tc_t\right)(w_0-w^\star-\Delta).
+\]
+现在分两种情况：
+\begin{itemize}
+  \item 若 \(\prod_{t=1}^Tc_t\not\to0\)，则即使无攻击无噪声，初始偏差也不能被完全遗忘，算法本来就不保证收敛。
+  \item 若 \(\prod_{t=1}^Tc_t\to0\)，则在 shifted 攻击下 \(m_T\to\Delta\)，于是
+  \[
+    \E[(w_T-w^\star)^2]\ge (\E[w_T-w^\star])^2\to\Delta^2>0 .
+  \]
+\end{itemize}
+因此无论正则化策略如何选，总有一种情形无法收敛。
+
+\subsection{frequent unbounded non-shifted 攻击}
+
+现在攻击仍然每个任务，但取零均值独立扰动：
+\[
+  \E[\tilde\eta_t]=0,\qquad
+  \E[\tilde\eta_t^2]=M_T,\qquad
+  M_T=\Omega(T).
+\]
+展开 \eqref{eq:scalar-recursion}：
+\[
+  w_T-w^\star
+  =
+  \left(\prod_{r=1}^Tc_r\right)(w_0-w^\star)
+  +
+  \sum_{s=1}^T
+  \beta_{s,T}(\varepsilon_s+\tilde\eta_s),
+\]
+其中
+\[
+  \beta_{s,T}=(1-c_s)\prod_{r=s+1}^Tc_r .
+\]
+这些权重满足望远镜恒等式
+\[
+  \sum_{s=1}^T\beta_{s,T}
+  =
+  1-\prod_{r=1}^Tc_r .
+\]
+如果 \(\prod c_r\not\to0\)，初始偏差仍然不消失；否则
+\[
+  \sum_{s=1}^T\beta_{s,T}\to1 .
+\]
+由 Cauchy 不等式
+\[
+  \sum_{s=1}^T\beta_{s,T}^2
+  \ge
+  \frac{\left(\sum_{s=1}^T\beta_{s,T}\right)^2}{T}
+  =
+  \frac{(1-\prod_{r=1}^Tc_r)^2}{T}.
+\]
+攻击方差给最终风险贡献至少
+\[
+  M_T\sum_{s=1}^T\beta_{s,T}^2
+  \ge
+  M_T\frac{(1-\prod_{r=1}^Tc_r)^2}{T}.
+\]
+因为 \(M_T=\Omega(T)\)，右端不会趋于 0。定理得证。
+
+\begin{remark}
+这个反例很重要。正则化 CL 必须靠 \(c_t<1\) 逐步忘掉初始偏差；但一旦每一步都混入有偏或巨大方差攻击，这种“持续吸收新数据”的机制本身就会把攻击吸收进去。
+\end{remark}
+
+\section{T2T 防御：少量但强攻击的检测与证明}
+
+\subsection{检测分数的设计}
+
+少量但强攻击的关键困难是：攻击任务未知，而且 shifted 攻击可以非常大。
+最自然的防御是检测异常任务并回滚。但只看
+\[
+  \norm{w_t-w_{t-1}}
+\]
+会有归因问题：大更新可能来自当前任务被攻击，也可能来自当前良性任务在纠正过去被攻击造成的偏差。
+
+T2T 使用两个连续更新：
+\[
+  w_t-w_{t-1},\qquad w_{t-1}-w_{t-2}.
+\]
+检测分数为
+\begin{equation}
+  d_t=
+  \norm{
+  D_t^1(w_t-w_{t-1})-D_t^2(w_{t-1}-w_{t-2})
+  }.
+  \label{eq:dt}
+\end{equation}
+其中
+\begin{align}
+  D_t^1&=(I-B_t)(A_t^+-C_tA_t^\top),\\
+  D_t^2&=(I-B_t)(B_t^++C_tB_t^\top),\\
+  C_t&=(A_t^+A_t-B_t^+B_t)(A_t^\top A_t+B_t^\top B_t)^+,
+  \label{eq:Dt}
+\end{align}
+而
+\begin{align}
+  A_t&=(\nabla_{ww}^2\calL_t+H_t)^{-1}
+      \nabla_{ww}^2\calL_t
+      (\nabla_{ww}^2\calL_{t-1}+H_{t-1})^{-1}H_{t-1},\\
+  B_t&=(\nabla_{ww}^2\calL_{t-1}+H_{t-1})^{-1}
+      \nabla_{ww}^2\calL_{t-1}.
+\end{align}
+
+\subsection{引理 4.1：为什么这个分数能隔离最近两个任务}
+
+引理说：
+\begin{align}
+  D_t^1(w_t-w_{t-1})-D_t^2(w_{t-1}-w_{t-2})
+  =
+  E_t^1(w_t^\star-w_{t-1}^\star)
+  +E_t^2\vect(\eta_{t-1})
+  +E_t^3\vect(\eta_t)
+  +\mathcal E_t,
+  \label{eq:t2t-lemma}
+\end{align}
+其中
+\[
+  \mathcal E_t
+  =
+  O(\norm{w_t-w_t^\star}^2)
+  +O(\norm{w_{t-1}-w_{t-1}^\star}^2)
+  +O(\norm{\eta_t}^2+\norm{\eta_{t-1}}^2).
+\]
+最重要的是：右边没有 \(w_{t-2}\) 的历史项。
+
+\subsection{证明关键：构造 \(D_t^1A_t=D_t^2B_t\)}
+
+从线性化更新可得到
+\begin{align}
+  w_t-w_{t-1}
+  =&
+  -A_t(w_{t-2}-w_t^\star)
+  +S_t^+Q_tS_{t-1}^+Q_{t-1}(w_t^\star-w_{t-1}^\star)
+  \notag\\
+  &+
+  S_t^+Q_tS_{t-1}^+G_{t-1}\vect(\eta_{t-1})
+  -S_t^+G_t\vect(\eta_t)
+  +\text{高阶项},
+  \label{eq:t2t-update1}\\
+  w_{t-1}-w_{t-2}
+  =&
+  -B_t(w_{t-2}-w_{t-1}^\star)
+  -S_{t-1}^+G_{t-1}\vect(\eta_{t-1})
+  +\text{高阶项}.
+  \label{eq:t2t-update2}
+\end{align}
+两式都含有历史状态 \(w_{t-2}\)。为了消掉它，需要
+\[
+  D_t^1A_t=D_t^2B_t .
+\]
+论文把 \(D_t^1,D_t^2\) 设计成下列最小二乘投影问题的解：
+\[
+  \min_{\bar D_t^1,\bar D_t^2}
+  \norm{\bar D_t^1-A_t^+}_F^2
+  +\norm{\bar D_t^2-B_t^+}_F^2,
+  \qquad
+  \st
+  \bar D_t^1A_t=\bar D_t^2B_t .
+\]
+解出来就是 \eqref{eq:Dt} 中的形式，再乘上 \((I-B_t)\) 做归一化。
+代回 \eqref{eq:t2t-update1}--\eqref{eq:t2t-update2} 后，历史项抵消，只剩最近两个任务的任务差异和攻击项。
+
+\subsection{检测阈值：Lemma 4.3}
+
+在线性回归假设下，如果任务 \(t-1\) 和 \(t\) 都是良性的，那么
+\[
+  d_t^2
+  =
+  \norm{E_t^2\mathbf e_{t-1}+E_t^3\mathbf e_t}_2^2 .
+\]
+噪声独立、零均值，且
+\[
+  \E[\mathbf e_s\mathbf e_s^\top\mid X_s]=\sigma^2I .
+\]
+因此交叉项期望为 0，
+\begin{align}
+  \E[d_t^2\mid X_{t-1},X_t]
+  =
+  \sigma^2\tr((E_t^2)^\top E_t^2)
+  +
+  \sigma^2\tr((E_t^3)^\top E_t^3).
+  \label{eq:dt-expectation}
+\end{align}
+用 Markov 不等式：
+\[
+  \Pr(d_t^2>\theta_t^2)\le\epsilon/T,
+\]
+取
+\begin{equation}
+  \theta_t
+  =
+  \sqrt{
+  \frac{\sigma^2T}{\epsilon}
+  \left[
+  \tr((E_t^2)^\top E_t^2)
+  +
+  \tr((E_t^3)^\top E_t^3)
+  \right]
+  }.
+  \label{eq:theta}
+\end{equation}
+再对所有 \(t\) 用 union bound，得到同时成立概率至少 \(1-\epsilon\)。
+
+如果噪声是 sub-Gaussian，可以用 Hanson-Wright 不等式替代 Markov 不等式，
+阈值会从粗糙的 \(T/\epsilon\) 型改善成对数型 \(\log(T/\epsilon)\)。
+
+\subsection{Theorem 4.4：最终误差界}
+
+论文选用正则化矩阵
+\begin{equation}
+  H_t=\frac{1}{n_t}
+  \left(
+  \frac{\sigma^2}{W}I+\sum_{s=1}^{t-1}\mathbf X_s^\top\mathbf X_s
+  \right).
+  \label{eq:Ht-t2t}
+\end{equation}
+把攻击写成标签扰动 \(\mathbf n_t\)，其中未攻击时 \(\mathbf n_t=0\)。
+线性回归递推为
+\begin{align}
+  \mathbf w_t-\mathbf w^\star
+  =
+  \left(
+  \frac{\mathbf X_t^\top\mathbf X_t}{n_t}+H_t
+  \right)^{-1}
+  \left[
+  \frac{\mathbf X_t^\top(\mathbf e_t+\mathbf n_t)}{n_t}
+  +H_t(\mathbf w_{t-1}-\mathbf w^\star)
+  \right].
+  \label{eq:t2t-linear-recursion}
+\end{align}
+代入 \eqref{eq:Ht-t2t} 并展开递推，有
+\begin{equation}
+  \mathbf w_T-\mathbf w^\star
+  =
+  \tilde{\mathbf X}_{T+1}^{-1}
+  \left[
+  \sum_{s=1}^T\mathbf X_s^\top(\mathbf e_s+\mathbf n_s)
+  +\frac{\sigma^2}{W}(\mathbf w_0-\mathbf w^\star)
+  \right],
+  \label{eq:t2t-unroll}
+\end{equation}
+其中
+\[
+  \tilde{\mathbf X}_{T+1}
+  =
+  \frac{\sigma^2}{W}I+\sum_{s=1}^T\mathbf X_s^\top\mathbf X_s .
+\]
+
+把任务分成良性任务和漏检攻击任务 \(\mathcal K=\{t_1,\dots,t_K\}\)。
+检测到的攻击会被回滚丢弃，不进入最终递推；真正需要控制的是漏检攻击。
+由 T2T 阈值可推出，任何漏检攻击必须满足
+\begin{equation}
+  \left\|
+  \left(
+  \frac{\mathbf X_t^\top\mathbf X_t}{n_t}
+  \right)^+
+  \frac{\mathbf X_t^\top}{n_t}
+  (\mathbf n_t+\mathbf e_t)
+  \right\|_2^2
+  \le
+  \frac{\sigma^2T}{\epsilon}
+  \tr\!\left((\mathbf X_t^\top\mathbf X_t)^+\right).
+  \label{eq:undetected-bound}
+\end{equation}
+直观解释：如果攻击超过这个尺度，在某个最坏未来任务对齐下，下一次 T2T 分数会超过阈值，攻击会被检测并回滚。
+
+由 \eqref{eq:t2t-unroll}，
+\begin{align}
+  \E\norm{\mathbf w_T-\mathbf w^\star}^2
+  \le&
+  \sigma^2\tr(\tilde{\mathbf X}_{T+1}^{-1})
+  \notag\\
+  &+
+  K\sum_{k=1}^K
+  \left\|
+  \tilde{\mathbf X}_{T+1}^{-1}
+  (\mathbf X_{t_k}^\top\mathbf X_{t_k})
+  \right\|_2^2
+  \frac{\sigma^2T}{\epsilon}
+  \tr\!\left((\mathbf X_{t_k}^\top\mathbf X_{t_k})^+\right).
+  \label{eq:t2t-final-bound}
+\end{align}
+第一项是良性噪声误差；第二项是漏检攻击误差。
+
+若所有任务 informative，即每个参数方向都能在 \(T\) 个任务中得到线性数量的信息，
+则 \(\tilde{\mathbf X}_{T+1}\) 的特征值按 \(\Theta(T)\) 增长。
+于是
+\[
+  \tr(\tilde{\mathbf X}_{T+1}^{-1})=O(1/T),
+  \qquad
+  \left\|
+  \tilde{\mathbf X}_{T+1}^{-1}
+  (\mathbf X_{t_k}^\top\mathbf X_{t_k})
+  \right\|_2^2=O(1/T^2).
+\]
+代入 \eqref{eq:t2t-final-bound} 得
+\[
+  \calR(w_T)=O\!\left(\frac{K^2}{\epsilon T}\right).
+\]
+当 \(K=O(1)\) 时，最终误差收敛到 0。
+
+\section{频繁有界零均值攻击：鲁棒特征防御}
+
+\subsection{为什么不能继续靠检测}
+
+如果几乎每个任务都被攻击，T2T 检测即使有效，也会不断丢任务，模型无法学习。
+此时要换思路：不再拒绝任务，而是调整正则化矩阵 \(H_t\)，让模型对攻击最敏感的方向变得不敏感。
+
+\subsection{线性模型中的 minimax 递推}
+
+在向量化线性回归下，带 non-shifted 攻击的递推是
+\begin{equation}
+  w_t-w_\star
+  =
+  S_t^{-1}
+  \left[
+  \frac{X_t^\top(\varepsilon_t+\tilde\eta_t)}{n_t}
+  +H_t(w_{t-1}-w_\star)
+  \right],
+  \qquad
+  S_t=\frac{X_t^\top X_t}{n_t}+H_t .
+  \label{eq:rfd-recursion}
+\end{equation}
+因为 \(\tilde\eta_t\) 是零均值并与历史误差条件不相关，
+\begin{align}
+  \E[w_t-w_\star]
+  &=
+  S_t^{-1}H_t\E[w_{t-1}-w_\star],
+  \label{eq:rfd-mean}\\
+  \Cov(w_t-w_\star)
+  &=
+  S_t^{-1}\frac{X_t^\top}{n_t}
+  (\Cov(\tilde\eta_t)+\sigma^2I)
+  \frac{X_t}{n_t}S_t^{-1}
+  \notag\\
+  &\quad+
+  S_t^{-1}H_t\Cov(w_{t-1}-w_\star)H_t^\top S_t^{-1}.
+  \label{eq:rfd-cov}
+\end{align}
+于是防御者在每轮求解
+\begin{align}
+  \min_{H_t}\max_{\Cov(\tilde\eta_t)\succeq0}\quad
+  &
+  \norm{S_t^{-1}H_t\E[w_{t-1}-w_\star]}_2^2
+  \notag\\
+  &+
+  \tr\!\left(
+  S_t^{-1}\frac{X_t^\top}{n_t}
+  (\Cov(\tilde\eta_t)+\sigma^2I)
+  \frac{X_t}{n_t}S_t^{-1}
+  \right)
+  \notag\\
+  &+
+  \tr\!\left(
+  S_t^{-1}H_t\Cov(w_{t-1}-w_\star)H_t^\top S_t^{-1}
+  \right)
+  \notag\\
+  \st&
+  \tr(\Cov(\tilde\eta_t))\le M .
+  \label{eq:rfd-minimax}
+\end{align}
+
+\subsection{对角化假设与每个方向的风险}
+
+假设所有任务 Hessian 两两可交换：
+\[
+  X_s^\top X_sX_t^\top X_t=X_t^\top X_tX_s^\top X_s .
+\]
+则它们可以被同一个正交矩阵 \(U=[u_1,\dots,u_p]\) 同时对角化：
+\[
+  \frac{X_t^\top X_t}{n_t}
+  =
+  U\Gamma_tU^\top,\qquad
+  \Gamma_t=\diag(\gamma_1^t,\dots,\gamma_p^t).
+\]
+只需考虑
+\[
+  H_t=U\Lambda_tU^\top,\qquad
+  \Lambda_t=\diag(\lambda_1^t,\dots,\lambda_p^t).
+\]
+定义第 \(j\) 个方向的误差贡献
+\[
+  \calR_j^t=\E[(u_j^\top(w_t-w_\star))^2],
+  \qquad
+  \calR(w_t)=\sum_{j=1}^p\calR_j^t.
+\]
+
+投影到 \(u_j\) 方向，若 \(\gamma_j^t>0\)，有
+\begin{equation}
+  u_j^\top(w_t-w_\star)
+  =
+  \frac{1}{\lambda_j^t+\gamma_j^t}
+  \left[
+  \frac{\sqrt{\gamma_j^t}}{\sqrt{n_t}}(v_j^t)^\top(\varepsilon_t+\tilde\eta_t)
+  +\lambda_j^tu_j^\top(w_{t-1}-w_\star)
+  \right],
+  \label{eq:per-direction}
+\end{equation}
+其中 \(v_j^t=X_tu_j/\sqrt{n_t\gamma_j^t}\) 且 \(\norm{v_j^t}=1\)。
+由零均值和不相关性，
+\begin{equation}
+  \calR_j^t
+  =
+  \left(\frac{\lambda_j^t}{\lambda_j^t+\gamma_j^t}\right)^2
+  \calR_j^{t-1}
+  +
+  \frac{
+  \gamma_j^t\left(\sigma^2+(v_j^t)^\top\Cov(\tilde\eta_t)v_j^t\right)
+  }{
+  n_t(\lambda_j^t+\gamma_j^t)^2
+  } .
+  \label{eq:risk-per-direction}
+\end{equation}
+
+固定 \(\lambda_j^t\) 后，攻击者的目标对 \(\Cov(\tilde\eta_t)\) 是线性的。
+所以最优攻击把全部预算 \(M\) 放到最敏感方向：
+\[
+  j^\star\in
+  \argmax_j
+  \frac{\gamma_j^t}{n_t(\lambda_j^t+\gamma_j^t)^2},
+  \qquad
+  \Cov(\tilde\eta_t)=Mv_{j^\star}^t(v_{j^\star}^t)^\top .
+\]
+于是防御问题等价于
+\begin{align}
+  \min_{\lambda_1^t,\dots,\lambda_p^t}\quad
+  &
+  \max_j
+  \frac{M\gamma_j^t}{n_t(\lambda_j^t+\gamma_j^t)^2}
+  +
+  \sum_{j=1}^p
+  \left[
+  \left(\frac{\lambda_j^t}{\lambda_j^t+\gamma_j^t}\right)^2
+  \calR_j^{t-1}
+  +
+  \frac{\gamma_j^t\sigma^2}{n_t(\lambda_j^t+\gamma_j^t)^2}
+  \right].
+  \label{eq:scalar-minimax}
+\end{align}
+
+\subsection{Proposition 5.2：最优正则化的水位结构}
+
+令
+\[
+  \tilde\gamma_j^t=\gamma_j^tn_t,\qquad
+  \calI_t^+=\{j:\tilde\gamma_j^t>0,\ \calR_j^{t-1}>0\}.
+\]
+对 \(j\in\calI_t^+\)，定义
+\[
+  b_j^t=
+  \frac{\calR_j^{t-1}\tilde\gamma_j^t+\sigma^2}
+  {\calR_j^{t-1}\sqrt{\tilde\gamma_j^t}} .
+\]
+按 \(b_j^t\) 从小到大排序。再定义
+\[
+  A_j^t=
+  \frac{
+  M+j\sigma^2+\sum_{k=1}^j\calR_k^{t-1}\tilde\gamma_k^t
+  }{
+  \sum_{k=1}^j\calR_k^{t-1}\sqrt{\tilde\gamma_k^t}
+  } .
+\]
+令 \(j_t\) 是满足
+\[
+  A_j^t>b_j^t
+\]
+的最大 \(j\)。那么最优防御为
+\begin{equation}
+  \lambda_j^t=
+  \begin{cases}
+  \dfrac{\sigma^2}{n_t\calR_j^{t-1}},
+  & j\in\calI_t^+,\ j>j_t,\\[0.9em]
+  A_{j_t}^t\sqrt{\dfrac{\gamma_j^t}{n_t}}-\gamma_j^t,
+  & j\in\calI_t^+,\ j\le j_t,\\[0.9em]
+  +\infty,
+  & \gamma_j^t>0,\ \calR_j^{t-1}=0,\\[0.4em]
+  \text{任意正数},
+  & \gamma_j^t=0 .
+  \end{cases}
+  \label{eq:rfd-lambda}
+\end{equation}
+
+\subsection{Proposition 5.2 的证明}
+
+证明从变量替换开始：
+\[
+  c_j^t=\frac{\lambda_j^t}{\lambda_j^t+\gamma_j^t}.
+\]
+这表示第 \(j\) 个方向保留旧模型的比例；\(1-c_j^t\) 表示当前任务数据进入模型的比例。
+
+忽略退化方向后，问题变成
+\begin{align}
+  \min_{\{c_j^t\},z}\quad
+  &
+  \sum_{j\in\calI_t^+}
+  \left[
+  (c_j^t)^2\calR_j^{t-1}
+  +
+  \frac{(1-c_j^t)^2\sigma^2}{n_t\gamma_j^t}
+  \right]
+  +zM
+  \notag\\
+  \st&
+  z\ge
+  \frac{(1-c_j^t)^2}{\gamma_j^tn_t},
+  \qquad j\in\calI_t^+ .
+  \label{eq:kkt-problem}
+\end{align}
+这里 \(z\) 代表最大攻击敏感度。
+
+对约束引入乘子 \(\chi_j\ge0\)。KKT 条件给出
+\[
+  \sum_{j\in\calI_t^+}\chi_j=M
+\]
+以及
+\begin{equation}
+  c_j^t=
+  \frac{(\sigma^2+\chi_j)/(n_t\gamma_j^t)}
+  {\calR_j^{t-1}+(\sigma^2+\chi_j)/(n_t\gamma_j^t)} .
+  \label{eq:c-kkt}
+\end{equation}
+若 \(\chi_j>0\)，说明方向 \(j\) 的最大敏感度约束是活跃的：
+\[
+  z=\frac{(1-c_j^t)^2}{\gamma_j^tn_t}.
+\]
+把 \eqref{eq:c-kkt} 代入可得
+\begin{equation}
+  \chi_j
+  =
+  \frac{\calR_j^{t-1}\sqrt{\gamma_j^tn_t}}{\sqrt z}
+  -\sigma^2
+  -\gamma_j^tn_t\calR_j^{t-1}.
+  \label{eq:chi}
+\end{equation}
+
+设活跃集合为 \(J_t=\{j:\chi_j>0\}\)。由 \(\sum\chi_j=M\) 得
+\[
+  \frac{1}{\sqrt z}
+  =
+  \frac{
+  M+|J_t|\sigma^2+\sum_{j\in J_t}\gamma_j^tn_t\calR_j^{t-1}
+  }{
+  \sum_{j\in J_t}\calR_j^{t-1}\sqrt{\gamma_j^tn_t}
+  } .
+\]
+这就是 \(A_j^t\) 的来源。
+
+接下来要确定 \(J_t\)。令
+\[
+  a_j=\calR_j^{t-1}\sqrt{\gamma_j^tn_t},
+  \qquad
+  b_j=
+  \frac{\gamma_j^tn_t\calR_j^{t-1}+\sigma^2}
+  {\calR_j^{t-1}\sqrt{\gamma_j^tn_t}} .
+\]
+对任意候选活跃集合 \(J\)，KKT 条件给出
+\[
+  \chi_k=a_k(A_J-b_k).
+\]
+因此：
+\[
+  k\in J \Rightarrow b_k<A_J,
+  \qquad
+  k\notin J \Rightarrow b_k\ge A_J .
+\]
+所以活跃集合必须是按 \(b_j\) 排序后的一个前缀。
+最大满足 \(A_j^t>b_j^t\) 的 \(j\) 就是前缀长度 \(j_t\)。
+
+最后由
+\[
+  \lambda_j^t=\frac{c_j^t\gamma_j^t}{1-c_j^t}
+\]
+还原回 \(\lambda_j^t\)，得到 \eqref{eq:rfd-lambda}。
+
+\begin{remark}
+\(b_j^t\) 越小，方向 \(j\) 越容易进入 protected set。直观上，这些方向要么当前特征信息弱，要么历史误差大，要么噪声相对影响强，因此更容易被攻击者利用。
+\end{remark}
+
+\subsection{Theorem 5.3：为什么鲁棒特征防御更快}
+
+定理考虑一个特殊平稳情形：protected set 长期固定为
+\[
+  \{1,\dots,j_T\}.
+\]
+对 protected directions 定义总误差
+\[
+  \Phi_t=\sum_{j=1}^{j_T}\calR_j^t,
+  \qquad
+  f_j^t=\frac{\calR_j^t}{\Phi_t}.
+\]
+假设 \(f_j^t\to f_j\)，且 \(\tilde\gamma_j^t\to\tilde\gamma_j^T\)。
+
+在 protected directions 上，KKT 条件让攻击敏感度相等：
+\[
+  \frac{(1-c_j^t)^2}{\tilde\gamma_j^t}=z_t,
+  \qquad j=1,\dots,j_T.
+\]
+因此
+\[
+  c_j^t=1-\sqrt{z_t\tilde\gamma_j^t}.
+\]
+由 KKT 水位公式：
+\[
+  \sqrt{z_t}
+  =
+  \frac{
+  \sum_{i=1}^{j_T}\sqrt{\tilde\gamma_i^t}\calR_i^{t-1}
+  }{
+  M+j_T\sigma^2+\sum_{i=1}^{j_T}\tilde\gamma_i^t\calR_i^{t-1}
+  } .
+\]
+
+把 protected directions 的风险加总，得到核心递推：
+\begin{equation}
+  \Phi_t
+  =
+  \Phi_{t-1}
+  -
+  \frac{
+  \left(
+  \sum_{j=1}^{j_T}\sqrt{\tilde\gamma_j^t}\calR_j^{t-1}
+  \right)^2
+  }{
+  M+j_T\sigma^2+
+  \sum_{j=1}^{j_T}\tilde\gamma_j^t\calR_j^{t-1}
+  } .
+  \label{eq:phi-recursion}
+\end{equation}
+把 \(\calR_j^{t-1}=f_j^{t-1}\Phi_{t-1}\) 代入，并取倒数，可写成
+\begin{align}
+  \frac{1}{\Phi_t}-\frac{1}{\Phi_{t-1}}
+  =
+  \frac{
+  \left(
+  \sum_{j=1}^{j_T}f_j^{t-1}\sqrt{\tilde\gamma_j^t}
+  \right)^2
+  }{
+  M+j_T\sigma^2+
+  \Phi_{t-1}
+  \left[
+  \sum_{j=1}^{j_T}f_j^{t-1}\tilde\gamma_j^t
+  -
+  \left(
+  \sum_{j=1}^{j_T}f_j^{t-1}\sqrt{\tilde\gamma_j^t}
+  \right)^2
+  \right]
+  }.
+  \label{eq:phi-reciprocal}
+\end{align}
+Cauchy 不等式保证中括号非负，因此 \(\Phi_t\) 单调下降。
+在平稳假设下，分子收敛到
+\[
+  C_\star=
+  \left(
+  \sum_{j=1}^{j_T}f_j\sqrt{\tilde\gamma_j^T}
+  \right)^2>0,
+\]
+而 \(\Phi_t\to0\)，所以分母最终趋于 \(M+j_T\sigma^2\)。
+于是
+\[
+  \frac{1}{\Phi_t}-\frac{1}{\Phi_{t-1}}
+  \to
+  \frac{C_\star}{M+j_T\sigma^2}.
+\]
+累加并用 Cesaro 平均得到
+\[
+  \Phi_T
+  \sim
+  \frac{M+j_T\sigma^2}
+  {T\left(\sum_{j=1}^{j_T}f_j\sqrt{\tilde\gamma_j^T}\right)^2}.
+\]
+
+对非 protected directions，攻击者不投预算，递推退化为
+\[
+  \calR_j^t
+  =
+  \frac{\sigma^2\calR_j^{t-1}}
+  {\sigma^2+\tilde\gamma_j^t\calR_j^{t-1}}.
+\]
+取倒数：
+\[
+  \frac{1}{\calR_j^t}
+  =
+  \frac{1}{\calR_j^{t-1}}
+  +\frac{\tilde\gamma_j^t}{\sigma^2}.
+\]
+展开得
+\[
+  \calR_j^T
+  \le
+  \frac{\sigma^2}
+  {\sigma^2/W+\sum_{t=1}^T\tilde\gamma_j^t}.
+\]
+因此鲁棒防御的总误差为
+\begin{equation}
+  \calR(w_T)
+  \lesssim
+  \frac{M+j_T\sigma^2}
+  {T\left(\sum_{j=1}^{j_T}f_j\sqrt{\tilde\gamma_j^T}\right)^2}
+  +
+  \sum_{j=j_T+1}^p
+  \frac{\sigma^2}
+  {\sigma^2/W+\sum_{\tau=1}^T\tilde\gamma_j^\tau}.
+  \label{eq:rfd-final}
+\end{equation}
+
+\subsection{和普通正则化 / EWC 型基线的比较}
+
+基线使用
+\[
+  H_t=\frac{1}{n_t}
+  \left(
+  \frac{\sigma^2}{W}I+\sum_{\tau=1}^{t-1}X_\tau^\top X_\tau
+  \right).
+\]
+在方向 \(j\) 上，最终噪声权重约为
+\[
+  \frac{\sqrt{\tilde\gamma_j^t}}
+  {\sigma^2/W+\sum_{\tau=1}^T\tilde\gamma_j^\tau}.
+\]
+攻击者每轮把预算投到最坏方向，攻击项变成
+\[
+  M\max_j
+  \frac{\sum_{t=1}^T\tilde\gamma_j^t}
+  {\left(\sigma^2/W+\sum_{t=1}^T\tilde\gamma_j^t\right)^2}.
+\]
+平稳时
+\[
+  \sum_{t=1}^T\tilde\gamma_j^t\sim T\tilde\gamma_j^T,
+\]
+于是基线攻击项近似
+\[
+  \max_j\frac{M}{T\tilde\gamma_j^T}.
+\]
+这意味着一个小 \(\tilde\gamma_j^T\) 的脆弱方向就可能主导误差。
+鲁棒特征防御则用 protected set 把敏感度平均化，攻击项变为
+\[
+  \frac{M+j_T\sigma^2}
+  {T\left(\sum_{j=1}^{j_T}f_j\sqrt{\tilde\gamma_j^T}\right)^2},
+\]
+不再完全由单个最坏方向决定。
+
+\section{实验部分怎么读}
+
+实验不是证明的核心，但它验证了两个理论直觉。
+
+\begin{itemize}
+  \item 对 infrequent shifted attacks，T2T 检测分数 \(d_t\) 在攻击任务附近出现峰值。即使测试准确率看起来没明显变化，微观更新分数仍能暴露攻击。
+  \item 对 frequent bounded non-shifted attacks，iCaRL 这类 replay/memorization 方法在频繁攻击下可能更脆弱，因为它没有显式正则化矩阵来降低敏感方向。鲁棒特征防御比普通 EWC 型正则化收敛更快。
+\end{itemize}
+
+\section{读公式的路线图}
+
+如果从头读论文很吃力，可以按以下顺序理解。
+
+\begin{enumerate}
+  \item 先看 \eqref{eq:regularized-cl}。所有防御都只是在设计 \(H_t\) 或通过检测让 \(H_t\to\infty\)。
+  \item 再看 \eqref{eq:attack-surrogate}。它告诉你攻击者为什么打最大奇异方向。
+  \item 用一维递推 \eqref{eq:scalar-recursion} 理解 Theorem 3.1。这个定理不需要复杂矩阵。
+  \item 用等式 \(D_t^1A_t=D_t^2B_t\) 理解 T2T。它解释了为什么 \(d_t\) 能消去历史。
+  \item 用 \eqref{eq:t2t-unroll} 理解 T2T 的收敛界。最终模型就是所有噪声与攻击的加权和。
+  \item 用 \eqref{eq:risk-per-direction} 理解鲁棒特征防御。每个特征方向有一个独立风险递推。
+  \item 用 KKT 条件理解 \eqref{eq:rfd-lambda}。protected set 是一个排序后的前缀集合。
+  \item 最后看 \eqref{eq:phi-reciprocal}。Theorem 5.3 的 \(O(1/T)\) 来自倒数递推。
+\end{enumerate}
+
+\section{这篇论文的假设与局限}
+
+\begin{itemize}
+  \item 最完整的证明建立在线性回归和平方损失上。论文用 NTK 和预训练线性头解释为什么这对非线性模型有启发，但严格结论仍然依赖线性化结构。
+  \item T2T 防御需要维护最近几个模型、正则化矩阵和 Hessian 信息。高维神经网络中必须用 Hessian 近似。
+  \item Theorem 4.4 中 informative tasks 假设很关键。若某些参数方向长期没有数据信息，即使没有攻击也不能保证收敛。
+  \item Theorem 5.3 的闭式收敛率依赖 protected set 平稳、Hessian 可同时对角化等假设。这些假设主要用于给出可解释的理论形式。
+  \item 攻击预算 \(M\) 在鲁棒特征防御中需要被知道或至少有上界。若上界过松，正则化可能过保守。
+\end{itemize}
+
+\section{一句话总结}
+
+这篇论文的核心观点是：连续学习中的投毒攻击不是普通噪声，而是沿时间累积的策略性偏置。频繁均值偏移或巨大方差攻击会打破任何正则化 CL 的收敛保证；少量强攻击可以通过 task-to-task 投影检测并回滚；频繁有界零均值攻击则需要在 Hessian 特征方向上做 minimax 正则化，把攻击者最想利用的敏感方向压平。
+
+\begin{thebibliography}{9}
+\bibitem{hu2026}
+Yiting Hu and Lingjie Duan.
+\newblock \emph{Theory of Continual Learning Against Data Poisoning Attacks}.
+\newblock arXiv:2606.29841, 2026.
+\end{thebibliography}
+
+\end{document}
