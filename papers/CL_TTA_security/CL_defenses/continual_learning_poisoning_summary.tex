@@ -1,0 +1,466 @@
+\documentclass[UTF8,fontset=none,11pt]{ctexart}
+
+\usepackage[a4paper,margin=2.15cm]{geometry}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{microtype}
+
+\setCJKmainfont{Noto Serif CJK SC}
+\setCJKsansfont{Noto Sans CJK SC}
+\setCJKmonofont{Noto Sans CJK SC}
+\setmainfont{DejaVu Serif}
+\setsansfont{DejaVu Sans}
+\setmonofont{DejaVu Sans Mono}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!55!black,
+  citecolor=blue!55!black,
+  urlcolor=blue!55!black
+}
+
+\setlist[itemize]{leftmargin=1.7em,itemsep=0.25em,topsep=0.25em}
+\setlist[enumerate]{leftmargin=2.0em,itemsep=0.25em,topsep=0.25em}
+\renewcommand{\arraystretch}{1.22}
+
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\calR}{\mathcal{R}}
+\newcommand{\calL}{\mathcal{L}}
+\newcommand{\norm}[1]{\left\lVert #1\right\rVert}
+\newcommand{\tr}{\operatorname{tr}}
+\newcommand{\Cov}{\operatorname{Cov}}
+\newcommand{\diag}{\operatorname{diag}}
+\newcommand{\argmin}{\operatorname*{arg\,min}}
+\newcommand{\argmax}{\operatorname*{arg\,max}}
+\newcommand{\vect}{\operatorname{vec}}
+
+\title{\bfseries 论文思想与算法总结\\
+{\large Theory of Continual Learning Against Data Poisoning Attacks}}
+\author{面向公式阅读困难的中文总览}
+\date{\today}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\section{一句话总览}
+
+这篇论文研究的问题是：连续学习模型按任务序列不断训练时，如果攻击者在训练数据里投毒，正则化式连续学习什么时候一定防不住，什么时候还能设计出有证明保证的防御。
+
+论文给出的核心答案可以压缩成三句话：
+\begin{itemize}
+  \item 如果攻击很频繁，并且攻击能持续改变数据均值，或者每次零均值攻击的方差预算越来越大，那么正则化式连续学习没有一般性的收敛保证。
+  \item 如果攻击次数很少，即使单次攻击很强，也可以用 task-to-task verification（T2T）检测最近两个任务的异常更新，并通过回滚避免攻击长期累积。
+  \item 如果攻击很频繁但每次有界且零均值，不能主要靠检测，而要把正则化矩阵设计成鲁棒的特征方向防御，让攻击者无法集中打最脆弱方向。
+\end{itemize}
+
+\section{论文在解决什么问题}
+
+\subsection{连续学习的正常目标}
+
+连续学习（continual learning, CL）中，任务按时间到来：
+\[
+  1,2,\dots,T .
+\]
+第 \(t\) 个任务有数据 \(D_t\)。模型训练完第 \(t-1\) 个任务后得到参数 \(w_{t-1}\)，然后只用当前任务数据和一个正则化项更新到 \(w_t\)。
+
+论文讨论的核心算法族是正则化式 CL：
+\[
+  w_t\in\argmin_w
+  \left\{
+  \frac1{n_t}\sum_{z\in D_t}\ell(w,z)
+  +\frac12\norm{w-w_{t-1}}_{H_t}^2
+  \right\}.
+\]
+这条公式的直觉是：
+\begin{itemize}
+  \item 第一项让模型适应当前任务；
+  \item 第二项让模型不要离旧模型太远；
+  \item \(H_t\) 是防御者最主要的控制旋钮，它决定哪些参数方向更不容易被新数据拉动。
+\end{itemize}
+
+\subsection{投毒为什么在 CL 中更危险}
+
+普通训练中，投毒影响一次训练过程；CL 中，攻击可以沿时间反复插入。一次被污染的更新会变成下次训练的起点，所以攻击影响会继续传播。
+
+论文把攻击者看成强对手：它知道当前模型、当前数据和历史信息，并能在任务 \(t\) 的数据中加入扰动
+\[
+  \eta_t=(\eta_{x,t},\eta_{y,t}).
+\]
+其中 \(\eta_{x,t}\) 是输入特征扰动，\(\eta_{y,t}\) 是标签扰动。理论模型先允许两者都存在；后面为了得到清晰证明，很多结论在线性回归中只分析 label poisoning。
+
+\section{攻击分类：论文的攻防地图}
+
+论文把攻击能力分成三个维度。
+
+\begin{center}
+\begin{tabular}{p{3.0cm}p{5.0cm}p{6.2cm}}
+\toprule
+维度 & 两种情况 & 含义 \\
+\midrule
+频率 & frequent / infrequent
+& 攻击任务数 \(K\) 是否随总任务数 \(T\) 线性增长。frequent 表示 \(K=\Theta(T)\)，infrequent 表示 \(K=O(1)\) 或很少。\\
+\addlinespace
+强度 & bounded / unbounded
+& 单次攻击预算 \(M\) 是否随 \(T\) 增大。unbounded 表示攻击方差或能量可达到 \(\Omega(T)\) 量级。\\
+\addlinespace
+模式 & shifted / non-shifted
+& shifted 会改变扰动的条件均值；non-shifted 满足 \(\E[\tilde\eta_t\mid\text{历史信息}]=0\)，也就是平均方向不偏，但方差可以变大。\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+由这三个维度组合，论文得到下面的可防御性结论。
+
+\begin{center}
+\begin{tabular}{p{2.8cm}p{2.8cm}p{3.2cm}p{5.2cm}}
+\toprule
+频率 & 强度 & 模式 & 论文结论 \\
+\midrule
+frequent & bounded & shifted
+& 无一般收敛保证。持续均值偏移会让模型长期学到错误方向。\\
+\addlinespace
+frequent & unbounded & shifted 或 non-shifted
+& 无一般收敛保证。即使均值为 0，巨大方差也能压过数据本身信号。\\
+\addlinespace
+infrequent & unbounded & shifted 或 non-shifted
+& 可以防。论文提出 T2T 检测加回滚，最终误差可收敛。\\
+\addlinespace
+frequent & bounded & non-shifted
+& 可以缓解。论文提出鲁棒特征正则化，通过 minimax 选择 \(H_t\)，加快收敛。\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{主线一：为什么有些攻击一定防不住}
+
+\subsection{核心直觉}
+
+正则化式 CL 的本质是一个加权折中：
+\[
+  \text{新模型}
+  \approx
+  \text{吸收当前数据}
+  +
+  \text{保留旧模型}.
+\]
+如果模型完全不吸收当前数据，它学不到新任务；如果模型吸收当前数据，它也会吸收投毒。攻击者正是利用这个矛盾。
+
+\subsection{frequent shifted 攻击为什么致命}
+
+shifted attack 的关键不是“噪声大”，而是“方向有偏”。如果每个任务都被加入同方向偏移 \(\Delta\)，模型每次学习当前任务时都会把这个偏移当成真实规律的一部分。
+
+论文用一维线性回归反例说明这个事实。递推可以写成：
+\[
+  w_t-w^\star
+  =
+  c_t(w_{t-1}-w^\star)
+  +(1-c_t)(\varepsilon_t+\eta_t),
+\]
+其中 \(w^\star\) 是真实参数，\(c_t\) 表示保留旧模型的比例。
+
+如果攻击者总是取 \(\eta_t=\Delta\)，那么模型误差的均值会被推向 \(\Delta\)。这说明只要攻击频繁且有固定方向，最终误差不可能趋于 0。
+
+\subsection{frequent unbounded non-shifted 为什么也防不住}
+
+non-shifted 攻击虽然均值为 0，但可以增加方差。若每次攻击方差预算 \(M_T=\Omega(T)\)，那么随机扰动的平均方向不偏也没用，因为波动太大。
+
+直觉上，模型最终误差包含很多历史噪声的加权和：
+\[
+  w_T-w^\star
+  =
+  \text{初始误差残留}
+  +
+  \sum_{s=1}^T \beta_{s,T}(\varepsilon_s+\tilde\eta_s).
+\]
+当 \(\tilde\eta_s\) 的方差随 \(T\) 增大时，这个和的方差不会消失，最终风险也不会收敛到 0。
+
+这就是 Theorem 3.1 的意义：不是某个算法设计得不好，而是在这些攻击条件下，整个正则化式 CL 框架都没有统一保证。
+
+\section{主线二：少量强攻击的 T2T 防御}
+
+\subsection{T2T 想解决什么}
+
+T2T 面对的场景是：攻击次数少，但单次攻击可以很强，甚至是 shifted attack。直觉上，少量强攻击应该能被检测出来；难点是不能只看当前更新大小。
+
+只看
+\[
+  \norm{w_t-w_{t-1}}
+\]
+会有误判，因为大更新可能来自三种原因：
+\begin{itemize}
+  \item 当前任务真的和旧任务不同；
+  \item 当前任务被投毒；
+  \item 过去被投毒的影响正在通过模型状态传播。
+\end{itemize}
+
+T2T 的想法是比较两个相邻更新：
+\[
+  w_t-w_{t-1},
+  \qquad
+  w_{t-1}-w_{t-2}.
+\]
+它先用两个投影矩阵把这两个更新变到可比较空间，再相减。设计目标是消掉更早历史状态 \(w_{t-2}\) 的影响，只保留最近两个任务的信息。
+
+\subsection{T2T 检测分数的逻辑}
+
+检测分数可以抽象理解为：
+\[
+  d_t
+  =
+  \norm{
+  \text{处理后的当前更新}
+  -
+  \text{处理后的上一更新}
+  }.
+\]
+论文中的 \(D_t^1,D_t^2,A_t,B_t,C_t\) 都是为了实现一件事：
+\[
+  D_t^1A_t=D_t^2B_t.
+\]
+这条关系保证两次更新里共同的历史项会在相减时抵消。
+
+因此，T2T 不是简单地看“模型有没有变大”，而是看“最近两个任务造成的局部变化是否异常”。
+
+\subsection{T2T 算法流程}
+
+用不含复杂公式的方式，T2T 算法可以写成：
+
+\begin{enumerate}
+  \item 维护最近三个模型 \(w_{t-2},w_{t-1},w_t\)，以及对应的正则化矩阵和 Hessian 近似。
+  \item 当前任务到来后，先按正则化式 CL 得到候选模型 \(w_t\)。
+  \item 根据当前和上一任务的局部曲率，构造两个历史抵消投影 \(D_t^1,D_t^2\)。
+  \item 计算检测分数
+  \[
+    d_t=\norm{D_t^1(w_t-w_{t-1})-D_t^2(w_{t-1}-w_{t-2})}.
+  \]
+  \item 如果 \(d_t\) 超过阈值，就认为最近任务中有投毒，拒绝或回滚对应更新；否则接受当前模型。
+\end{enumerate}
+
+\subsection{T2T 的理论保证}
+
+在线性回归、平方损失、label poisoning 的理论设置下，论文给出阈值 \(\theta_t\)，使得良性任务的检测分数以高概率不会超过阈值。
+
+若任务数据足够 informative，且使用论文给出的历史信息正则化矩阵，则 T2T 防御后最终风险满足大意上的界：
+\[
+  \calR(w_T)=O\!\left(\frac{K^2}{\epsilon T}\right).
+\]
+其中：
+\begin{itemize}
+  \item \(K\) 是攻击任务数量；
+  \item \(T\) 是总任务数量；
+  \item \(\epsilon\) 是允许误报概率相关参数。
+\end{itemize}
+
+所以当 \(K=O(1)\) 时，风险会随 \(T\) 增大而下降到 0。若 \(K\) 增长太快，\(K^2/T\) 不再趋于 0，T2T 的收敛保证也会消失。
+
+\subsection{T2T 的适用边界}
+
+T2T 适合少量强攻击，不适合频繁攻击。原因很简单：如果几乎每个任务都可疑，检测加回滚会丢掉太多任务，模型就没有足够干净数据可学。
+
+此外，T2T 依赖 Hessian 或 Hessian 近似。在线性模型中这很自然；在深度网络中通常需要用对角近似、低秩近似或经验 Fisher 近似。
+
+\section{主线三：频繁有界零均值攻击的鲁棒特征防御}
+
+\subsection{为什么不再靠检测}
+
+这一部分面对的是 frequent + bounded + non-shifted attack。攻击几乎每轮都可能出现，但单次预算有限，而且平均方向为 0。
+
+如果继续用 T2T 检测，系统可能不断拒绝任务；但这些任务中仍然包含有用学习信号。因此论文换了思路：不问“哪个任务坏了”，而是问“哪些特征方向最容易被攻击放大”。
+
+\subsection{攻击者为什么会打敏感方向}
+
+在正则化更新中，当前数据扰动如何影响参数，取决于一个敏感矩阵。直观上：
+\[
+  \text{参数偏移}
+  \approx
+  \text{敏感矩阵}\times\text{数据扰动}.
+\]
+如果某个方向的放大倍数最大，攻击者就会把有限预算集中投到这个方向。这就是论文中“最大奇异方向”的意义。
+
+普通正则化只考虑怎么减少干净数据下的遗忘；鲁棒特征防御则额外考虑攻击者会主动寻找最脆弱方向。
+
+\subsection{对角化后的直观图像}
+
+论文为了得到闭式解，假设任务 Hessian 可以同时对角化。这样参数空间可以拆成很多互不干扰的方向：
+\[
+  u_1,u_2,\dots,u_p.
+\]
+每个方向 \(u_j\) 有两个关键量：
+\begin{itemize}
+  \item \(\gamma_j^t\)：当前任务在这个方向上提供了多少数据曲率，也就是有多少有效学习信号；
+  \item \(\lambda_j^t\)：防御者在这个方向设置的正则化强度，也就是对这个方向踩多重的刹车。
+\end{itemize}
+
+攻击者会偏好那些“数据弱、误差大、容易被扰动放大”的方向。防御者则要提高这些方向的保护力度。
+
+\subsection{鲁棒特征防御算法流程}
+
+鲁棒特征防御可以按下面流程理解：
+
+\begin{enumerate}
+  \item 对当前任务的 Hessian 做特征分解，得到方向 \(u_j\) 和曲率 \(\gamma_j^t\)。
+  \item 估计上一轮每个方向的风险 \(\calR_j^{t-1}\)。
+  \item 假设攻击者会在预算 \(M\) 内选择最坏方向，建立在线 minimax 问题。
+  \item 解这个 minimax 问题，得到每个方向的最优正则化强度 \(\lambda_j^t\)。
+  \item 把这些 \(\lambda_j^t\) 重新组成正则化矩阵
+  \[
+    H_t=U\diag(\lambda_1^t,\dots,\lambda_p^t)U^\top.
+  \]
+  \item 用这个 \(H_t\) 执行当前任务的正则化更新。
+\end{enumerate}
+
+\subsection{protected set 是什么}
+
+protected set 是论文中最有用的概念之一。它不是人工指定的特征集合，而是由 minimax 解自动选出来的一组脆弱方向。
+
+这些方向满足：如果防御者不特别处理，攻击者最可能把预算投到这里。因此最优防御会让这些方向的攻击敏感度被压到同一水平，避免某个单一方向成为最大短板。
+
+可以把它理解为一种水位平衡：
+\begin{itemize}
+  \item 原来某些方向特别低，攻击者最容易从那里突破；
+  \item 防御者把正则化资源优先放到这些低洼方向；
+  \item 最终 protected set 中的方向达到相近的最坏敏感度。
+\end{itemize}
+
+\subsection{鲁棒特征防御的理论保证}
+
+在 protected set 长期稳定、Hessian 可同时对角化等假设下，论文证明鲁棒特征防御的最终风险具有更好的上界。关键区别是：
+\begin{itemize}
+  \item 普通正则化的攻击项容易被单个最坏方向控制；
+  \item 鲁棒特征防御把最坏敏感度分摊到 protected set，避免单个小曲率方向主导风险。
+\end{itemize}
+
+这并不表示攻击完全无效，而是表示在 bounded non-shifted frequent attack 下，模型仍能以可控速度收敛，并且比普通正则化更稳。
+
+\section{两种防御的对比}
+
+\begin{center}
+\begin{tabular}{p{3.2cm}p{5.2cm}p{5.2cm}}
+\toprule
+对比项 & T2T 防御 & 鲁棒特征防御 \\
+\midrule
+目标场景
+& 少量强攻击，允许 shifted 或 unbounded
+& 频繁但有界、零均值攻击 \\
+\addlinespace
+核心动作
+& 检测异常任务并拒绝/回滚
+& 不拒绝任务，重新设计 \(H_t\) \\
+\addlinespace
+主要信号
+& 相邻两次模型更新的投影差
+& Hessian 特征方向上的攻击敏感度 \\
+\addlinespace
+关键思想
+& 消掉历史影响，只看最近异常
+& 压低最脆弱方向，分散最坏风险 \\
+\addlinespace
+理论条件
+& 线性回归、平方损失、informative tasks、噪声阈值控制
+& 线性回归、non-shifted bounded、Hessian 可同时对角化、预算上界 \\
+\addlinespace
+主要限制
+& 攻击频繁时会丢太多任务
+& 不能处理 shifted 或 unbounded 攻击的不可防御性 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{这篇论文真正提供的算法思想}
+
+\subsection{不是单一防御，而是先分清攻击条件}
+
+论文最重要的贡献不是说“某个算法万能”，而是明确告诉我们：
+\[
+  \text{不同攻击条件需要不同防御，且有些条件根本不能防。}
+\]
+这比只提出一个经验算法更强，因为它给出理论边界。
+
+\subsection{把 CL 投毒看成在线 minimax}
+
+防御者每轮选 \(H_t\)，攻击者每轮选扰动 \(\eta_t\)。防御者想让最终风险小，攻击者想让最终风险大。这就是在线零和博弈：
+\[
+  \min_{H_t}\max_{\eta_t}\;\text{最终风险或其近似上界}.
+\]
+T2T 是在少量强攻击场景下用检测把异常任务排除；鲁棒特征防御是在频繁弱攻击场景下直接解 minimax 正则化。
+
+\subsection{把正则化矩阵从“防遗忘”升级为“抗攻击”}
+
+传统 EWC 或相关正则化方法主要用 \(H_t\) 表示旧任务重要性，目标是避免灾难性遗忘。论文的关键升级是：\(H_t\) 还应该考虑攻击者会如何利用当前任务的敏感方向。
+
+因此，\(H_t\) 不只是记忆旧知识的工具，也是控制攻击传播路径的工具。
+
+\section{实验结论怎么理解}
+
+论文实验主要验证两个直觉：
+\begin{itemize}
+  \item 对少量 shifted 攻击，T2T 的检测分数会在攻击附近出现明显峰值；有时整体测试准确率看不出异常，但局部更新分数能暴露问题。
+  \item 对频繁有界 non-shifted 攻击，普通正则化和记忆回放方法可能被敏感特征方向拖慢；鲁棒特征防御能更稳定地下降风险。
+\end{itemize}
+
+实验不是替代理论证明，而是说明理论机制在 CIFAR、预训练 ViT 线性头、CNN 等设置中也有可观察效果。
+
+\section{论文假设与局限}
+
+需要注意，这篇论文的证明不是无条件适用于所有深度学习系统。
+
+\begin{itemize}
+  \item 严格理论主要建立在线性回归和平方损失上；对深度网络的解释依赖线性化、NTK 或只训练线性头的近似。
+  \item T2T 需要 Hessian 或 Hessian 近似，高维模型中计算和存储会成为问题。
+  \item T2T 的收敛界含 \(K^2/T\)，所以它要求攻击任务数量不能太快增长。
+  \item 鲁棒特征防御需要知道或估计攻击预算 \(M\)。如果预算估得过大，模型可能过度保守；估得过小，则防御不足。
+  \item 鲁棒特征防御的闭式解依赖 Hessian 同时对角化、protected set 稳定等假设，实际神经网络中通常只能近似使用。
+  \item 对 frequent shifted attack 或 frequent unbounded non-shifted attack，论文给出的结论是无一般收敛保证，不应该期待简单调参解决。
+\end{itemize}
+
+\section{读这篇论文的推荐顺序}
+
+如果只想先理解论文思想，建议按下面顺序读：
+\begin{enumerate}
+  \item 先看 Table 1，理解攻击分类和可防御性边界。
+  \item 看公式 (2)，理解所有方法都围绕正则化更新和 \(H_t\) 展开。
+  \item 看 Theorem 3.1，接受“有些频繁攻击不能防”的结论。
+  \item 看 Algorithm 1 和 Section 4，理解 T2T 为什么比较两个相邻更新。
+  \item 看 Section 5 的 minimax 解释，理解攻击者为什么集中打最大敏感方向。
+  \item 最后再回到附录证明，逐步看 Taylor 展开、伪逆、SVD、KKT 等细节。
+\end{enumerate}
+
+\section{最终总结}
+
+这篇论文的攻防逻辑可以概括为：
+
+\begin{center}
+\begin{tabular}{p{4.0cm}p{10.0cm}}
+\toprule
+问题 & 论文回答 \\
+\midrule
+攻击什么时候不可防？
+& 频繁 shifted 攻击和频繁 unbounded 攻击会破坏正则化 CL 的收敛机制。\\
+\addlinespace
+少量强攻击怎么办？
+& 用 T2T 比较相邻更新，消去历史影响，检测异常任务并回滚。\\
+\addlinespace
+频繁弱攻击怎么办？
+& 不再主要检测任务，而是在 Hessian 特征方向上做 minimax 正则化，保护最脆弱方向。\\
+\addlinespace
+论文最大的启发是什么？
+& CL 安全不能只看单轮鲁棒性，必须分析攻击如何沿时间传播，并根据攻击频率、强度、均值偏移决定防御策略。\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{thebibliography}{9}
+\bibitem{hu2026}
+Yiting Hu and Lingjie Duan.
+\newblock \emph{Theory of Continual Learning Against Data Poisoning Attacks}.
+\newblock arXiv:2606.29841, 2026.
+\end{thebibliography}
+
+\end{document}
