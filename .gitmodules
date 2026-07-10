@@ -25,3 +25,7 @@
 [submodule "code/TSMNet"]
 	path = code/brain_decoding/2022NeurIPS-TSMNet-SPD-DSBN-EEG-UDA
 	url = https://github.com/rkobler/TSMNet.git
+[submodule "papers/CL_TTA_security/CL_defenses/spr_official"]
+	path = papers/CL_TTA_security/CL_defenses/spr_official
+	url = git@github.com:Phobia-Cosmos/BCI-sync.git
+	branch = spr-official
