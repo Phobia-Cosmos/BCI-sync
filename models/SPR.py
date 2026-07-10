@@ -119,7 +119,7 @@ class SPR(torch.nn.Module):
         with torch.no_grad():
             xs = self.delay_buffer.get('imgs')
             ys = self.delay_buffer.get('cats')
-            corrs = self.delay_buffer.get('corrupts')
+            corrs = self.delay_buffer.get('corrupts').to(ys.device)
 
             features = self.expert(xs)
             features = F.normalize(features, dim=1)
@@ -141,7 +141,7 @@ class SPR(torch.nn.Module):
                     similarity_matrix = (_similarity_matrix > torch.rand_like(_similarity_matrix)).type(torch.float32)
                     similarity_matrix[similarity_matrix == 0] = 1e-5  # add small num for ensuring positive matrix
 
-                    g = nx.from_numpy_matrix(similarity_matrix.cpu().numpy())
+                    g = nx.from_numpy_array(similarity_matrix.cpu().numpy())
                     info = nx.eigenvector_centrality(g, max_iter=6000, weight='weight') # index: value
                     centrality = [info[i] for i in range(len(info))]
 

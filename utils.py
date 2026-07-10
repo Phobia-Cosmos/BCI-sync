@@ -4,6 +4,14 @@ import torch
 import torch.nn as nn
 import torchvision.transforms as transforms
 import numpy as np
+
+
+def _torch_solve_compat(b, a):
+    return torch.linalg.solve(a, b), None
+
+
+torch.solve = _torch_solve_compat
+
 import kornia
 import scipy.stats as stats
 from colorlog import ColoredFormatter

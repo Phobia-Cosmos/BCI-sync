@@ -4,6 +4,7 @@
 *.tfidf
 .cenv
 .venv
+.venv_spr
 
 # Ignore data directory
 data
