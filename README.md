@@ -13,6 +13,9 @@ domain adaptation code, and tracking security/hardware notes.
 - `code/sfda/`: one subdirectory per SFDA-related paper or codebase.
 - `code/brain_decoding/`: one subdirectory per brain decoding codebase.
 - `code/bci_toolkits/`: broad BCI toolkits or multi-paper code collections.
+- `papers/TTAP/BrainUICL/experiments/`: EEG attack/defense runners, protocol
+  notes, and local generated runs; see `reports/eeg_experiment_workspace.md`
+  for the experiment index, naming, and retention rules.
 - `reports/`: local survey notes, run logs, and research planning documents.
 - `scripts/`: local utility scripts.
 - `data/`: local datasets only; ignored by Git and not synchronized.
