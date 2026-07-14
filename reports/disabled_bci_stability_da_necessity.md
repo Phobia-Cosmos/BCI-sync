@@ -63,7 +63,7 @@ BCI 中的 domain 不只是“不同数据集”。在真实设备中，domain �
 
 - `reports/nature_noninvasive_bci_real_world_and_da.md` 中整理的 Chaudhary et al. 2016 Nature Reviews Neurology 区分 assistive BCI 与 rehabilitative BCI，强调 BCI 可作为通信/控制工具，也可作为康复训练工具。
 - Donati et al. 2016 Scientific Reports 报告慢性 SCI 患者经过 12 个月 BMI-based gait neurorehabilitation 后出现感觉和自主肌肉控制改善。这说明康复 BCI 的用户神经状态并非静态。
-- `papers/bci_realtime/09_Real_Time_EEG_BCI_Stroke_Rehab_Latent_Features_2025.pdf` 的本地提取内容显示 stroke rehab BCI 中存在 subject-specific variability，需要 high stability across sessions 和 brief guided calibration。
+- `papers/bci_realtime/2025Preprint-A Real-Time BCI for Stroke Hand Rehabilitation Using Latent EEG Features from Healthy Subjects.pdf` 的本地提取内容显示 stroke rehab BCI 中存在 subject-specific variability，需要 high stability across sessions 和 brief guided calibration。
 
 ## 4. 不做 DA 对 disabled 用户意味着什么
 
@@ -78,7 +78,7 @@ SSVEP/P300/SCP 拼写器常面向 speech difficulties、locked-in 或重度瘫�
 
 本地论文支撑：
 
-- `papers/sfda/2022Arxiv-Source-Free Domain Adaptation for SSVEP-based Brain-Computer Interfaces.pdf` 明确指出 SSVEP BCI speller 用于帮助 speech difficulties 用户通信；高 ITR 方法需要 extensive calibration，而典型用户可能是 disabled individual，因此去除校准负担对 user comfort 和 plug-and-play 很重要。
+- `papers/sfda/2022arXiv-Source-Free Domain Adaptation for SSVEP-based Brain-Computer Interfaces.pdf` 明确指出 SSVEP BCI speller 用于帮助 speech difficulties 用户通信；高 ITR 方法需要 extensive calibration，而典型用户可能是 disabled individual，因此去除校准负担对 user comfort 和 plug-and-play 很重要。
 - Birbaumer et al. 1999 Nature 的 EEG spelling device for the paralysed 证明瘫痪患者可用 EEG 拼写，但也暴露出速度低、训练负担大、稳定性有限的问题。
 
 ### 4.2 控制型 BCI：机器人/外设误控制
@@ -96,7 +96,7 @@ SSVEP/P300/SCP 拼写器常面向 speech difficulties、locked-in 或重度瘫�
 
 本地论文支撑：
 
-- `papers/bci_realtime/09_Real_Time_EEG_BCI_Stroke_Rehab_Latent_Features_2025.pdf` 的本地提取内容显示不同 subject accuracy 从 60% 到 86%，反映 subject-specific variability in EEG signal quality and motor control；论文还提到 session 间结果可能变化，需要 brief guided calibration。
+- `papers/bci_realtime/2025Preprint-A Real-Time BCI for Stroke Hand Rehabilitation Using Latent EEG Features from Healthy Subjects.pdf` 的本地提取内容显示不同 subject accuracy 从 60% 到 86%，反映 subject-specific variability in EEG signal quality and motor control；论文还提到 session 间结果可能变化，需要 brief guided calibration。
 - Donati et al. 2016 Scientific Reports 的 SCI 步态康复研究需要 12 个月闭环训练，说明康复 BCI 是长期动态过程，不适合假设一次训练模型永久有效。
 
 ## 5. DA 在 disabled-oriented BCI 中具体解决什么
@@ -132,7 +132,7 @@ DA 的作用不是简单追求更高离线分数，而是把模型从 source dom
 
 - `papers/sfda/2025JBHI-Lightweight Source-Free Domain Adaptation based on Adaptive Euclidean Alignment for BCIs.pdf` 明确指出为保护 source subjects 隐私，source data sometimes unavailable during DA，因此 SFDA 只依赖 source-trained model 扩展到 target subjects。
 - `papers/sfda/2026AAAI-Probability Distribution Alignment and Low-Rank Weight Decomposition for Source-Free Domain Adaptive Brain Decoding.pdf` 将 cross-subject variations、privacy concerns 和 data storage burden 作为 SFDA 动机。
-- `papers/sfda/2022Arxiv-Source-Free Domain Adaptation for SSVEP-based Brain-Computer Interfaces.pdf` 指出 SFDA 不需要保存 source data，可减少隐私与存储问题，同时面向 disabled users 的舒适性和 plug-and-play 需求。
+- `papers/sfda/2022arXiv-Source-Free Domain Adaptation for SSVEP-based Brain-Computer Interfaces.pdf` 指出 SFDA 不需要保存 source data，可减少隐私与存储问题，同时面向 disabled users 的舒适性和 plug-and-play 需求。
 
 因此，从 disabled 个体稳定性出发，逻辑不是“我们为了算法新颖性做 SFDA”，而是：
 
@@ -202,7 +202,7 @@ Therefore, domain adaptation is a practical necessity for assistive BCI deployme
 
 [11] Xu G, Long J, Zhang J. Probability distribution alignment and low-rank weight decomposition for source-free domain adaptive brain decoding[C]//AAAI Conference on Artificial Intelligence. 2026.
 
-[12] Real-Time EEG BCI Stroke Rehab Latent Features 2025. Local file: `papers/bci_realtime/09_Real_Time_EEG_BCI_Stroke_Rehab_Latent_Features_2025.pdf`.
+[12] Real-Time EEG BCI Stroke Rehab Latent Features 2025. Local file: `papers/bci_realtime/2025Preprint-A Real-Time BCI for Stroke Hand Rehabilitation Using Latent EEG Features from Healthy Subjects.pdf`.
 
 ## 10. 最适合你当前课题的最终表述
 

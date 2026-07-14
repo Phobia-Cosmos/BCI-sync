@@ -76,7 +76,7 @@
 
 - **引用**：Zhang X, Wu D, Ding L, Luo H, Lin C T, Jung T P, Chavarriaga R. *Tiny noise, big mistakes: adversarial perturbations induce errors in brain–computer interface spellers*. National Science Review, 2021, 8(4): nwaa233.
 - **链接**：https://academic.oup.com/nsr/article/8/4/nwaa233/5903729
-- **本地文件**：`papers/phyAttack/2020-Tiny noise, big mistakes: adversarial perturbations induce errors in brain-computer interface spellers.pdf`
+- **本地文件**：`papers/phyAttack/2020NSR-Tiny Noise, Big Mistakes Adversarial Perturbations Induce Errors in Brain–Computer Interface Spellers.pdf`
 - **范式**：P300 speller、SSVEP speller。
 - **攻击方式**：给 EEG trial 添加很小的 adversarial perturbation template，让拼写器输出攻击者指定字符。
 - **价值**：
@@ -113,7 +113,7 @@
 
 - **引用**：Meng L, Huang J, Zeng Z, Jiang X, Yu S, Jung T P, Lin C T, Chavarriaga R, Wu D. *EEG-Based Brain-Computer Interfaces Are Vulnerable to Backdoor Attacks*. IEEE Transactions on Neural Systems and Rehabilitation Engineering, 2023, 31: 2224-2234.
 - **链接**：https://arxiv.org/abs/2011.00101
-- **本地文件**：`papers/phyAttack/2021Arxiv-EEG-Based Brain–Computer Interfaces are Vulnerable to Backdoor Attacks.pdf`
+- **本地文件**：`papers/phyAttack/2021arXiv-EEG-Based Brain–Computer Interfaces are Vulnerable to Backdoor Attacks.pdf`
 - **范式**：ERN、MI、P300。
 - **攻击方式**：把 narrow period pulse 作为 backdoor key，加到 EEG 采集信号中。
 - **价值**：

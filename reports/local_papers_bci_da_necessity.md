@@ -107,7 +107,7 @@ BCI 真实部署不能假设目标域 label distribution 与源域相同。例�
 
 ### 4.1 SSVEP speller：高 ITR 方法需要长校准，新用户不舒服
 
-本地论文：`papers/sfda/2022Arxiv-Source-Free Domain Adaptation for SSVEP-based Brain-Computer Interfaces.pdf`
+本地论文：`papers/sfda/2022arXiv-Source-Free Domain Adaptation for SSVEP-based Brain-Computer Interfaces.pdf`
 
 论文面向 SSVEP BCI speller，这类系统用于帮助 speech difficulties 用户通信。论文指出：
 
@@ -117,7 +117,7 @@ BCI 真实部署不能假设目标域 label distribution 与源域相同。例�
 - source-free DA 用 source domains 预训练模型，再用 new user 的 unlabeled target data 适配；
 - SFDA 不需要 source data 存储，避免 privacy concerns，并保持 user comfort。
 
-关键证据位置：`2022Arxiv-Source-Free_Domain_Adaptation_for_SSVEP-based_Brain-Computer_Interfaces.txt` 第 17-35、57-64、72-83、136-142 行。
+关键证据位置：`2022arXiv-Source-Free_Domain_Adaptation_for_SSVEP-based_Brain-Computer_Interfaces.txt` 第 17-35、57-64、72-83、136-142 行。
 
 **真实影响**：
 
@@ -182,7 +182,7 @@ BCI 真实部署不能假设目标域 label distribution 与源域相同。例�
 
 ### 6.2 实时 EEG-BCI stroke rehab：subject-specific variability 和短校准
 
-本地论文：`papers/bci_realtime/09_Real_Time_EEG_BCI_Stroke_Rehab_Latent_Features_2025.pdf`
+本地论文：`papers/bci_realtime/2025Preprint-A Real-Time BCI for Stroke Hand Rehabilitation Using Latent EEG Features from Healthy Subjects.pdf`
 
 该论文中本地提取片段显示：
 
@@ -191,7 +191,7 @@ BCI 真实部署不能假设目标域 label distribution 与源域相同。例�
 - 各 subject accuracy 从 60% 到 86%，反映 subject-specific variability in EEG signal quality and motor control；
 - 需要 brief guided calibration。
 
-关键证据位置：`09_Real_Time_EEG_BCI_Stroke_Rehab_Latent_Features_2025.txt` 第 102、289、469、537-541 行。
+关键证据位置：`2025Preprint-A Real-Time BCI for Stroke Hand Rehabilitation Using Latent EEG Features from Healthy Subjects.txt` 第 102、289、469、537-541 行。
 
 **DA 必要性**：
 
@@ -264,7 +264,7 @@ BCI 真实部署不能假设目标域 label distribution 与源域相同。例�
 
 [3] Li S, Kawanabe M, Kobler R J. SPDIM: Source-Free Unsupervised Conditional and Label Shift Adaptation in EEG[C]//ICLR. 2025. Local: `papers/sfda/2025ICLR-SPDIM Source-Free Unsupervised Conditional and Label Shift Adaptation in EEG.pdf`.
 
-[4] Guney O B, Kucukahmetler D, Ozkan H. Source-Free Domain Adaptation for SSVEP-based Brain-Computer Interfaces[Z]. arXiv, 2022/2025 version. Local: `papers/sfda/2022Arxiv-Source-Free Domain Adaptation for SSVEP-based Brain-Computer Interfaces.pdf`.
+[4] Guney O B, Kucukahmetler D, Ozkan H. Source-Free Domain Adaptation for SSVEP-based Brain-Computer Interfaces[Z]. arXiv, 2022/2025 version. Local: `papers/sfda/2022arXiv-Source-Free Domain Adaptation for SSVEP-based Brain-Computer Interfaces.pdf`.
 
 [5] Zhao L M, Yan X, Lu B L. Plug-and-Play Domain Adaptation for Cross-Subject EEG-based Emotion Recognition[C]//AAAI. 2021. Local: `papers/sfda/2021AAAI-Plug-and-Play Domain Adaptation for Cross-Subject EEG-based Emotion Recognition.pdf`.
 
@@ -278,5 +278,4 @@ BCI 真实部署不能假设目标域 label distribution 与源域相同。例�
 
 [10] Liu X H, Lu B L, Zheng W L. EEGMirror: Leveraging EEG Data in the Wild via Montage-Agnostic Self-Supervision for EEG to Video Decoding[C]//ICCV. 2025. Local: `papers/bci_decoding/2025ICCV-EEGMirror Leveraging EEG Data in the Wild via Montage-Agnostic Self-Supervision for EEG to Video Decoding.pdf`.
 
-[11] Real-Time EEG BCI Stroke Rehab Latent Features[Z]. 2025. Local: `papers/bci_realtime/09_Real_Time_EEG_BCI_Stroke_Rehab_Latent_Features_2025.pdf`.
-
+[11] Real-Time EEG BCI Stroke Rehab Latent Features[Z]. 2025. Local: `papers/bci_realtime/2025Preprint-A Real-Time BCI for Stroke Hand Rehabilitation Using Latent EEG Features from Healthy Subjects.pdf`.

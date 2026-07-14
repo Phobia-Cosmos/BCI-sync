@@ -16,16 +16,16 @@ PDF 均已下载到 `papers/black_box_data_poisoning/`，并已用 `pdftotext` �
 
 | 类别 | 论文 | 年份/会议 | 本地 PDF |
 | --- | --- | --- | --- |
-| 主线 | Poison Frogs! Targeted Clean-Label Poisoning Attacks on Neural Networks | NIPS 2018 | [PDF](papers/black_box_data_poisoning/2018_poison_frogs_clean_label_poisoning.pdf) |
-| 主线 | Hidden Trigger Backdoor Attacks | AAAI 2020 | [PDF](papers/black_box_data_poisoning/2020_hidden_trigger_backdoor_attacks.pdf) |
-| 主线 | MetaPoison: Practical General-purpose Clean-label Data Poisoning | NeurIPS 2020 | [PDF](papers/black_box_data_poisoning/2020_metapoison_clean_label_data_poisoning.pdf) |
-| 主线 | Bullseye Polytope: A Scalable Clean-Label Poisoning Attack with Improved Transferability | IEEE S&P 2021 | [PDF](papers/black_box_data_poisoning/2021_bullseye_polytope_clean_label_poisoning.pdf) |
-| 主线 | Witches' Brew: Industrial Scale Data Poisoning via Gradient Matching | ICLR 2021 | [PDF](papers/black_box_data_poisoning/2021_witches_brew_gradient_matching.pdf) |
-| 主线 | A Targeted Attack on Black-Box Neural Machine Translation with Parallel Data Poisoning | WWW 2021 | [PDF](papers/black_box_data_poisoning/2021_black_box_nmt_parallel_data_poisoning.pdf) |
-| 主线 | Sleeper Agent: Scalable Hidden Trigger Backdoors for Neural Networks Trained from Scratch | NeurIPS 2022 | [PDF](papers/black_box_data_poisoning/2022_sleeper_agent_hidden_trigger_backdoors.pdf) |
-| 补充 | Trojaning Language Models for Fun and Profit | EuroS&P 2021 | [PDF](papers/black_box_data_poisoning/2021_trojaning_language_models.pdf) |
-| 补充 | BadPre: Task-agnostic Backdoor Attacks to Pre-trained NLP Foundation Models | arXiv/相关工作 | [PDF](papers/black_box_data_poisoning/2021_badpre_task_agnostic_backdoor_pretraining.pdf) |
-| 补充 | Narcissus: A Practical Clean-Label Backdoor Attack with Limited Information | arXiv/相关工作 | [PDF](papers/black_box_data_poisoning/2022_narcissus_clean_label_backdoor_limited_information.pdf) |
+| 主线 | Poison Frogs! Targeted Clean-Label Poisoning Attacks on Neural Networks | NIPS 2018 | [PDF](papers/black_box_data_poisoning/2018NeurIPS-Poison%20Frogs!%20Targeted%20Clean-Label%20Poisoning%20Attacks%20on%20Neural%20Networks.pdf) |
+| 主线 | Hidden Trigger Backdoor Attacks | AAAI 2020 | [PDF](papers/black_box_data_poisoning/2020AAAI-Hidden%20Trigger%20Backdoor%20Attacks.pdf) |
+| 主线 | MetaPoison: Practical General-purpose Clean-label Data Poisoning | NeurIPS 2020 | [PDF](papers/black_box_data_poisoning/2020NeurIPS-MetaPoison%20Practical%20General-Purpose%20Clean-Label%20Data%20Poisoning.pdf) |
+| 主线 | Bullseye Polytope: A Scalable Clean-Label Poisoning Attack with Improved Transferability | IEEE S&P 2021 | [PDF](papers/black_box_data_poisoning/2021EuroSP-Bullseye%20Polytope%20A%20Scalable%20Clean-Label%20Poisoning%20Attack%20with%20Improved%20Transferability.pdf) |
+| 主线 | Witches' Brew: Industrial Scale Data Poisoning via Gradient Matching | ICLR 2021 | [PDF](papers/black_box_data_poisoning/2021ICLR-Witches'%20Brew%20Industrial%20Scale%20Data%20Poisoning%20via%20Gradient%20Matching.pdf) |
+| 主线 | A Targeted Attack on Black-Box Neural Machine Translation with Parallel Data Poisoning | WWW 2021 | [PDF](papers/black_box_data_poisoning/2021WWW-A%20Targeted%20Attack%20on%20Black-Box%20Neural%20Machine%20Translation%20with%20Parallel%20Data%20Poisoning.pdf) |
+| 主线 | Sleeper Agent: Scalable Hidden Trigger Backdoors for Neural Networks Trained from Scratch | NeurIPS 2022 | [PDF](papers/black_box_data_poisoning/2022NeurIPS-Sleeper%20Agent%20Scalable%20Hidden%20Trigger%20Backdoors%20for%20Neural%20Networks%20Trained%20from%20Scratch.pdf) |
+| 补充 | Trojaning Language Models for Fun and Profit | EuroS&P 2021 | [PDF](papers/black_box_data_poisoning/2021EuroSP-Trojaning%20Language%20Models%20for%20Fun%20and%20Profit.pdf) |
+| 补充 | BadPre: Task-agnostic Backdoor Attacks to Pre-trained NLP Foundation Models | arXiv/相关工作 | [PDF](papers/black_box_data_poisoning/2021arXiv-BadPre%20Task-Agnostic%20Backdoor%20Attacks%20to%20Pre-Trained%20NLP%20Foundation%20Models.pdf) |
+| 补充 | Narcissus: A Practical Clean-Label Backdoor Attack with Limited Information | arXiv/相关工作 | [PDF](papers/black_box_data_poisoning/2022arXiv-NARCISSUS%20A%20Practical%20Clean-Label%20Backdoor%20Attack%20with%20Limited%20Information.pdf) |
 
 ## 方法总览
 

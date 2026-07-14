@@ -59,7 +59,7 @@ EEG/BCI 数据不是普通传感器数据。已有研究说明，脑电可用于
 
 - `reports/bci_privacy_domain_adaptation_risks.md`
 - `papers/bci_security/2021CSUR-Security in Brain-Computer Interfaces State-of-the-Art Opportunities and Future Challenges.pdf`
-- `papers/bci_security/2024Arxiv-Protecting Multiple Types of Privacy Simultaneously in EEG-based Brain-Computer Interfaces.pdf`
+- `papers/bci_security/2024arXiv-Protecting Multiple Types of Privacy Simultaneously in EEG-based Brain-Computer Interfaces.pdf`
 - `papers/bci_security/2025IJCAI-ID-RemovalNet Identity Removal Network for EEG Privacy Protection with Enhancing Decoding Tasks.pdf`
 - `papers/bci_security/2025AAAI-BrainGuard Privacy-Preserving Multisubject Image Reconstructions from Brain Activities.pdf`
 
@@ -78,8 +78,8 @@ EEG/BCI 数据不是普通传感器数据。已有研究说明，脑电可用于
 
 - `reports/bci_sfda_inventory_and_plan.md`
 - `papers/sfda/2020ICML-SHOT Source Hypothesis Transfer for Unsupervised Domain Adaptation.pdf`
-- `papers/sfda/2022Arxiv-Source-Free Domain Adaptation for SSVEP-based Brain-Computer Interfaces.pdf`
-- `papers/sfda/2023Arxiv-Source-free Subject Adaptation for EEG-based Visual Recognition.pdf`
+- `papers/sfda/2022arXiv-Source-Free Domain Adaptation for SSVEP-based Brain-Computer Interfaces.pdf`
+- `papers/sfda/2023arXiv-Source-free Subject Adaptation for EEG-based Visual Recognition.pdf`
 - `papers/sfda/2025JBHI-Lightweight Source-Free Domain Adaptation based on Adaptive Euclidean Alignment for BCIs.pdf`
 - `papers/sfda/2025JBHI-Prediction Consistency and Confidence-Based Proxy Domain Construction for Cross-Subject EEG Classification.pdf`
 - `papers/sfda/2025ICLR-SPDIM Source-Free Unsupervised Conditional and Label Shift Adaptation in EEG.pdf`
@@ -515,8 +515,8 @@ Input: source model M_s, forget set D_f, unlabeled target EEG D_t
 SFDA / EEG adaptation：
 
 - `papers/sfda/2020ICML-SHOT Source Hypothesis Transfer for Unsupervised Domain Adaptation.pdf`
-- `papers/sfda/2022Arxiv-Source-Free Domain Adaptation for SSVEP-based Brain-Computer Interfaces.pdf`
-- `papers/sfda/2023Arxiv-Source-free Subject Adaptation for EEG-based Visual Recognition.pdf`
+- `papers/sfda/2022arXiv-Source-Free Domain Adaptation for SSVEP-based Brain-Computer Interfaces.pdf`
+- `papers/sfda/2023arXiv-Source-free Subject Adaptation for EEG-based Visual Recognition.pdf`
 - `papers/sfda/2025JBHI-Lightweight Source-Free Domain Adaptation based on Adaptive Euclidean Alignment for BCIs.pdf`
 - `papers/sfda/2025JBHI-Prediction Consistency and Confidence-Based Proxy Domain Construction for Cross-Subject EEG Classification.pdf`
 - `papers/sfda/2025ICLR-SPDIM Source-Free Unsupervised Conditional and Label Shift Adaptation in EEG.pdf`
@@ -530,16 +530,16 @@ Machine unlearning：
 Privacy / security：
 
 - `papers/bci_security/2021CSUR-Security in Brain-Computer Interfaces State-of-the-Art Opportunities and Future Challenges.pdf`
-- `papers/bci_security/2024Arxiv-Protecting Multiple Types of Privacy Simultaneously in EEG-based Brain-Computer Interfaces.pdf`
+- `papers/bci_security/2024arXiv-Protecting Multiple Types of Privacy Simultaneously in EEG-based Brain-Computer Interfaces.pdf`
 - `papers/bci_security/2025IJCAI-ID-RemovalNet Identity Removal Network for EEG Privacy Protection with Enhancing Decoding Tasks.pdf`
 - `papers/bci_security/2025AAAI-BrainGuard Privacy-Preserving Multisubject Image Reconstructions from Brain Activities.pdf`
 
 BCI real-time / application background：
 
-- `papers/bci_realtime/14_Adaptive_closed_loop_EEG_BCI_neurorehabilitation_review_2024.pdf`
-- `papers/bci_realtime/08_Real_time_wireless_imagined_speech_EEG_decoding_2025.pdf`
-- `papers/bci_realtime/01_BCI2000_general_purpose_BCI_system_2004.pdf`
-- `papers/bci_realtime/12_Timeflux_open_source_near_real_time_signal_streams_GrazBCI_2019.pdf`
+- `papers/bci_realtime/2024FrontComputNeurosci-Electroencephalogram-Based Adaptive Closed-Loop Brain–Computer Interface in Neurorehabilitation A Review.pdf`
+- `papers/bci_realtime/2025arXiv-Toward Practical BCI A Real-Time Wireless Imagined Speech EEG Decoding System.pdf`
+- `papers/bci_realtime/2004TBME-BCI2000 A General-Purpose Brain–Computer Interface (BCI) System.pdf`
+- `papers/bci_realtime/2019GrazBCI-Timeflux An Open-Source Framework for the Acquisition and Near Real-Time Processing of Signal Streams.pdf`
 
 ## 13. 给下一个 Codex 的 LaTeX 起草任务
 

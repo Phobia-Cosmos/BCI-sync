@@ -8,9 +8,9 @@ Current workspace already contained 29 PDFs under the project root and `others/`
 
 | Paper | Local PDF | Code / status |
 | --- | --- | --- |
-| Source-Free Domain Adaptation for SSVEP-based Brain-Computer Interfaces | `papers/sfda/2023Arxiv-Source-Free Domain Adaptation for SSVEP-based Brain-Computer Interfaces.pdf` | `code/SFDA-SSVEP-BCI`, official MATLAB repo |
-| Source-free Subject Adaptation for EEG-based Visual Recognition | `papers/sfda/2023Arxiv-Source-free Subject Adaptation for EEG-based Visual Recognition.pdf` | `code/Deep-BCI/1_Intelligent_BCI/Source_Free_Subject_Adaptation_for_EEG`, sparse checkout |
-| SPDIM: Source-Free Unsupervised Conditional and Label Shift Adaptation in EEG | `papers/sfda/2026Arxiv-SPDIM Source-Free Unsupervised Conditional and Label Shift Adaptation in EEG.pdf` | no public code found in quick search |
+| Source-Free Domain Adaptation for SSVEP-based Brain-Computer Interfaces | `papers/sfda/2022arXiv-Source-Free Domain Adaptation for SSVEP-based Brain-Computer Interfaces.pdf` | `code/SFDA-SSVEP-BCI`, official MATLAB repo |
+| Source-free Subject Adaptation for EEG-based Visual Recognition | `papers/sfda/2023arXiv-Source-free Subject Adaptation for EEG-based Visual Recognition.pdf` | `code/Deep-BCI/1_Intelligent_BCI/Source_Free_Subject_Adaptation_for_EEG`, sparse checkout |
+| SPDIM: Source-Free Unsupervised Conditional and Label Shift Adaptation in EEG | `papers/sfda/2025ICLR-SPDIM Source-Free Unsupervised Conditional and Label Shift Adaptation in EEG.pdf` | no public code found in quick search |
 | Lightweight Source-Free Domain Adaptation based on Adaptive Euclidean Alignment for BCIs | `papers/sfda/2025JBHI-Lightweight Source-Free Domain Adaptation based on Adaptive Euclidean Alignment for BCIs.pdf` | no official repo found; useful to implement on top of SHOT/NRC/MOABB |
 | Prediction Consistency and Confidence-Based Proxy Domain Construction for Cross-Subject EEG Classification | `papers/sfda/2025JBHI-Prediction Consistency and Confidence-Based Proxy Domain Construction for Cross-Subject EEG Classification.pdf` | `code/PDCC`, official repo |
 
@@ -20,7 +20,7 @@ Existing local papers that are directly relevant:
 | --- | --- |
 | `2026AAAI-Probability Distribution Alignment and Low-Rank Weight Decomposition for Source-Free Domain Adaptive Brain Decoding.pdf` | no official repo found; closest executable baseline is `code/mindbridge` |
 | `2020ICML-Do We Really Need to Access the Source Data? Source Hypothesis Transfer for Unsupervised Domain Adaptation.pdf` | `code/SHOT` |
-| `others/2024CVPR-Source-Free Domain Adaptation with Frozen Multimodal Foundation Model.pdf` | `code/source-free-domain-adaptation`; also `code/DIFO-Plus` |
+| `papers/sfda/2024CVPR-Source-Free Domain Adaptation with Frozen Multimodal Foundation Model.pdf` | `code/source-free-domain-adaptation`; also `code/DIFO-Plus` |
 | `2024CVPR-MindBridge: A Cross-Subject Brain Decoding Framework.pdf` | `code/mindbridge` |
 | `2025ICLR-CBraMod: A Criss-Cross Brain Foundation Model for EEG Decoding.pdf` | public repo: `https://github.com/wjq-learning/CBraMod`; not cloned because it is not SFDA-core |
 | `2026AAAI-EEG Agent: A Unified Framework for Automated EEG Analysis Using Large Language Models.pdf` | public repo: `https://github.com/rebootingLine/EEGAgent`; not cloned because it is not SFDA-core |

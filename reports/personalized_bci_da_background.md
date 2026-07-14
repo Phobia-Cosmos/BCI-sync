@@ -118,8 +118,8 @@ Wu et al. 的 EEG-based BCI transfer learning 综述指出，EEG-BCI 面临校�
 
 本地已有相关论文：
 
-- `papers/sfda/2022Arxiv-Source-Free Domain Adaptation for SSVEP-based Brain-Computer Interfaces.pdf`
-- `papers/sfda/2023Arxiv-Source-free Subject Adaptation for EEG-based Visual Recognition.pdf`
+- `papers/sfda/2022arXiv-Source-Free Domain Adaptation for SSVEP-based Brain-Computer Interfaces.pdf`
+- `papers/sfda/2023arXiv-Source-free Subject Adaptation for EEG-based Visual Recognition.pdf`
 - `papers/sfda/2025AAAI-Personalized Sleep Staging Leveraging Source-Free Unsupervised Domain Adaptation.pdf`
 - `papers/sfda/2025JBHI-Lightweight Source-Free Domain Adaptation based on Adaptive Euclidean Alignment for BCIs.pdf`
 - `papers/sfda/2025ICLR-SPDIM Source-Free Unsupervised Conditional and Label Shift Adaptation in EEG.pdf`
@@ -247,4 +247,3 @@ Personalization, however, also amplifies privacy risks. To adapt a BCI to a targ
 [9] Source-free Subject Adaptation for EEG-based Visual Recognition[Z]. arXiv, 2023.
 
 [10] Personalized Sleep Staging Leveraging Source-Free Unsupervised Domain Adaptation[C]//AAAI. 2025.
-
