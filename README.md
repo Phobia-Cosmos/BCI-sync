@@ -1,39 +1,20 @@
-# BCI-sync
+# BCI research workspace
 
-BCI/EEG research workspace synchronized for reading papers, running source-free
-domain adaptation code, and tracking security/hardware notes.
+本目录已按内容类型整理：
 
-## Layout
+- `papers/`：46 篇唯一正式论文，按 BCI、持续学习和测试时自适应主题分类。
+- `code/`：项目源码、实验代码和工作区工具；外部仓库信息见 `code/REPOSITORIES.md`。
+- `documents/`：本地分析稿、调研笔记、实验报告和配图。
 
-- `papers/sfda/`: source-free domain adaptation and cross-subject adaptation papers.
-- `papers/bci_security/`: BCI/EEG privacy, attack, defense, and security survey papers.
-- `papers/bci_decoding/`: neural decoding, EEG foundation models, reconstruction, and real-time decoding papers.
-- `papers/accelerator/`: BCI system architecture, DNN accelerator, low-power accelerator papers, and accelerator notes.
-- `papers/bci_realtime/`: real-time BCI platform and pipeline papers.
-- `code/sfda/`: one subdirectory per SFDA-related paper or codebase.
-- `code/brain_decoding/`: one subdirectory per brain decoding codebase.
-- `code/bci_toolkits/`: broad BCI toolkits or multi-paper code collections.
-- `papers/TTAP/BrainUICL/experiments/`: EEG attack/defense runners, protocol
-  notes, and local generated runs; see `reports/eeg_experiment_workspace.md`
-  for the experiment index, naming, and retention rules.
-- `reports/`: local survey notes, run logs, and research planning documents.
-- `scripts/`: local utility scripts.
-- `data/`: local datasets only; ignored by Git and not synchronized.
+## 数据策略
 
-## Code Sync
+本地 `data/` 不属于 BCI-sync 远端仓库，已按“远端不包含则本地不保留”的规则删除。公开数据集来源和处理流程仍记录在：
 
-Most external codebases are registered as Git submodules. After cloning this
-repository on another machine, run:
+- `documents/research_notes/bci_sfda_inventory_and_plan.md`
+- `documents/research_notes/data_task_processing_comparison.md`
 
-```bash
-git submodule update --init --recursive
-```
+代码仓库内名为 `data/` 或 `datasets/` 的目录如果由上游 Git 跟踪，则属于数据加载代码、类别表或路径清单，继续随源码保留。
 
-## CPGA Note
+## 说明
 
-No official public CPGA GitHub repository was found for
-`Source-free Domain Adaptation via Avatar Prototype Generation and Adaptation`.
-The directory `code/sfda/2021Arxiv-CPGA-Avatar-Prototype-Generation-Adaptation/`
-contains a small NumPy toy probe that demonstrates the privacy intuition:
-a frozen source model can be used to generate source-like avatar prototypes even
-when source data is unavailable.
+外部项目保留各自的嵌套 `.git`，因为本仓库没有配置 Git submodule，不能仅凭 BCI-sync 远端恢复这些项目。PDCC 的 `get_proxy_domain.py` 仍保留本地未提交修复。

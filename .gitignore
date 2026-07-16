@@ -18,6 +18,18 @@ data/
 **/.git/
 code/**/.git/
 
+# External repositories retained as independent nested worktrees.
+# Their URLs and pinned commits are recorded in code/REPOSITORIES.md.
+code/bci_toolkits/Deep-BCI/
+code/brain_decoding/2022NeurIPS-TSMNet-SPD-DSBN-EEG-UDA/
+code/brain_decoding/2024CVPR-MindBridge/
+code/sfda/2020ICML-SHOT/
+code/sfda/2023Arxiv-SFDA-SSVEP-BCI/
+code/sfda/2024CVPR-DIFO-Plus/
+code/sfda/2024CVPR-DIFO-ProDe-Source-Free-Domain-Adaptation/
+code/sfda/2025AAAI-SF-UIDA/
+code/sfda/2025JBHI-PDCC-Cross-Subject-EEG-Classification/
+
 # Dataset copies inside cloned code repositories.
 code/**/data/
 code/**/datasets/
