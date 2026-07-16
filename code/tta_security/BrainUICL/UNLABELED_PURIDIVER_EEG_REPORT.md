@@ -18,7 +18,7 @@ $$
 \arg\max_c p_g(c\mid x_i)
 $$
 
-guiding output 不是 true label。ISRUC 人工 annotation 在 target CL 中完全隐藏，只在 held-out evaluation 和事后诊断中读取。
+guiding output 不是 true label。默认 target adaptation loader 不打开 ISRUC label 文件；annotation 只由 benchmark evaluator 读取。若显式设置 `--benchmark-annotation-diagnostics`，benchmark 还会读取隐藏标签计算 pseudo/memory purity，但这些字段不参与训练、选择或梯度。
 
 guiding model 必须来自历史有标签 source cohort 或外部预训练模型；如果真实系统中连 source/external supervision 都不存在，就无法得到具有 W/N1/N2/N3/REM 语义的 guiding classifier，这不是 PuriDivER 可以解决的问题。
 
@@ -288,7 +288,7 @@ $$
 
 对该 loss 做 backward 和 SGD，更新的仍然只有 student。guide 不更新，C/R/U mask 本身也不是参数。完成 10 个 replay epochs 后，用更新后的 student 在当前和全部旧 subjects 的 held-out test sequences 上评价，然后进入下一个 subject。
 
-benchmark 代码为了计算事后 pseudo-memory purity，在数据对象中携带隐藏 annotation；单元测试已经验证，改变这些隐藏 annotation 不会改变 guide pseudo labels 或 Puri memory selection。在真实部署中该诊断字段可以完全不存在。
+默认训练 pool 用 `-1` 表示 annotation unavailable，可以在没有 target label 文件的训练侧运行。正式研究表为了计算 pseudo-memory purity，显式开启 `--benchmark-annotation-diagnostics`，使 benchmark pool 携带隐藏 annotation；单元测试已经验证，改变这些隐藏 annotation 不会改变 guide pseudo labels、额外噪声位置、Puri memory selection 或 C/R/U。真实部署应关闭该开关。
 
 ## 与 BrainUICL 的流程对比（主实验）
 
@@ -490,7 +490,7 @@ student
     只由 online CE、Puri memory 和 C/R/U replay 持续更新
 ```
 
-这组实验仍然不使用 target annotation、confidence gate、CEA、source replay protection 或 BrainUICL joint-update objective。人工标签只用于 full-subject old/new 评价与事后 purity 诊断。`brainuicl` 评价协议固定 19 个 never-adapted old subjects，并按相同顺序处理 49 个 new subjects。
+这组实验仍然不使用 target annotation、confidence gate、CEA、source replay protection 或 BrainUICL joint-update objective。人工标签只用于 full-subject old/new 评价；正式报告另显式开启 benchmark diagnostics 计算 purity。`brainuicl` 评价协议固定 19 个 never-adapted old subjects，并按相同顺序处理 49 个 new subjects。
 
 正式配置为：
 
@@ -610,6 +610,7 @@ Relabel observed-label precision 为 `48.87%`，即约 `51.13%` 的 relabel 样�
   --max-subjects 0 \
   --guide-cpc-epochs 3 \
   --guide-cpc-learning-rate 0.0001 \
+  --benchmark-annotation-diagnostics \
   --memory-size 1000 \
   --replay-epochs 10 \
   --warmup-epochs 2 \
@@ -622,11 +623,57 @@ RTX 4070 SUPER 的验证重跑用时约 `102` 秒，49/49 tasks 和 50 个 old c
 experiments/rttdp_brainuicl_runs/full49_unlabeled_puridiver_cpcguide_randomstudent_brainuicl_eval_seed4321/metrics.json
 ```
 
+## 额外伪标签噪声防护实验
+
+为回答无标签 EEG 中 PuriDivER 是否真的能防护噪声，新增：
+
+```text
+guide argmax pseudo label
+        ↓
+以固定 seed 选择约 20% epochs
+        ↓
+将 pseudo label 均匀翻转为另外四类之一
+        ↓
+再进入 student online update、memory 与 replay
+```
+
+该翻转不读取 target annotation。实际 flip rate 为 `19.832%`。由于 guide 原本已有错误 pseudo labels，额外翻转偶尔会碰巧改回 true class；frozen guide 全流 observed-label purity 从 `71.35%` 变为 `58.67%`，有效总错误率为 `41.33%`。
+
+控制变量固定为 frozen guide、guide-copy student、BrainUICL old/new protocol、memory 1000、49 subjects、seed 4321。两种方法收到完全相同的 pseudo labels 和额外 flip mask：
+
+| 方法 | Extra flip | Input purity | Final old ACC/MF1 | AAA/AAF1 | New-after ACC/MF1 | Final memory purity |
+|---|---:|---:|---:|---:|---:|---:|
+| Pseudo-ER | 0% | 0.7135 | **0.7301 / 0.7174** | **0.7275 / 0.7157** | **0.7080 / 0.6595** | 0.706 |
+| Pseudo-PuriDivER | 0% | 0.7135 | 0.6950 / 0.7014 | 0.7059 / 0.6784 | 0.6771 / 0.6062 | 0.829 |
+| Pseudo-ER | 19.832% | 0.5867 | 0.6318 / 0.6092 | 0.6264 / 0.6095 | 0.6340 / 0.5822 | 0.580 |
+| Pseudo-PuriDivER | 19.832% | 0.5867 | **0.6919 / 0.6962** | **0.6991 / 0.6842** | **0.6841 / 0.6252** | **0.841** |
+
+| 对比 | Final old ACC | Final old MF1 |
+|---|---:|---:|
+| ER 的 0→20% 变化 | -9.83 points | -10.82 points |
+| PuriDivER 的 0→20% 变化 | -0.31 points | -0.52 points |
+| 加噪后 PuriDivER − ER | +6.01 points | +8.70 points |
+| Difference-in-differences | +9.52 points | +10.30 points |
+
+因此，在本 seed 的独立对称伪标签翻转下，PuriDivER 显著降低了普通 replay 的噪声敏感性，并将加噪后的 final memory purity 从 `58.0%` 提高到 `84.1%`。这支持“对独立标签噪声有防护”的结论。
+
+边界也很明确：无额外噪声时 PuriDivER 的 final old ACC/MF1 比 ER 低 `3.51/1.60` 点，说明 robust filtering 会误处理正确但困难的 EEG epochs；本实验尚不能代表系统性 guide bias、coherent class confusion 或 adversarial poisoning。结果仍需多 seed 复现。
+
+动态 guide + 随机 student 分支的额外 20% stress test，Final old ACC/MF1 从 `0.6940/0.6645` 下降到 `0.6395/0.5992`，但 memory purity 从 `86.6%` 保持在 `86.5%`。这说明 memory 过滤仍强，但随机 student 的 endpoint 对额外噪声更敏感。
+
+正式加噪结果：
+
+```text
+experiments/rttdp_brainuicl_runs/full49_unlabeled_pseudo_er_extra_pseudo_noise20_brainuicl_eval_seed4321/
+experiments/rttdp_brainuicl_runs/full49_unlabeled_pseudo_puridiver_extra_pseudo_noise20_brainuicl_eval_seed4321/
+experiments/rttdp_brainuicl_runs/full49_unlabeled_puridiver_cpcguide_randomstudent_extra_pseudo_noise20_brainuicl_eval_seed4321/
+```
+
 ## 结论
 
 该实现满足本次要求：target 数据无标签、必须使用 guiding model、不使用 CEA、不使用额外 confidence filtering，student 使用 PuriDivER 的 memory 和两层 GMM 过滤。frozen 主实验没有 target CPC；动态扩展只在 guide encoder 上加入 CPC-style 无标签更新。
 
-在 seed 4321 的 49-subject 实验中，PuriDivER 提高了 pseudo-memory purity，但没有超过 Frozen guide 或 Pseudo-ER。当前不能声称 PuriDivER 改善了真实无标签 EEG 持续学习；可以声称其过滤机制在 memory purity 上有效，但会牺牲部分正确困难样本并增加 forgetting。
+在 seed 4321 的自然伪标签流中，PuriDivER 提高了 pseudo-memory purity，但没有超过 Frozen guide 或 Pseudo-ER，因此不能声称它改善了 clean/natural 无标签 EEG 持续学习。额外 20% 对称翻转下，它却显著优于 Pseudo-ER，并几乎保持 endpoint，说明其优势主要体现在独立标签噪声防护，而不是无噪声性能。
 
 动态扩展说明随机 student 可以学到有效模型，且恢复了正 plasticity，但其长期平均轨迹和 MF1 仍弱于 guide-copy/frozen-guide 对照。结果基于一个 source guide 和一个 seed。由于用户要求不增加额外置信度过滤，当前主方法不应通过 confidence threshold 调参来改善结果。后续若修改 class-conditional GMM、时序一致性或 subject-aware loss normalization，应明确命名为 EEG-specific PuriDivER，而不是原始方法。
 
@@ -645,4 +692,8 @@ experiments/rttdp_brainuicl_runs/full49_unlabeled_puridiver_cpcguide_randomstude
 experiments/rttdp_brainuicl_runs/probe5_unlabeled_puridiver_frozenguide_randomstudent_seed4321/
 experiments/rttdp_brainuicl_runs/probe5_unlabeled_puridiver_cpcguide_randomstudent_seed4321/
 experiments/rttdp_brainuicl_runs/probe5_unlabeled_puridiver_cpcguide_guidestudent_seed4321/
+
+experiments/rttdp_brainuicl_runs/full49_unlabeled_pseudo_er_extra_pseudo_noise20_brainuicl_eval_seed4321/
+experiments/rttdp_brainuicl_runs/full49_unlabeled_pseudo_puridiver_extra_pseudo_noise20_brainuicl_eval_seed4321/
+experiments/rttdp_brainuicl_runs/full49_unlabeled_puridiver_cpcguide_randomstudent_extra_pseudo_noise20_brainuicl_eval_seed4321/
 ```

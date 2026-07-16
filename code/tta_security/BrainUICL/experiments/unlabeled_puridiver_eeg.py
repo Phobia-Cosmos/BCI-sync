@@ -10,6 +10,9 @@ confidence gate. The student uses PuriDivER memory construction and robust
 replay without BrainUICL CEA, teacher entropy/disagreement, confidence-based
 selection, source-label protection, or BrainUICL's joint-update objective. The
 optional CPC-style guide adaptation is recorded explicitly in result metadata.
+Target adaptation loads signal files only by default; hidden annotations are
+available solely behind an explicit benchmark-diagnostics flag. Optional
+symmetric pseudo-label flips provide a controlled noise stress test.
 """
 
 from __future__ import annotations
@@ -30,6 +33,7 @@ from torch.utils.data import DataLoader, Dataset
 from pure_puridiver_eeg import (
     NUM_CLASSES,
     CompactEEGClassifier,
+    diagnostic_label_purity,
     EpochPool,
     PoolDataset,
     PuriDivERMemory,
@@ -80,6 +84,60 @@ class UnlabeledSequencePathDataset(Dataset):
 
     def __getitem__(self, index: int):
         return torch.from_numpy(normalize_epochs(np.load(self.paths[index]))).float()
+
+
+def load_unlabeled_epoch_pool(
+    subject: int,
+    paths: list[Path],
+) -> tuple[EpochPool, dict]:
+    """Load target adaptation data without opening an annotation file."""
+
+    rows = [
+        torch.from_numpy(normalize_epochs(np.load(path))).to(torch.float16)
+        for path in paths
+    ]
+    if not rows:
+        raise RuntimeError(f"No target sequences found for subject {subject}")
+    x = torch.cat(rows, dim=0)
+    unknown = torch.full((len(x),), -1, dtype=torch.long)
+    return EpochPool(
+        x=x,
+        observed_y=unknown.clone(),
+        true_y=unknown.clone(),
+        subject_y=torch.full((len(x),), int(subject), dtype=torch.long),
+    ), {
+        "epochs": len(x),
+        "sequences": len(paths),
+        "noise_count": None,
+        "realized_noise_rate": None,
+        "class_counts": None,
+        "annotation_loaded_for_diagnostics": False,
+    }
+
+
+def optional_classification_metrics(
+    true_labels: torch.Tensor,
+    predicted_labels: torch.Tensor,
+) -> tuple[float | None, float | None]:
+    valid = true_labels.ge(0)
+    if not bool(valid.any()):
+        return None, None
+    true_np = true_labels[valid].numpy()
+    predicted_np = predicted_labels[valid].numpy()
+    return float((true_np == predicted_np).mean()), float(
+        f1_score(
+            true_np,
+            predicted_np,
+            labels=list(range(NUM_CLASSES)),
+            average="macro",
+            zero_division=0,
+        )
+    )
+
+
+def optional_mean(values: list[float | None]) -> float | None:
+    available = [value for value in values if value is not None]
+    return float(np.mean(available)) if available else None
 
 
 class TemporalCPCHeads(nn.Module):
@@ -225,8 +283,15 @@ def train_or_load_guiding_model(args, train_subjects: list[int], val_subjects: l
     metadata_path = checkpoint_path.with_suffix(".json")
     if checkpoint_path.exists() and not args.retrain_guide:
         checkpoint = torch.load(checkpoint_path, map_location=args.device, weights_only=False)
-        model.load_state_dict(checkpoint["model"])
         metadata = checkpoint.get("metadata", {})
+        cached_train = metadata.get("source_train_subjects")
+        cached_val = metadata.get("source_val_subjects")
+        if cached_train != train_subjects or cached_val != val_subjects:
+            raise RuntimeError(
+                "Guide checkpoint source split does not match the current seed. "
+                "Use a seed-specific --guide-checkpoint or --retrain-guide."
+            )
+        model.load_state_dict(checkpoint["model"])
         metadata["loaded_from_cache"] = True
         model.eval()
         for parameter in model.parameters():
@@ -281,6 +346,8 @@ def train_or_load_guiding_model(args, train_subjects: list[int], val_subjects: l
     final_validation = evaluate_sequence_dataset(model, val_dataset, args)
     metadata = {
         "type": "source_supervised_compact_eeg_guide",
+        "seed": args.seed,
+        "data_root": str(args.data_root),
         "source_train_subjects": train_subjects,
         "source_val_subjects": val_subjects,
         "guide_epochs": args.guide_epochs,
@@ -313,6 +380,7 @@ def assign_all_guiding_pseudo_labels(
     probabilities = logits.softmax(dim=1)
     confidence, pseudo_labels = probabilities.max(dim=1)
     true_labels = unlabeled_pool.true_y
+    pseudo_acc, pseudo_mf1 = optional_classification_metrics(true_labels, pseudo_labels)
     pseudo_pool = EpochPool(
         x=unlabeled_pool.x,
         observed_y=pseudo_labels.long(),
@@ -326,19 +394,76 @@ def assign_all_guiding_pseudo_labels(
         "accepted_epochs": len(unlabeled_pool),
         "acceptance_rate": 1.0,
         "mean_confidence_diagnostic_only": float(confidence.mean()),
-        "pseudo_label_acc_diagnostic_only": float(pseudo_labels.eq(true_labels).float().mean()),
-        "pseudo_label_mf1_diagnostic_only": float(
-            f1_score(
-                true_labels.numpy(),
-                pseudo_labels.numpy(),
-                labels=list(range(NUM_CLASSES)),
-                average="macro",
-                zero_division=0,
-            )
-        ),
+        "guiding_pseudo_label_acc_diagnostic_only": pseudo_acc,
+        "guiding_pseudo_label_mf1_diagnostic_only": pseudo_mf1,
+        "pseudo_label_acc_diagnostic_only": pseudo_acc,
+        "pseudo_label_mf1_diagnostic_only": pseudo_mf1,
         "pseudo_class_counts": torch.bincount(pseudo_labels, minlength=NUM_CLASSES).tolist(),
     }
     return pseudo_pool, diagnostics
+
+
+def attach_benchmark_annotations(
+    pseudo_pool: EpochPool,
+    diagnostics: dict,
+    annotated_pool: EpochPool,
+) -> None:
+    """Attach hidden labels only for explicitly requested benchmark diagnostics."""
+
+    if len(pseudo_pool) != len(annotated_pool):
+        raise ValueError("Unlabeled and annotated target pools have different lengths")
+    pseudo_pool.true_y = annotated_pool.true_y.clone()
+    pseudo_acc, pseudo_mf1 = optional_classification_metrics(
+        pseudo_pool.true_y, pseudo_pool.observed_y
+    )
+    diagnostics.update(
+        {
+            "guiding_pseudo_label_acc_diagnostic_only": pseudo_acc,
+            "guiding_pseudo_label_mf1_diagnostic_only": pseudo_mf1,
+            "pseudo_label_acc_diagnostic_only": pseudo_acc,
+            "pseudo_label_mf1_diagnostic_only": pseudo_mf1,
+        }
+    )
+
+
+def inject_symmetric_pseudo_label_noise(
+    pseudo_pool: EpochPool,
+    noise_rate: float,
+    seed: int,
+) -> tuple[EpochPool, dict]:
+    """Flip guide pseudo labels without consulting hidden target annotations."""
+
+    observed_y = pseudo_pool.observed_y.clone()
+    generator = np.random.default_rng(seed)
+    noise_mask = generator.random(len(pseudo_pool)) < noise_rate
+    noisy_indices = np.flatnonzero(noise_mask)
+    if noisy_indices.size:
+        offsets = generator.integers(1, NUM_CLASSES, size=noisy_indices.size)
+        original = observed_y[noisy_indices].numpy()
+        observed_y[noisy_indices] = torch.from_numpy(
+            ((original + offsets) % NUM_CLASSES).astype(np.int64)
+        )
+
+    noisy_pool = EpochPool(
+        x=pseudo_pool.x,
+        observed_y=observed_y,
+        true_y=pseudo_pool.true_y,
+        subject_y=pseudo_pool.subject_y,
+    )
+    effective_acc, effective_mf1 = optional_classification_metrics(
+        pseudo_pool.true_y, observed_y
+    )
+    observed_np = observed_y.numpy()
+    return noisy_pool, {
+        "extra_pseudo_noise_rate_requested": float(noise_rate),
+        "extra_pseudo_noise_count": int(noisy_indices.size),
+        "realized_extra_pseudo_noise_rate": float(noisy_indices.size / len(pseudo_pool)),
+        "pseudo_label_acc_diagnostic_only": effective_acc,
+        "pseudo_label_mf1_diagnostic_only": effective_mf1,
+        "pseudo_class_counts": np.bincount(
+            observed_np, minlength=NUM_CLASSES
+        ).astype(int).tolist(),
+    }
 
 
 def brainuicl_stability_summary(stability: dict[str, list[float]]) -> dict:
@@ -347,6 +472,11 @@ def brainuicl_stability_summary(stability: dict[str, list[float]]) -> dict:
     final_acc = float(stability["ACC"][-1])
     final_mf1 = float(stability["MF1"][-1])
     old_acc_change = final_acc - initial_acc
+    endpoint_relative_abs_change = (
+        float(abs(initial_acc - final_acc) / initial_acc)
+        if initial_acc != 0.0
+        else None
+    )
     return {
         "initial_acc": initial_acc,
         "initial_mf1": initial_mf1,
@@ -357,10 +487,13 @@ def brainuicl_stability_summary(stability: dict[str, list[float]]) -> dict:
         # Kept for exact compatibility with BrainUICL's published metric. It is
         # an absolute relative endpoint change, so a value > 1 can describe
         # improvement from a weak random initialization rather than forgetting.
-        "fr": float(abs(initial_acc - final_acc) / initial_acc),
+        "fr": endpoint_relative_abs_change,
+        "endpoint_relative_abs_change": endpoint_relative_abs_change,
         "old_acc_change": old_acc_change,
         "old_mf1_change": final_mf1 - initial_mf1,
-        "relative_old_acc_change": old_acc_change / initial_acc,
+        "relative_old_acc_change": (
+            old_acc_change / initial_acc if initial_acc != 0.0 else None
+        ),
     }
 
 
@@ -383,7 +516,11 @@ def update_brainuicl_stability(stability: dict[str, list[float]], result: dict) 
     stability["AAA"].append(float(np.mean(stability["ACC"])))
     stability["AAF1"].append(float(np.mean(stability["MF1"])))
     initial_acc = stability["ACC"][0]
-    stability["FR"].append(float(abs(initial_acc - stability["ACC"][-1]) / initial_acc))
+    stability["FR"].append(
+        float(abs(initial_acc - stability["ACC"][-1]) / initial_acc)
+        if initial_acc != 0.0
+        else None
+    )
 
 
 def run(args) -> dict:
@@ -400,7 +537,9 @@ def run(args) -> dict:
         split["val"],
     )
     student = initialize_student(guiding_model, args)
-    initial_student = copy.deepcopy(student).to(args.device).eval()
+    initial_student = copy.deepcopy(
+        guiding_model if args.method == "guide_only" else student
+    ).to(args.device).eval()
     for parameter in initial_student.parameters():
         parameter.requires_grad_(False)
     memory = PuriDivERMemory(args.memory_size, args.seed)
@@ -417,11 +556,26 @@ def run(args) -> dict:
             "target_annotation_used_for_training": False,
             "target_annotation_used_for_selection": False,
             "target_annotation_use": (
-                "full_subject_evaluation_and_posthoc_diagnostics_only"
-                if args.evaluation_protocol == "brainuicl"
-                else "held_out_evaluation_and_posthoc_diagnostics_only"
+                (
+                    "full_subject_evaluation_and_online_diagnostics_only"
+                    if args.evaluation_protocol == "brainuicl"
+                    else "held_out_evaluation_and_online_diagnostics_only"
+                )
+                if args.benchmark_annotation_diagnostics
+                else (
+                    "full_subject_evaluation_only"
+                    if args.evaluation_protocol == "brainuicl"
+                    else "held_out_evaluation_only"
+                )
             ),
+            "benchmark_annotation_diagnostics": args.benchmark_annotation_diagnostics,
             "candidate_rule": "all_argmax_pseudo_labels_without_confidence_filter",
+            "observed_label_pipeline": (
+                "guide_argmax_then_symmetric_pseudo_label_noise"
+                if args.extra_pseudo_noise_rate > 0.0
+                else "guide_argmax"
+            ),
+            "extra_pseudo_noise_rate": args.extra_pseudo_noise_rate,
             "brainuicl_components": [],
             "target_cpc_guide_adaptation": args.guide_policy == "cpc_dynamic",
             "guide_parameter_updates": (
@@ -440,7 +594,7 @@ def run(args) -> dict:
     old_dataset = None
     if args.evaluation_protocol == "brainuicl":
         old_dataset = SequencePathDataset(args.data_root, split["old_generalization"])
-        initial_old = evaluate_sequence_dataset(student, old_dataset, args)
+        initial_old = evaluate_sequence_dataset(initial_student, old_dataset, args)
         brainuicl_performance = {
             "stability": {"ACC": [], "MF1": [], "AAA": [], "AAF1": [], "FR": []},
             "plasticity": {
@@ -466,31 +620,55 @@ def run(args) -> dict:
                 args.data_root, subject, args.train_fraction
             )
             new_dataset = None
+        evaluation_model = guiding_model if args.method == "guide_only" else student
+        if args.evaluation_protocol == "brainuicl":
+            initial = evaluate_sequence_dataset(initial_student, new_dataset, args)
+            before = evaluate_sequence_dataset(evaluation_model, new_dataset, args)
+        else:
+            initial = None
+            before = None
         guide_adaptation = adapt_guiding_model_cpc(
             guiding_model,
             adaptation_paths,
             args,
             task_index + 1,
         )
-        diagnostic_pool, adaptation_stats = load_epoch_pool(
-            args.data_root,
-            subject,
-            adaptation_paths,
-            noise_rate=0.0,
-            noise_seed=args.seed,
+        unlabeled_pool, adaptation_stats = load_unlabeled_epoch_pool(
+            subject, adaptation_paths
         )
         pseudo_pool, pseudo_diagnostics = assign_all_guiding_pseudo_labels(
-            guiding_model, diagnostic_pool, args
+            guiding_model, unlabeled_pool, args
         )
+        if args.benchmark_annotation_diagnostics:
+            annotated_pool, annotated_stats = load_epoch_pool(
+                args.data_root,
+                subject,
+                adaptation_paths,
+                noise_rate=0.0,
+                noise_seed=args.seed,
+            )
+            attach_benchmark_annotations(
+                pseudo_pool, pseudo_diagnostics, annotated_pool
+            )
+            adaptation_stats.update(
+                {
+                    **annotated_stats,
+                    "annotation_loaded_for_diagnostics": True,
+                }
+            )
+        pseudo_pool, extra_noise_diagnostics = inject_symmetric_pseudo_label_noise(
+            pseudo_pool,
+            args.extra_pseudo_noise_rate,
+            args.seed + 3_000_000 + task_index,
+        )
+        pseudo_diagnostics.update(extra_noise_diagnostics)
         if args.evaluation_protocol == "brainuicl":
             test_pool = None
             test_stats = {
-                "epochs": len(diagnostic_pool),
+                "epochs": len(unlabeled_pool),
                 "sequences": len(test_paths),
                 "scope": "full_subject_same_as_unlabeled_adaptation",
             }
-            initial = evaluate_sequence_dataset(initial_student, new_dataset, args)
-            before = evaluate_sequence_dataset(student, new_dataset, args)
         else:
             test_pool, test_stats = load_epoch_pool(
                 args.data_root,
@@ -499,8 +677,7 @@ def run(args) -> dict:
                 noise_rate=0.0,
                 noise_seed=args.seed,
             )
-            initial = None
-            before = evaluate(student, test_pool, args)
+            before = evaluate(evaluation_model, test_pool, args)
         if args.method == "guide_only":
             online = {
                 "mini_batches": 0,
@@ -520,9 +697,10 @@ def run(args) -> dict:
                 task_index + 1,
             )
             replay = replay_train(student, optimizer, memory, args, task_index + 1)
+        evaluation_model = guiding_model if args.method == "guide_only" else student
         if args.evaluation_protocol == "brainuicl":
-            after = evaluate_sequence_dataset(student, new_dataset, args)
-            old_result = evaluate_sequence_dataset(student, old_dataset, args)
+            after = evaluate_sequence_dataset(evaluation_model, new_dataset, args)
+            old_result = evaluate_sequence_dataset(evaluation_model, old_dataset, args)
             update_brainuicl_stability(brainuicl_performance["stability"], old_result)
             brainuicl_performance["plasticity"][str(subject)] = {
                 "ACC": [initial["acc"], before["acc"], after["acc"]],
@@ -535,7 +713,7 @@ def run(args) -> dict:
         else:
             test_pools.append(test_pool)
             for seen_index, seen_pool in enumerate(test_pools):
-                result = evaluate(student, seen_pool, args)
+                result = evaluate(evaluation_model, seen_pool, args)
                 acc_matrix[task_index, seen_index] = result["acc"]
                 mf1_matrix[task_index, seen_index] = result["mf1"]
             after = {
@@ -571,10 +749,8 @@ def run(args) -> dict:
             "replay": replay,
             "memory": {
                 "size": len(memory),
-                "pseudo_label_purity_diagnostic_only": (
-                    float(memory.pool.observed_y.eq(memory.pool.true_y).float().mean())
-                    if len(memory)
-                    else None
+                "pseudo_label_purity_diagnostic_only": diagnostic_label_purity(
+                    memory.pool
                 ),
                 "pseudo_class_counts": torch.bincount(
                     memory.pool.observed_y, minlength=NUM_CLASSES
@@ -589,15 +765,40 @@ def run(args) -> dict:
             "mean_new_subject_mf1_gain": float(
                 np.mean([task["plasticity"]["mf1_gain"] for task in task_rows])
             ),
-            "mean_guiding_pseudo_label_acc": float(
-                np.mean(
-                    [task["pseudo_labels"]["pseudo_label_acc_diagnostic_only"] for task in task_rows]
-                )
+            "mean_guiding_pseudo_label_acc": optional_mean(
+                [
+                    task["pseudo_labels"][
+                        "guiding_pseudo_label_acc_diagnostic_only"
+                    ]
+                    for task in task_rows
+                ]
             ),
-            "mean_guiding_pseudo_label_mf1": float(
-                np.mean(
-                    [task["pseudo_labels"]["pseudo_label_mf1_diagnostic_only"] for task in task_rows]
+            "mean_guiding_pseudo_label_mf1": optional_mean(
+                [
+                    task["pseudo_labels"][
+                        "guiding_pseudo_label_mf1_diagnostic_only"
+                    ]
+                    for task in task_rows
+                ]
+            ),
+            "mean_effective_pseudo_label_acc": optional_mean(
+                [
+                    task["pseudo_labels"]["pseudo_label_acc_diagnostic_only"]
+                    for task in task_rows
+                ]
+            ),
+            "mean_effective_pseudo_label_mf1": optional_mean(
+                [
+                    task["pseudo_labels"]["pseudo_label_mf1_diagnostic_only"]
+                    for task in task_rows
+                ]
+            ),
+            "realized_extra_pseudo_noise_rate": float(
+                sum(
+                    task["pseudo_labels"]["extra_pseudo_noise_count"]
+                    for task in task_rows
                 )
+                / sum(task["pseudo_labels"]["candidate_epochs"] for task in task_rows)
             ),
         }
         if args.evaluation_protocol == "brainuicl":
@@ -622,9 +823,10 @@ def run(args) -> dict:
             }
         save_metrics(args.output_root, payload)
         purity = row["memory"]["pseudo_label_purity_diagnostic_only"]
+        pseudo_acc = pseudo_diagnostics["pseudo_label_acc_diagnostic_only"]
         print(
             f"[unlabeled-{args.method}] task={task_index + 1}/{len(order)} subject={subject} "
-            f"pseudo_acc={pseudo_diagnostics['pseudo_label_acc_diagnostic_only']:.4f} "
+            f"pseudo_acc={pseudo_acc if pseudo_acc is not None else float('nan'):.4f} "
             f"new_acc={before['acc']:.4f}->{after['acc']:.4f} "
             f"old_acc={old_acc if old_acc is not None else float('nan'):.4f} "
             f"seen_acc={all_seen_acc if all_seen_acc is not None else float('nan'):.4f} "
@@ -653,10 +855,7 @@ def parse_args():
     parser.add_argument(
         "--guide-checkpoint",
         type=Path,
-        default=Path(
-            "/home/undefined/Disk/ai-storage/BrainUICL/model_parameter/"
-            "PseudoPuriDivER/compact_guide_seed4321.pt"
-        ),
+        default=None,
     )
     parser.add_argument("--retrain-guide", action="store_true")
     parser.add_argument(
@@ -690,6 +889,24 @@ def parse_args():
     parser.add_argument("--guide-cpc-sequence-batch", type=int, default=8)
     parser.add_argument("--guide-cpc-prediction-steps", type=int, default=3)
     parser.add_argument("--guide-cpc-temperature", type=float, default=0.1)
+    parser.add_argument(
+        "--extra-pseudo-noise-rate",
+        type=float,
+        default=0.0,
+        help=(
+            "Additional symmetric flips applied after guide argmax labels; "
+            "target annotations are not used to choose flips"
+        ),
+    )
+    parser.add_argument(
+        "--benchmark-annotation-diagnostics",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help=(
+            "Read hidden target annotations for online purity diagnostics. "
+            "Disabled by default so target training can run without label files."
+        ),
+    )
     parser.add_argument("--source-sequence-batch", type=int, default=4)
     parser.add_argument("--num-worker", type=int, default=0)
     parser.add_argument("--memory-size", type=int, default=1000)
@@ -709,6 +926,21 @@ def parse_args():
     args = parser.parse_args()
     if not 0.0 < args.train_fraction < 1.0:
         parser.error("--train-fraction must be in (0, 1)")
+    if not 0.0 <= args.extra_pseudo_noise_rate <= 1.0:
+        parser.error("--extra-pseudo-noise-rate must be in [0, 1]")
+    if args.guide_cpc_sequence_batch < 2:
+        parser.error("--guide-cpc-sequence-batch must be at least 2")
+    if not 1 <= args.guide_cpc_prediction_steps < 19:
+        parser.error("--guide-cpc-prediction-steps must be in [1, 18]")
+    if args.guide_cpc_temperature <= 0.0:
+        parser.error("--guide-cpc-temperature must be positive")
+    if args.guide_cpc_epochs < 0:
+        parser.error("--guide-cpc-epochs must be non-negative")
+    if args.guide_checkpoint is None:
+        args.guide_checkpoint = Path(
+            "/home/undefined/Disk/ai-storage/BrainUICL/model_parameter/"
+            f"PseudoPuriDivER/compact_guide_seed{args.seed}.pt"
+        )
     args.device = torch.device(
         f"cuda:{args.gpu}" if args.gpu >= 0 and torch.cuda.is_available() else "cpu"
     )

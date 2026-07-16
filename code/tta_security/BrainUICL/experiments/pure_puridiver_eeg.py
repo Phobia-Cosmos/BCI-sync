@@ -144,6 +144,15 @@ class EpochPool:
         )
 
 
+def diagnostic_label_purity(pool: EpochPool) -> float | None:
+    """Return observed-label purity when hidden annotations are available."""
+
+    valid = pool.true_y.ge(0)
+    if not bool(valid.any()):
+        return None
+    return float(pool.observed_y[valid].eq(pool.true_y[valid]).float().mean())
+
+
 class PoolDataset(Dataset):
     def __init__(self, pool: EpochPool):
         self.pool = pool
@@ -295,10 +304,12 @@ def puridiver_split(
 
     relabel_mask_np = (~clean_mask_np) & (low_uncertainty_probability >= 0.5)
     unlabeled_mask_np = (~clean_mask_np) & (~relabel_mask_np)
+    annotation_available = memory.true_y.ge(0).numpy()
     true_clean = memory.observed_y.eq(memory.true_y).numpy()
 
     def precision(mask: np.ndarray) -> float | None:
-        return float(true_clean[mask].mean()) if mask.any() else None
+        diagnostic_mask = mask & annotation_available
+        return float(true_clean[diagnostic_mask].mean()) if diagnostic_mask.any() else None
 
     diagnostics = {
         "loss_gmm_means": loss_means,
@@ -308,7 +319,7 @@ def puridiver_split(
         "unlabeled_count": int(unlabeled_mask_np.sum()),
         "clean_precision": precision(clean_mask_np),
         "relabel_observed_label_precision": precision(relabel_mask_np),
-        "memory_label_purity": float(true_clean.mean()),
+        "memory_label_purity": diagnostic_label_purity(memory),
     }
     return PurificationState(
         clean_probability=torch.from_numpy(clean_probability),
@@ -361,7 +372,7 @@ class PuriDivERMemory:
             "strategy": "reservoir",
             "candidates": self.reservoir_seen,
             "size": len(self.pool),
-            "purity": float(self.pool.observed_y.eq(self.pool.true_y).float().mean()),
+            "purity": diagnostic_label_purity(self.pool),
         }
 
     @torch.no_grad()
@@ -380,7 +391,7 @@ class PuriDivERMemory:
                 "candidates": len(candidates),
                 "removed": 0,
                 "size": len(self.pool),
-                "purity": float(self.pool.observed_y.eq(self.pool.true_y).float().mean()),
+                "purity": diagnostic_label_purity(self.pool),
             }
 
         logits, features = infer_pool(model, candidates, device, infer_batch_size)
@@ -435,7 +446,7 @@ class PuriDivERMemory:
             "candidates": len(candidates),
             "removed": remove_count,
             "size": len(self.pool),
-            "purity": float(self.pool.observed_y.eq(self.pool.true_y).float().mean()),
+            "purity": diagnostic_label_purity(self.pool),
             "class_counts": torch.bincount(self.pool.observed_y, minlength=NUM_CLASSES).tolist(),
             "mean_kept_score": float(np.mean(kept_scores)),
             "mean_removed_score": float(np.mean(removed_scores)),
@@ -773,7 +784,7 @@ def run(args) -> dict:
             "replay": replay,
             "memory": {
                 "size": len(memory),
-                "purity": float(memory.pool.observed_y.eq(memory.pool.true_y).float().mean()),
+                "purity": diagnostic_label_purity(memory.pool),
                 "class_counts": torch.bincount(
                     memory.pool.observed_y, minlength=NUM_CLASSES
                 ).tolist(),
