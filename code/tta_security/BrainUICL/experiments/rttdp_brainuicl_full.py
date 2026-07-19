@@ -32,6 +32,7 @@ if str(Path(__file__).resolve().parent) not in sys.path:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from model.pretrain_net import FeatureExtractor, SleepMLP, TransformerEncoder  # noqa: E402
+from model.regularization_cl import freeze_batch_norm_running_stats  # noqa: E402
 from model.spr_eeg import purify_eeg_sequences  # noqa: E402
 from utils.config import ModelConfig  # noqa: E402
 from utils.util import compute_aaf1, compute_aaa, compute_forget, fix_randomness  # noqa: E402
@@ -1147,6 +1148,8 @@ def incremental_train(blocks, teacher_blocks, args, new_task_loader, new_task_id
     tmp_blocks = blocks
     for epoch in range(args.incremental_epoch):
         set_train(blocks, True)
+        if args.freeze_bn_stats:
+            freeze_batch_norm_running_stats(blocks)
         set_train(tmp_blocks_teacher, False)
         losses = []
         if epoch % args.cross_epoch == 0:
@@ -1462,7 +1465,7 @@ def summarize_plasticity(performance):
         mf1_initial.append(metrics["MF1"][0])
         mf1_before.append(metrics["MF1"][1])
         mf1_after.append(metrics["MF1"][2])
-    return {
+    summary = {
         "initial_acc": float(np.mean(acc_initial)) if acc_initial else math.nan,
         "before_acc": float(np.mean(acc_before)) if acc_before else math.nan,
         "after_acc": float(np.mean(acc_after)) if acc_after else math.nan,
@@ -1470,6 +1473,81 @@ def summarize_plasticity(performance):
         "before_mf1": float(np.mean(mf1_before)) if mf1_before else math.nan,
         "after_mf1": float(np.mean(mf1_after)) if mf1_after else math.nan,
     }
+    final_seen = performance.get("final", {}).get("seen_subjects", {})
+    if final_seen:
+        final_seen_acc = [metrics["acc"] for metrics in final_seen.values()]
+        final_seen_mf1 = [metrics["mf1"] for metrics in final_seen.values()]
+        learned_acc = {
+            subject: metrics["ACC"][2]
+            for subject, metrics in performance["plasticity"].items()
+        }
+        learned_mf1 = {
+            subject: metrics["MF1"][2]
+            for subject, metrics in performance["plasticity"].items()
+        }
+        bwt_acc = [
+            final_seen[subject]["acc"] - learned_acc[subject]
+            for subject in final_seen
+        ]
+        bwt_mf1 = [
+            final_seen[subject]["mf1"] - learned_mf1[subject]
+            for subject in final_seen
+        ]
+        accepted = sum(row.get("accepted_sequences", 0) for row in performance["buffer"])
+        candidates = sum(row.get("candidate_sequences", 0) for row in performance["buffer"])
+        summary.update(
+            {
+                "final_old_acc": performance["stability"]["ACC"][-1],
+                "final_old_mf1": performance["stability"]["MF1"][-1],
+                "old_aaa": performance["stability"]["AAA"][-1],
+                "old_aaf1": performance["stability"]["AAF1"][-1],
+                "old_fr": performance["stability"]["FR"][-1],
+                "mean_current_before_acc": summary["before_acc"],
+                "mean_current_after_acc": summary["after_acc"],
+                "mean_current_acc_gain": summary["after_acc"] - summary["before_acc"],
+                "mean_current_before_mf1": summary["before_mf1"],
+                "mean_current_after_mf1": summary["after_mf1"],
+                "mean_current_mf1_gain": summary["after_mf1"] - summary["before_mf1"],
+                "final_seen_acc": float(np.mean(final_seen_acc)),
+                "final_seen_mf1": float(np.mean(final_seen_mf1)),
+                "bwt_acc": float(np.mean(bwt_acc)),
+                "bwt_mf1": float(np.mean(bwt_mf1)),
+                "pseudo_sequence_acceptance_rate": (
+                    float(accepted / candidates) if candidates else 0.0
+                ),
+                "final_buffer_sequences": (
+                    int(performance["buffer"][-1]["length"])
+                    if performance["buffer"]
+                    else 0
+                ),
+            }
+        )
+    return summary
+
+
+def parse_int_set(value: str) -> set[int]:
+    if not value.strip():
+        return set()
+    return {int(item.strip()) for item in value.split(",") if item.strip()}
+
+
+def evaluate_seen_subjects(blocks, subjects, args):
+    results = {}
+    for subject in subjects:
+        loader = make_new_loader(
+            args,
+            int(subject),
+            is_buffer=False,
+            shuffle=False,
+            use_uploaded=False,
+        )
+        evaluated = evaluate(blocks, loader, args)
+        results[str(int(subject))] = {
+            "acc": float(evaluated["acc"]),
+            "mf1": float(evaluated["mf1"]),
+            "n_epochs": int(evaluated["n_epochs"]),
+        }
+    return results
 
 
 def write_progress(args, performance, summary=None):
@@ -1503,9 +1581,21 @@ def run_variant(base_args, variant, attack_mode, new_order, defense_mode="none")
         "attack_diagnostics": [],
         "purification": [],
         "uploaded_subjects": [],
+        "retention_snapshots": {},
+        "final": {},
         "order": [int(subject) for subject in new_order],
         "attack_mode": attack_mode,
         "defense_mode": defense_mode,
+        "protocol": {
+            "replay": True,
+            "pseudo_labels": "confidence-filtered hard labels from the CPC guide",
+            "confidence_threshold": float(args.confidence),
+            "student_batch_norm_running_stats": (
+                "frozen" if args.freeze_bn_stats else "updated"
+            ),
+            "true_target_labels_used_for_training": False,
+            "final_seen_evaluation": True,
+        },
     }
     attack_state = AttackState(args.model_param.NumClasses, args.device)
 
@@ -1515,7 +1605,9 @@ def run_variant(base_args, variant, attack_mode, new_order, defense_mode="none")
     performance["stability"]["AAA"].append(float(compute_aaa(performance["stability"]["ACC"])))
     performance["stability"]["AAF1"] = compute_aaf1(performance["stability"]["MF1"])
     performance["stability"]["FR"].append(float(compute_forget(performance["stability"]["ACC"])))
-    if not args.no_save_checkpoints:
+    if not args.no_save_checkpoints and (
+        not args.checkpoint_milestones or 0 in args.checkpoint_milestones
+    ):
         save_blocks(blocks, args.variant_dir / "checkpoints" / "Pretrain", args.seed)
 
     for num, subject in enumerate(new_order, start=1):
@@ -1542,7 +1634,11 @@ def run_variant(base_args, variant, attack_mode, new_order, defense_mode="none")
         if purification:
             purification.update({"step": num, "subject": int(subject)})
             performance["purification"].append(purification)
-        if not args.no_save_checkpoints:
+        if not args.no_save_checkpoints and (
+            not args.checkpoint_milestones
+            or num in args.checkpoint_milestones
+            or num == len(new_order)
+        ):
             save_blocks(blocks, args.variant_dir / "checkpoints" / f"individual_{num}", args.seed)
 
         new_eval_loader = make_new_loader(args, subject, is_buffer=False, shuffle=False, use_uploaded=False)
@@ -1571,6 +1667,12 @@ def run_variant(base_args, variant, attack_mode, new_order, defense_mode="none")
         if biased:
             buffer_row["biased"] = int(biased)
         performance["buffer"].append(buffer_row)
+        if num in args.retention_milestones or num == len(new_order):
+            performance["retention_snapshots"][str(num)] = evaluate_seen_subjects(
+                blocks,
+                new_order[:num],
+                args,
+            )
         if attack_mode.startswith("stealth_") or attack_mode.startswith("proxy_"):
             attack_stats = attack_state.flush_stats()
             attack_stats.update({"step": num, "subject": int(subject)})
@@ -1581,6 +1683,15 @@ def run_variant(base_args, variant, attack_mode, new_order, defense_mode="none")
             f"buffer={len(args.train_paths[0])} added={added}",
             flush=True,
         )
+    final_seen = performance["retention_snapshots"][str(len(new_order))]
+    performance["final"] = {
+        "old_generalization": {
+            "acc": performance["stability"]["ACC"][-1],
+            "mf1": performance["stability"]["MF1"][-1],
+            "n_epochs": int(old_result["n_epochs"]),
+        },
+        "seen_subjects": final_seen,
+    }
     summary = summarize_plasticity(performance)
     write_progress(args, performance, summary)
     return performance, summary
@@ -1764,6 +1875,18 @@ def parse_args():
     parser.add_argument("--proxy-meta-soft-weight", type=float, default=0.25)
     parser.add_argument("--store-poisoned-buffer", action="store_true")
     parser.add_argument("--no-save-checkpoints", action="store_true")
+    parser.add_argument(
+        "--freeze-bn-stats",
+        action="store_true",
+        help="Freeze student BN running statistics while retaining trainable affine parameters.",
+    )
+    parser.add_argument("--retention-milestones", type=str, default="10,25,49")
+    parser.add_argument(
+        "--checkpoint-milestones",
+        type=str,
+        default="",
+        help="Comma-separated task indices; empty preserves the prior save-every-task behavior.",
+    )
     return parser.parse_args()
 
 
@@ -1780,6 +1903,8 @@ def main():
     args.algorithm = "cpc"
     args.model_param = ModelConfig(args.dataset)
     args.alpha = args.initial_alpha
+    args.retention_milestones = parse_int_set(args.retention_milestones)
+    args.checkpoint_milestones = parse_int_set(args.checkpoint_milestones)
 
     subjects = discover_subjects(args.data_root)
     train_idx, val_idx, old_idx, new_idx = split_subjects(subjects, args.seed)

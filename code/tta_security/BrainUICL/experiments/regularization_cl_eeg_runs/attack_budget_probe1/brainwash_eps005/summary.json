@@ -1,0 +1,22 @@
+{
+  "finetune": {
+    "final_old_acc": 0.7046706586826347,
+    "final_old_mf1": 0.6896783138541481,
+    "old_aaa": 0.703562874251497,
+    "old_aaf1": 0.6888558040925707,
+    "old_fr": 0.0031540363140396014,
+    "mean_current_before_acc": 0.7290697674418605,
+    "mean_current_after_acc": 0.7197674418604652,
+    "mean_current_acc_gain": -0.009302325581395321,
+    "mean_current_before_mf1": 0.7631163096154122,
+    "mean_current_after_mf1": 0.754365254925507,
+    "mean_current_mf1_gain": -0.008751054689905224,
+    "final_seen_acc": 0.7197674418604652,
+    "final_seen_mf1": 0.754365254925507,
+    "bwt_acc": 0.0,
+    "bwt_mf1": 0.0,
+    "mean_pseudo_acc_diagnostic_only": 0.7186046511627907,
+    "mean_pseudo_mf1_diagnostic_only": 0.7518388819514039,
+    "pseudo_label_coverage": 1.0
+  }
+}

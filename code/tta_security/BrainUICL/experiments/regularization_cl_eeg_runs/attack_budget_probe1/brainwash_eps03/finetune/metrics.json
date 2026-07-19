@@ -1,0 +1,254 @@
+{
+  "method": "finetune",
+  "protocol": {
+    "pseudo_labels": "all hard argmax labels from the guiding model",
+    "confidence_filter": false,
+    "replay": false,
+    "dcb": false,
+    "cea": false,
+    "student_batch_norm_running_stats": "frozen",
+    "attack": "brainwash_reckless",
+    "attack_tasks": [
+      1
+    ],
+    "attacker_reference_inputs_used_by_learner": false,
+    "true_target_labels_used_for_training": false
+  },
+  "config": {
+    "data_root": "/home/undefined/Disk/datasets/brainuicl/processed/isruc_group1_npy_float32",
+    "input_checkpoint_root": "/home/undefined/Disk/ai-storage/BrainUICL/model_parameter",
+    "output_root": "experiments/regularization_cl_eeg_runs/attack_budget_probe1/brainwash_eps03",
+    "methods": "finetune",
+    "seed": 4321,
+    "gpu": 0,
+    "batch": 16,
+    "num_worker": 0,
+    "max_subjects": 1,
+    "ssl_epoch": 1,
+    "incremental_epoch": 1,
+    "lr": 0.0001,
+    "ssl_lr": 1e-06,
+    "cl_lr": 1e-06,
+    "beta1": 0.5,
+    "beta2": 0.99,
+    "weight_decay": 0.0003,
+    "grad_clip": 5.0,
+    "freeze_bn_stats": true,
+    "ewc_strength": 5000.0,
+    "online_ewc_strength": 6500.0,
+    "online_ewc_decay": 1.0,
+    "si_strength": 15.0,
+    "si_xi": 0.1,
+    "mas_strength": 1.0,
+    "mas_decay": 1.0,
+    "attack_mode": "brainwash_reckless",
+    "attack_tasks": [
+      1
+    ],
+    "attack_fraction": 0.03,
+    "attack_eps_scale": 0.03,
+    "attack_steps": 3,
+    "attack_inner_lr": 0.0001,
+    "attack_cautious_weight": 1.0,
+    "attack_param_scope": "classifier",
+    "attack_reference_batch": 1,
+    "attack_random_start": false,
+    "eval_max_batches": 0,
+    "retention_milestones": [
+      1
+    ],
+    "checkpoint_milestones": [],
+    "dataset": "ISRUC",
+    "model_param": "<utils.config.ModelConfig object at 0x7bcd879beb70>",
+    "device": "cuda:0"
+  },
+  "initial": {
+    "old_generalization": {
+      "acc": 0.7024550898203593,
+      "mf1": 0.6880332943309935,
+      "n_epochs": 16700
+    },
+    "source_train": {
+      "acc": 0.7500970873786408,
+      "mf1": 0.7321142684197317,
+      "n_epochs": 20600
+    },
+    "validation": {
+      "acc": 0.6414448669201521,
+      "mf1": 0.613332711486469,
+      "n_epochs": 5260
+    }
+  },
+  "stability": {
+    "acc": [
+      0.7024550898203593,
+      0.7047904191616766
+    ],
+    "mf1": [
+      0.6880332943309935,
+      0.6897586915001479
+    ]
+  },
+  "tasks": [
+    {
+      "task": 1,
+      "subject": 64,
+      "current_before": {
+        "acc": 0.7290697674418605,
+        "mf1": 0.7631163096154122,
+        "n_epochs": 860
+      },
+      "current_after": {
+        "acc": 0.7209302325581395,
+        "mf1": 0.7553822971091495,
+        "n_epochs": 860
+      },
+      "old_generalization_after": {
+        "acc": 0.7047904191616766,
+        "mf1": 0.6897586915001479,
+        "n_epochs": 16700
+      },
+      "pseudo_labels": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.7127906976744186,
+        "mf1_diagnostic_only": 0.7465348630075687,
+        "mean_confidence_diagnostic_only": 0.9155390850679819,
+        "pseudo_class_counts": [
+          134,
+          179,
+          314,
+          151,
+          82
+        ],
+        "n_epochs": 860
+      },
+      "pseudo_labels_on_clean_current": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.7174418604651163,
+        "mf1_diagnostic_only": 0.7510858881796356,
+        "mean_confidence_diagnostic_only": 0.9140712783780209,
+        "pseudo_class_counts": [
+          131,
+          178,
+          318,
+          151,
+          82
+        ],
+        "n_epochs": 860
+      },
+      "guiding_cpc_losses": [
+        113.49580637613933
+      ],
+      "attack_label_guiding_cpc_losses": [
+        99.65615844726562
+      ],
+      "attack": {
+        "mode": "brainwash_reckless",
+        "task": 1,
+        "subject": 64,
+        "poisoned_sequences": 2,
+        "total_sequences": 43,
+        "poison_fraction": 0.046511627906976744,
+        "poison_indices": [
+          13,
+          28
+        ],
+        "eps_scale_of_modality_std": 0.03,
+        "steps": 3,
+        "parameter_scope": "classifier",
+        "reference": "source-training inputs with victim hard pseudo labels",
+        "learner_replay": false,
+        "diagnostics_mean": {
+          "epsilon_eog": 9.617561715913325e-07,
+          "epsilon_eeg": 6.664112532916988e-07,
+          "linf_eog": 9.617724572308362e-07,
+          "linf_eeg": 6.664267857559025e-07,
+          "relative_l2_eog": 0.021708359010517597,
+          "relative_l2_eeg": 0.022315039299428463,
+          "objective_initial": -0.0583576038479805,
+          "objective_final": -0.058890043292194605,
+          "surrogate_old_loss_final": 0.058890043292194605,
+          "surrogate_current_loss_final": 0.1182025633752346,
+          "pseudo_label_preservation": 0.675000011920929
+        }
+      },
+      "training": {
+        "epochs": [
+          {
+            "epoch": 1,
+            "pseudo_loss": 0.25527433057626087,
+            "regularization_loss": 0.0,
+            "total_loss": 0.25527433057626087
+          }
+        ],
+        "last_pseudo_loss": 0.25527433057626087,
+        "last_regularization_loss": 0.0
+      },
+      "importance": {
+        "mean": 0.0,
+        "max": 0.0,
+        "nonzero_fraction": 0.0
+      }
+    }
+  ],
+  "retention_snapshots": {
+    "1": {
+      "64": {
+        "acc": 0.7209302325581395,
+        "mf1": 0.7553822971091495,
+        "n_epochs": 860
+      }
+    }
+  },
+  "final": {
+    "old_generalization": {
+      "acc": 0.7047904191616766,
+      "mf1": 0.6897586915001479,
+      "n_epochs": 16700
+    },
+    "source_train": {
+      "acc": 0.7503398058252427,
+      "mf1": 0.7310127325765239,
+      "n_epochs": 20600
+    },
+    "validation": {
+      "acc": 0.6416349809885932,
+      "mf1": 0.609083184212601,
+      "n_epochs": 5260
+    },
+    "seen_subjects": {
+      "64": {
+        "acc": 0.7209302325581395,
+        "mf1": 0.7553822971091495,
+        "n_epochs": 860
+      }
+    },
+    "initial_model_seen_subjects": {
+      "64": {
+        "acc": 0.7290697674418605,
+        "mf1": 0.7631163096154122,
+        "n_epochs": 860
+      }
+    }
+  },
+  "summary": {
+    "final_old_acc": 0.7047904191616766,
+    "final_old_mf1": 0.6897586915001479,
+    "old_aaa": 0.703622754491018,
+    "old_aaf1": 0.6888959929155707,
+    "old_fr": 0.00332452476344719,
+    "mean_current_before_acc": 0.7290697674418605,
+    "mean_current_after_acc": 0.7209302325581395,
+    "mean_current_acc_gain": -0.008139534883720989,
+    "mean_current_before_mf1": 0.7631163096154122,
+    "mean_current_after_mf1": 0.7553822971091495,
+    "mean_current_mf1_gain": -0.007734012506262711,
+    "final_seen_acc": 0.7209302325581395,
+    "final_seen_mf1": 0.7553822971091495,
+    "bwt_acc": 0.0,
+    "bwt_mf1": 0.0,
+    "mean_pseudo_acc_diagnostic_only": 0.7127906976744186,
+    "mean_pseudo_mf1_diagnostic_only": 0.7465348630075687,
+    "pseudo_label_coverage": 1.0
+  }
+}
