@@ -30,18 +30,18 @@ The stability result must not be interpreted as strong adaptation on every new s
 
 ## Comparison with BrainUICL
 
-![Regularization CL methods compared with BrainUICL](regularization_vs_brainuicl_clean49_zh.png)
+![Aligned regularization CL methods compared with BrainUICL](aligned_regularization_vs_brainuicl_clean49_zh.png)
 
-| Method | Final old ACC | Final old MF1 | Mean new-subject ACC after adaptation | Mean new-subject MF1 after adaptation |
-|---|---:|---:|---:|---:|
-| Finetune | 0.6065 | 0.5902 | 0.6430 | 0.5640 |
-| EWC | 0.6902 | 0.6614 | **0.6524** | 0.5628 |
-| Online EWC | 0.6951 | 0.6669 | 0.6470 | 0.5537 |
-| SI | **0.7120** | **0.6927** | 0.6502 | 0.5576 |
-| MAS | 0.7069 | 0.6848 | 0.6465 | 0.5560 |
-| BrainUICL | 0.6569 | 0.6231 | 0.6182 | 0.5548 |
+| Method | Final old ACC | Final old MF1 | Final seen ACC | Final seen MF1 | BWT ACC |
+|---|---:|---:|---:|---:|---:|
+| Finetune | 0.6065 | 0.5902 | 0.5489 | 0.4712 | -0.0941 |
+| EWC | 0.6902 | 0.6614 | 0.6285 | 0.5321 | -0.0240 |
+| Online EWC | 0.6951 | 0.6669 | 0.6367 | 0.5391 | -0.0103 |
+| SI | 0.7120 | 0.6927 | 0.6485 | 0.5556 | -0.0017 |
+| MAS | 0.7069 | 0.6848 | 0.6432 | 0.5524 | -0.0034 |
+| **BrainUICL aligned** | **0.7326** | **0.6995** | **0.6762** | **0.6067** | **+0.0139** |
 
-These four metrics are directly available under the same ISRUC data, seed-4321 split, 49-subject order, and 10+10 epoch schedule. The two method families do not have the same resource assumptions: original BrainUICL uses a replay buffer and confidence-based pseudo-label selection, while the five methods above use no replay and accept all hard pseudo labels. The original BrainUICL run did not retain its final checkpoint or final per-subject re-evaluation, so its final-seen ACC/MF1 and BWT cannot be placed in the main table without rerunning it. The plotted values and protocol labels are also available in `regularization_vs_brainuicl_clean49.csv`.
+All six rows now use the same ISRUC files, seed-4321 split, 49-subject order, pretrained checkpoint, batch size, learning rate, 10+10 epoch schedule, frozen student BatchNorm statistics, clean evaluation inputs, final 49-subject re-evaluation, and BWT implementation. BrainUICL retains its defining replay and confidence-selection components: 44.23% of new sequences enter replay and its final buffer contains 1,980 sequences including initial labeled history. The five other methods have no historical buffer and accept every current hard pseudo label. The aligned result therefore shows that BrainUICL performs best when its additional memory and selection resources are allowed; it is a metric-aligned, not memory-matched, comparison. The plotted values and protocol labels are available in `aligned_regularization_vs_brainuicl_clean49.csv`.
 
 ## BatchNorm ablation
 

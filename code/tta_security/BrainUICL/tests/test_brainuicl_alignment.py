@@ -22,8 +22,18 @@ class BrainUICLAlignmentTest(unittest.TestCase):
                 "FR": [0.0, 0.05],
             },
             "buffer": [
-                {"accepted_sequences": 2, "candidate_sequences": 4, "length": 10},
-                {"accepted_sequences": 3, "candidate_sequences": 6, "length": 13},
+                {
+                    "accepted_sequences": 2,
+                    "candidate_sequences": 4,
+                    "total_sequences": 8,
+                    "length": 10,
+                },
+                {
+                    "accepted_sequences": 3,
+                    "candidate_sequences": 6,
+                    "total_sequences": 12,
+                    "length": 13,
+                },
             ],
             "final": {
                 "seen_subjects": {
@@ -37,7 +47,9 @@ class BrainUICLAlignmentTest(unittest.TestCase):
         self.assertAlmostEqual(summary["final_seen_mf1"], 0.575)
         self.assertAlmostEqual(summary["bwt_acc"], -0.025)
         self.assertAlmostEqual(summary["bwt_mf1"], -0.025)
-        self.assertAlmostEqual(summary["pseudo_sequence_acceptance_rate"], 0.5)
+        self.assertAlmostEqual(summary["high_confidence_candidate_rate"], 0.5)
+        self.assertAlmostEqual(summary["candidate_acceptance_rate"], 0.5)
+        self.assertAlmostEqual(summary["pseudo_sequence_coverage"], 0.25)
         self.assertEqual(summary["final_buffer_sequences"], 13)
 
 

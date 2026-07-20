@@ -114,6 +114,45 @@ def subject_paths(data_root: Path, subject: int) -> tuple[list[Path], list[Path]
     return data_paths, label_paths
 
 
+def external_proxy_upload_paths(
+    upload_root: Path,
+    clean_paths: tuple[list[Path], list[Path]],
+    task_index: int,
+    subject: int,
+) -> tuple[tuple[list[Path], list[Path]], dict]:
+    """Pair a fixed proxy-noise upload with the subject's untouched labels."""
+    task_root = upload_root / f"individual_{task_index}"
+    metadata_path = task_root / "metadata.json"
+    data_dir = task_root / "data"
+    if not metadata_path.is_file():
+        raise FileNotFoundError(f"Missing proxy-noise metadata: {metadata_path}")
+    if not data_dir.is_dir():
+        raise FileNotFoundError(f"Missing proxy-noise data directory: {data_dir}")
+
+    metadata = json.loads(metadata_path.read_text())
+    if int(metadata.get("task", -1)) != int(task_index):
+        raise ValueError(
+            f"Proxy-noise task mismatch in {metadata_path}: "
+            f"expected {task_index}, found {metadata.get('task')}"
+        )
+    if int(metadata.get("subject", -1)) != int(subject):
+        raise ValueError(
+            f"Proxy-noise subject mismatch in {metadata_path}: "
+            f"expected {subject}, found {metadata.get('subject')}"
+        )
+
+    data_paths = sorted(data_dir.glob("*.npy"), key=lambda path: int(path.stem))
+    expected_names = [f"{index}.npy" for index in range(len(clean_paths[0]))]
+    if [path.name for path in data_paths] != expected_names:
+        raise ValueError(
+            f"Proxy-noise sequence set for task {task_index} does not match "
+            f"the clean subject's {len(expected_names)} sequences"
+        )
+    if len(clean_paths[0]) != len(clean_paths[1]):
+        raise ValueError(f"Clean data/label count mismatch for subject {subject}")
+    return (data_paths, list(clean_paths[1])), metadata
+
+
 def merge_subject_paths(data_root: Path, subjects: list[int]) -> tuple[list[Path], list[Path]]:
     data_paths, label_paths = [], []
     for subject in subjects:
@@ -598,7 +637,16 @@ def target_for_attack(logits, attack_mode, state):
 
 
 def is_input_attack(attack_mode):
-    return attack_mode.startswith("pgd") or attack_mode.startswith("stealth_") or attack_mode.startswith("proxy_")
+    return (
+        attack_mode == "external_proxy_noise"
+        or attack_mode.startswith("pgd")
+        or attack_mode.startswith("stealth_")
+        or attack_mode.startswith("proxy_")
+    )
+
+
+def is_proxy_noise_mode(mode):
+    return mode in {"proxy_guided_noise", "external_proxy_noise"}
 
 
 def sequence_pass_mask(logits, args):
@@ -909,7 +957,14 @@ def poison_proxy_meta_conflict_batch(eog_new, eeg_new, eog_replay, eeg_replay, l
 
 
 def use_individual_proxy_upload(args):
-    return args.attack_mode == "proxy_meta_conflict" and args.proxy_meta_poison_scope == "individual"
+    return (
+        args.attack_mode in {"proxy_meta_conflict", "proxy_guided_noise"}
+        and args.proxy_meta_poison_scope == "individual"
+    )
+
+
+def use_external_proxy_upload(args):
+    return args.attack_mode == "external_proxy_noise"
 
 
 def proxy_meta_reference_paths(args):
@@ -935,7 +990,9 @@ def materialize_proxy_meta_subject(args, subject, num, student_blocks, teacher_b
     new_loader = DataLoader(SequenceDataset(clean_paths), batch_size=args.batch, shuffle=False, num_workers=args.num_worker)
     replay_loader = DataLoader(SequenceDataset(proxy_meta_reference_paths(args)), batch_size=args.batch, shuffle=True, num_workers=args.num_worker)
     replay_iter = iter(replay_loader)
-    save_data_path = args.variant_dir / "poisoned_uploads" / f"individual_{num}" / "data"
+    noise_terminology = args.attack_mode == "proxy_guided_noise"
+    upload_dir_name = "noisy_uploads" if noise_terminology else "poisoned_uploads"
+    save_data_path = args.variant_dir / upload_dir_name / f"individual_{num}" / "data"
     save_data_path.mkdir(parents=True, exist_ok=True)
     total_sequences = len(clean_paths[0])
     poison_fraction = min(max(args.proxy_meta_poison_fraction, 0.0), 1.0)
@@ -984,20 +1041,39 @@ def materialize_proxy_meta_subject(args, subject, num, student_blocks, teacher_b
             poisoned_data_paths.append(save_data_file)
             label_paths.append(clean_paths[1][idx])
         global_idx += eog_adv.shape[0]
+    sequence_label = "noisy" if noise_terminology else "poisoned"
     print(
         f"[{args.variant}] Materialized upload for Subject {subject}: "
-        f"{materialized_poisoned}/{len(poisoned_data_paths)} poisoned sequences",
+        f"{materialized_poisoned}/{len(poisoned_data_paths)} {sequence_label} sequences",
         flush=True,
     )
     stats = {
+        "task": int(num),
         "step": int(num),
         "subject": int(subject),
         "uploaded": int(len(poisoned_data_paths)),
-        "poisoned": int(materialized_poisoned),
-        "poison_fraction": float(materialized_poisoned / max(len(poisoned_data_paths), 1)),
         "reference": args.proxy_meta_reference,
         "reference_label_mode": args.proxy_meta_reference_label_mode,
     }
+    if noise_terminology:
+        stats.update(
+            {
+                "noisy_sequences": int(materialized_poisoned),
+                "noise_fraction": float(materialized_poisoned / max(len(poisoned_data_paths), 1)),
+                "noise_indices": sorted(int(index) for index in poison_indices),
+            }
+        )
+    else:
+        stats.update(
+            {
+                "poisoned": int(materialized_poisoned),
+                "poison_fraction": float(materialized_poisoned / max(len(poisoned_data_paths), 1)),
+                "poison_indices": sorted(int(index) for index in poison_indices),
+            }
+        )
+    (save_data_path.parent / "metadata.json").write_text(
+        json.dumps(stats, indent=2, ensure_ascii=False)
+    )
     return (poisoned_data_paths, label_paths), stats
 
 
@@ -1343,6 +1419,7 @@ def spr_buffer_single_merge(args, new_task_id, num, tmp_blocks, expert_blocks, a
         added += 1
 
     diagnostics = {
+        "total_sequences": int(len(new_paths[0])),
         "candidate_sequences": candidate_count,
         "accepted_sequences": added,
         "rejected_sequences": candidate_count - added,
@@ -1438,6 +1515,7 @@ def buffer_single_merge(args, new_task_id, num, tmp_blocks, attack_state, expert
                 added += 1
         global_idx += pred_prob.shape[0]
     diagnostics = {
+        "total_sequences": int(len(new_paths[0])),
         "candidate_sequences": candidate_count,
         "accepted_sequences": added,
         "rejected_sequences": candidate_count - added,
@@ -1495,6 +1573,7 @@ def summarize_plasticity(performance):
         ]
         accepted = sum(row.get("accepted_sequences", 0) for row in performance["buffer"])
         candidates = sum(row.get("candidate_sequences", 0) for row in performance["buffer"])
+        total_sequences = sum(row.get("total_sequences", 0) for row in performance["buffer"])
         summary.update(
             {
                 "final_old_acc": performance["stability"]["ACC"][-1],
@@ -1512,8 +1591,14 @@ def summarize_plasticity(performance):
                 "final_seen_mf1": float(np.mean(final_seen_mf1)),
                 "bwt_acc": float(np.mean(bwt_acc)),
                 "bwt_mf1": float(np.mean(bwt_mf1)),
-                "pseudo_sequence_acceptance_rate": (
+                "high_confidence_candidate_rate": (
+                    float(candidates / total_sequences) if total_sequences else 0.0
+                ),
+                "candidate_acceptance_rate": (
                     float(accepted / candidates) if candidates else 0.0
+                ),
+                "pseudo_sequence_coverage": (
+                    float(accepted / total_sequences) if total_sequences else 0.0
                 ),
                 "final_buffer_sequences": (
                     int(performance["buffer"][-1]["length"])
@@ -1570,6 +1655,14 @@ def run_variant(base_args, variant, attack_mode, new_order, defense_mode="none")
     args.train_len = len(args.train_paths[0])
     args.alpha = args.initial_alpha
     args.uploaded_subject_paths = {}
+    noise_run = is_proxy_noise_mode(attack_mode)
+    diagnostics_key = (
+        "noise_diagnostics"
+        if noise_run
+        else "input_diagnostics"
+        if attack_mode == "none"
+        else "attack_diagnostics"
+    )
 
     blocks = load_pretrained(args)
     initial_blocks = load_pretrained(args)
@@ -1578,18 +1671,21 @@ def run_variant(base_args, variant, attack_mode, new_order, defense_mode="none")
         "stability": {"ACC": [], "MF1": [], "AAA": [], "AAF1": [], "FR": []},
         "plasticity": {str(int(subject)): {"ACC": [], "MF1": []} for subject in new_order},
         "buffer": [],
-        "attack_diagnostics": [],
+        diagnostics_key: [],
         "purification": [],
         "uploaded_subjects": [],
         "retention_snapshots": {},
         "final": {},
         "order": [int(subject) for subject in new_order],
-        "attack_mode": attack_mode,
+        "input_condition": "noise" if noise_run else "standard_or_legacy",
         "defense_mode": defense_mode,
         "protocol": {
             "replay": True,
             "pseudo_labels": "confidence-filtered hard labels from the CPC guide",
             "confidence_threshold": float(args.confidence),
+            "external_proxy_noise": (
+                str(args.noise_upload_root) if args.noise_upload_root is not None else None
+            ),
             "student_batch_norm_running_stats": (
                 "frozen" if args.freeze_bn_stats else "updated"
             ),
@@ -1597,6 +1693,10 @@ def run_variant(base_args, variant, attack_mode, new_order, defense_mode="none")
             "final_seen_evaluation": True,
         },
     }
+    if noise_run:
+        performance["noise_mode"] = attack_mode
+    elif attack_mode != "none":
+        performance["attack_mode"] = attack_mode
     attack_state = AttackState(args.model_param.NumClasses, args.device)
 
     old_result = evaluate(blocks, old_loader, args)
@@ -1613,10 +1713,26 @@ def run_variant(base_args, variant, attack_mode, new_order, defense_mode="none")
     for num, subject in enumerate(new_order, start=1):
         if num >= args.train_num:
             args.alpha = np.power(0.1, np.log10(num / args.train_num) + 2)
-        print(f"[{variant}] New Task {num}/{len(new_order)} Subject {subject} attack={attack_mode}", flush=True)
+        input_label = "noise" if noise_run else attack_mode
+        print(
+            f"[{variant}] New Task {num}/{len(new_order)} "
+            f"Subject {subject} input={input_label}",
+            flush=True,
+        )
         last_blocks = clone_blocks(blocks, args)
         teacher_blocks = clone_blocks(blocks, args)
-        if use_individual_proxy_upload(args):
+        if use_external_proxy_upload(args):
+            upload_paths, upload_stats = external_proxy_upload_paths(
+                args.noise_upload_root,
+                subject_paths(args.data_root, subject),
+                num,
+                subject,
+            )
+            upload_stats = dict(upload_stats)
+            upload_stats["source"] = str(args.noise_upload_root)
+            args.uploaded_subject_paths[int(subject)] = upload_paths
+            performance["uploaded_subjects"].append(upload_stats)
+        elif use_individual_proxy_upload(args):
             upload_paths, upload_stats = materialize_proxy_meta_subject(
                 args,
                 subject,
@@ -1676,7 +1792,7 @@ def run_variant(base_args, variant, attack_mode, new_order, defense_mode="none")
         if attack_mode.startswith("stealth_") or attack_mode.startswith("proxy_"):
             attack_stats = attack_state.flush_stats()
             attack_stats.update({"step": num, "subject": int(subject)})
-            performance["attack_diagnostics"].append(attack_stats)
+            performance[diagnostics_key].append(attack_stats)
         write_progress(args, performance)
         print(
             f"[{variant}] Subject {subject} old ACC={old_result['acc']:.4f} MF1={old_result['mf1']:.4f} "
@@ -1714,6 +1830,9 @@ def write_comparison(output_root, clean_perf, attack_perf, clean_summary, attack
             "proxy_meta_reference_label_mode": getattr(args, "proxy_meta_reference_label_mode", "true"),
             "proxy_meta_max_rel_eog": getattr(args, "proxy_meta_max_rel_eog", 0.0),
             "proxy_meta_max_rel_eeg": getattr(args, "proxy_meta_max_rel_eeg", 0.0),
+            "noise_upload_root": (
+                str(args.noise_upload_root) if args.noise_upload_root is not None else None
+            ),
         },
         "clean_summary": clean_summary,
         "attack_summary": attack_summary,
@@ -1789,13 +1908,22 @@ def parse_args():
             "stealth_loss_drift",
             "stealth_target_flip",
             "proxy_meta_conflict",
+            "proxy_guided_noise",
+            "external_proxy_noise",
             "buffer_label_noise",
         ],
         default="model_nhe",
     )
     parser.add_argument("--run-clean-only", action="store_true")
     parser.add_argument("--run-attack-only", action="store_true")
+    parser.add_argument("--run-noise-only", action="store_true")
     parser.add_argument("--run-defense-only", action="store_true")
+    parser.add_argument(
+        "--noise-mode",
+        choices=["proxy_guided", "external_proxy"],
+        default=None,
+        help="Use proxy-generated noisy inputs without changing labels or model settings.",
+    )
     parser.add_argument("--defense-mode", choices=["none", "puridiver", "spr"], default="none")
     parser.add_argument(
         "--defense-on-clean",
@@ -1873,6 +2001,12 @@ def parse_args():
     parser.add_argument("--proxy-meta-grad-norm-weight", type=float, default=0.1)
     parser.add_argument("--proxy-meta-conf-tau", type=float, default=0.05)
     parser.add_argument("--proxy-meta-soft-weight", type=float, default=0.25)
+    parser.add_argument(
+        "--noise-upload-root",
+        type=Path,
+        default=None,
+        help="Read a fixed per-task proxy-noise stream generated by another run.",
+    )
     parser.add_argument("--store-poisoned-buffer", action="store_true")
     parser.add_argument("--no-save-checkpoints", action="store_true")
     parser.add_argument(
@@ -1892,11 +2026,48 @@ def parse_args():
 
 def main():
     args = parse_args()
-    exclusive_runs = sum([args.run_clean_only, args.run_attack_only, args.run_defense_only])
+    if args.noise_mode is not None:
+        args.attack_mode = {
+            "proxy_guided": "proxy_guided_noise",
+            "external_proxy": "external_proxy_noise",
+        }[args.noise_mode]
+        if not any(
+            [
+                args.run_clean_only,
+                args.run_attack_only,
+                args.run_noise_only,
+                args.run_defense_only,
+            ]
+        ):
+            args.run_noise_only = True
+    elif args.run_noise_only:
+        raise ValueError("--run-noise-only requires --noise-mode")
+    exclusive_runs = sum(
+        [
+            args.run_clean_only,
+            args.run_attack_only,
+            args.run_noise_only,
+            args.run_defense_only,
+        ]
+    )
     if exclusive_runs > 1:
-        raise ValueError("Choose at most one of --run-clean-only, --run-attack-only, --run-defense-only")
+        raise ValueError(
+            "Choose at most one of --run-clean-only, --run-noise-only, "
+            "--run-defense-only, or the legacy direct-only mode"
+        )
     if args.run_defense_only and args.defense_mode == "none":
         raise ValueError("--run-defense-only requires --defense-mode puridiver or spr")
+    if args.attack_mode == "external_proxy_noise":
+        if args.noise_upload_root is None:
+            raise ValueError("external_proxy_noise requires --noise-upload-root")
+        if not args.noise_upload_root.is_dir():
+            raise FileNotFoundError(
+                f"Proxy-noise upload root does not exist: {args.noise_upload_root}"
+            )
+    elif args.noise_upload_root is not None:
+        raise ValueError(
+            "--noise-upload-root requires --attack-mode external_proxy_noise"
+        )
     fix_randomness(args.seed)
     args.device = torch.device(f"cuda:{args.gpu}" if args.gpu >= 0 and torch.cuda.is_available() else "cpu")
     args.dataset = "ISRUC"
@@ -1928,11 +2099,17 @@ def main():
 
     clean_perf = attack_perf = defense_perf = None
     clean_summary = attack_summary = defense_summary = None
-    if not args.run_attack_only and not args.run_defense_only:
+    direct_only = args.run_attack_only or args.run_noise_only
+    if not direct_only and not args.run_defense_only:
         clean_perf, clean_summary = run_variant(args, "clean", "none", new_order, defense_mode="none")
     if not args.run_clean_only and not args.run_defense_only:
+        variant_name = (
+            f"noise_{args.noise_mode}"
+            if args.noise_mode is not None
+            else f"attack_{args.attack_mode}"
+        )
         attack_perf, attack_summary = run_variant(
-            args, f"attack_{args.attack_mode}", args.attack_mode, new_order, defense_mode="none"
+            args, variant_name, args.attack_mode, new_order, defense_mode="none"
         )
     if args.defense_mode != "none" and not args.run_clean_only and not args.run_attack_only:
         defense_attack_mode = "none" if args.defense_on_clean else args.attack_mode

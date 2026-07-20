@@ -46,6 +46,7 @@ from rttdp_brainuicl_full import (  # noqa: E402
     clone_blocks,
     discover_subjects,
     evaluate,
+    external_proxy_upload_paths,
     flat_labels,
     flat_logits,
     forward_blocks,
@@ -509,9 +510,10 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
             "student_batch_norm_running_stats": (
                 "frozen" if args.freeze_bn_stats else "updated"
             ),
-            "attack": args.attack_mode,
-            "attack_tasks": sorted(args.attack_tasks),
-            "attacker_reference_inputs_used_by_learner": False,
+            "external_proxy_noise": (
+                str(args.noise_upload_root) if args.noise_upload_root is not None else None
+            ),
+            "proxy_reference_inputs_used_by_learner": False,
             "true_target_labels_used_for_training": False,
         },
         "config": vars_for_json(args),
@@ -528,8 +530,16 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
         "retention_snapshots": {},
         "final": {},
     }
+    if args.noise_upload_root is None:
+        performance["protocol"].update(
+            {
+                "attack": args.attack_mode,
+                "attack_tasks": sorted(args.attack_tasks),
+                "attacker_reference_inputs_used_by_learner": False,
+            }
+        )
 
-    if 0 in args.checkpoint_milestones:
+    if not args.no_save_checkpoints and 0 in args.checkpoint_milestones:
         save_blocks(student_blocks, method_dir / "checkpoints" / "Pretrain", args.seed)
 
     seen_subjects: list[int] = []
@@ -550,8 +560,30 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
         )
 
         attack_diagnostics = None
+        noise_diagnostics = None
         attack_label_cpc_losses: list[float] = []
-        if task_index in args.attack_tasks:
+        if args.noise_upload_root is not None:
+            training_paths, noise_diagnostics = external_proxy_upload_paths(
+                args.noise_upload_root,
+                clean_paths,
+                task_index,
+                subject,
+            )
+            noise_diagnostics = dict(noise_diagnostics)
+            noise_diagnostics["source"] = str(args.noise_upload_root)
+            loader_train = DataLoader(
+                SequenceDataset(training_paths),
+                batch_size=args.batch,
+                shuffle=True,
+                num_workers=args.num_worker,
+            )
+            loader_pseudo_eval = DataLoader(
+                SequenceDataset(training_paths),
+                batch_size=args.batch,
+                shuffle=False,
+                num_workers=args.num_worker,
+            )
+        elif task_index in args.attack_tasks:
             clean_label_loader = make_subject_loader(args, subject, shuffle=True)
             label_blocks, attack_label_cpc_losses = adapt_guiding_model(
                 student_blocks,
@@ -617,7 +649,7 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
         )
         clean_pseudo_diagnostics = (
             pseudo_label_diagnostics(guiding_blocks, loader_eval, args)
-            if attack_diagnostics is not None
+            if attack_diagnostics is not None or noise_diagnostics is not None
             else pseudo_diagnostics
         )
         train_diagnostics, current_importance = train_student_task(
@@ -649,18 +681,22 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
             "pseudo_labels": pseudo_diagnostics,
             "pseudo_labels_on_clean_current": clean_pseudo_diagnostics,
             "guiding_cpc_losses": cpc_losses,
-            "attack_label_guiding_cpc_losses": attack_label_cpc_losses,
-            "attack": attack_diagnostics,
+            "noise": noise_diagnostics,
             "training": train_diagnostics,
             "importance": current_importance,
         }
+        if args.noise_upload_root is None:
+            task_row["attack"] = attack_diagnostics
+            task_row["attack_label_guiding_cpc_losses"] = attack_label_cpc_losses
         performance["tasks"].append(task_row)
 
         if task_index in args.retention_milestones or task_index == total_tasks:
             performance["retention_snapshots"][str(task_index)] = (
                 evaluate_seen_subjects(student_blocks, seen_subjects, args)
             )
-        if task_index in args.checkpoint_milestones or task_index == total_tasks:
+        if not args.no_save_checkpoints and (
+            task_index in args.checkpoint_milestones or task_index == total_tasks
+        ):
             checkpoint_dir = method_dir / "checkpoints" / f"individual_{task_index}"
             save_blocks(student_blocks, checkpoint_dir, args.seed)
             torch.save(strategy.state_dict(), checkpoint_dir / "regularizer_state.pt")
@@ -703,6 +739,8 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
 def vars_for_json(args) -> dict:
     output = {}
     for key, value in vars(args).items():
+        if args.noise_upload_root is not None and key.startswith("attack_"):
+            continue
         if key in {"device", "model_param"}:
             output[key] = str(value)
         elif isinstance(value, Path):
@@ -809,6 +847,13 @@ def parse_args():
     )
     parser.add_argument("--attack-reference-batch", type=int, default=1)
     parser.add_argument("--attack-random-start", action="store_true")
+    parser.add_argument(
+        "--noise-upload-root",
+        type=Path,
+        default=None,
+        help="Read a fixed per-task proxy-noise stream while keeping clean labels.",
+    )
+    parser.add_argument("--no-save-checkpoints", action="store_true")
     parser.add_argument("--eval-max-batches", type=int, default=0)
     parser.add_argument("--retention-milestones", type=str, default="10,25,49")
     parser.add_argument("--checkpoint-milestones", type=str, default="0,1,10,25,49")
@@ -844,6 +889,13 @@ def main():
         raise ValueError("--attack-tasks requires a non-'none' --attack-mode")
     if args.attack_mode != "none" and not args.attack_tasks:
         raise ValueError("A non-'none' --attack-mode requires --attack-tasks")
+    if args.noise_upload_root is not None:
+        if args.attack_mode != "none" or args.attack_tasks:
+            raise ValueError("External proxy noise cannot be combined with attack modes")
+        if not args.noise_upload_root.is_dir():
+            raise FileNotFoundError(
+                f"Proxy-noise upload root does not exist: {args.noise_upload_root}"
+            )
     if not 0.0 <= args.attack_fraction <= 1.0:
         raise ValueError("--attack-fraction must be in [0, 1]")
     if args.attack_steps < 1:

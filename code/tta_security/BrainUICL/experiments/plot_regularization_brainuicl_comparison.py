@@ -24,7 +24,7 @@ DEFAULT_BRAINUICL = (
     REPO_ROOT
     / "experiments"
     / "rttdp_brainuicl_runs"
-    / "brainuicl_full49_e10_noise40_seed4321"
+    / "aligned_full49_bn_frozen_lr1e6_seed4321"
     / "clean"
     / "metrics.json"
 )
@@ -73,21 +73,25 @@ def load_rows(regularization_path: Path, brainuicl_path: Path) -> list[dict]:
                 "mean_current_after_mf1": summary["mean_current_after_mf1"],
                 "final_seen_acc": summary["final_seen_acc"],
                 "final_seen_mf1": summary["final_seen_mf1"],
+                "bwt_acc": summary["bwt_acc"],
             }
         )
 
-    performance = brainuicl["performance"]
+    summary = brainuicl["summary"]
     rows.append(
         {
             "method": "BrainUICL",
             "color": "#B91C1C",
-            "protocol": "Original replay buffer and confidence-based pseudo-label selection",
-            "final_old_acc": performance["stability"]["ACC"][-1],
-            "final_old_mf1": performance["stability"]["MF1"][-1],
-            "mean_current_after_acc": brainuicl["summary"]["after_acc"],
-            "mean_current_after_mf1": brainuicl["summary"]["after_mf1"],
-            "final_seen_acc": None,
-            "final_seen_mf1": None,
+            "protocol": "Replay; confidence threshold 0.9; frozen student BN stats",
+            "final_old_acc": summary["final_old_acc"],
+            "final_old_mf1": summary["final_old_mf1"],
+            "mean_current_after_acc": summary["mean_current_after_acc"],
+            "mean_current_after_mf1": summary["mean_current_after_mf1"],
+            "final_seen_acc": summary["final_seen_acc"],
+            "final_seen_mf1": summary["final_seen_mf1"],
+            "bwt_acc": summary["bwt_acc"],
+            "pseudo_sequence_coverage": summary["pseudo_sequence_coverage"],
+            "final_buffer_sequences": summary["final_buffer_sequences"],
         }
     )
     return rows
@@ -103,6 +107,9 @@ def write_csv(path: Path, rows: list[dict]) -> None:
         "mean_current_after_mf1",
         "final_seen_acc",
         "final_seen_mf1",
+        "bwt_acc",
+        "pseudo_sequence_coverage",
+        "final_buffer_sequences",
     )
     with path.open("w", newline="") as handle:
         writer = csv.DictWriter(handle, fieldnames=fields, extrasaction="ignore")
@@ -158,7 +165,7 @@ def draw_panel(
     ]
     ax.set_yticks(y, labels)
     ax.invert_yaxis()
-    ax.set_xlim(50.0, 76.5)
+    ax.set_xlim(45.0, 76.5)
     ax.set_xlabel("性能（%）" if chinese else "Performance (%)")
     ax.set_title(title, fontsize=12, fontweight="bold", color="#111827", pad=9)
     ax.grid(axis="x", color="#D1D5DB", linewidth=0.8, alpha=0.8)
@@ -170,6 +177,74 @@ def draw_panel(
     ax.tick_params(axis="x", colors="#4B5563")
 
 
+def draw_bwt_panel(ax, rows: list[dict], *, chinese: bool) -> None:
+    y = np.arange(len(rows))
+    ax.axhspan(len(rows) - 1.42, len(rows) - 0.58, color="#FEE2E2", alpha=0.55)
+    ax.axvline(0.0, color="#6B7280", linewidth=1.1)
+    chinese_names = {
+        "Finetune": "微调",
+        "Online EWC": "在线 EWC",
+        "BrainUICL": "BrainUICL（回放）",
+    }
+    for index, row in enumerate(rows):
+        value = 100.0 * row["bwt_acc"]
+        marker = "D" if row["method"] == "BrainUICL" else "o"
+        ax.hlines(index, min(0.0, value), max(0.0, value), color=row["color"], linewidth=2.2, alpha=0.6)
+        ax.scatter(value, index, s=70 if marker == "D" else 62, marker=marker, color=row["color"], edgecolor="white", linewidth=1.1, zorder=3)
+        offset = 0.25 if value >= 0 else -0.25
+        ax.text(value + offset, index, f"{value:+.2f}", va="center", ha="left" if value >= 0 else "right", fontsize=9, color="#111827")
+    labels = [chinese_names.get(row["method"], row["method"]) if chinese else row["method"] for row in rows]
+    ax.set_yticks(y, labels)
+    ax.invert_yaxis()
+    ax.set_xlim(-10.5, 2.5)
+    ax.set_xlabel("BWT ACC（百分点）" if chinese else "BWT ACC (percentage points)")
+    ax.set_title("后向迁移（BWT）" if chinese else "Backward Transfer (BWT)", fontsize=12, fontweight="bold", color="#111827", pad=9)
+    ax.grid(axis="x", color="#D1D5DB", linewidth=0.8, alpha=0.8)
+    ax.set_axisbelow(True)
+    for spine in ("top", "right", "left"):
+        ax.spines[spine].set_visible(False)
+    ax.spines["bottom"].set_color("#9CA3AF")
+    ax.tick_params(axis="y", length=0, labelsize=9.5)
+    ax.tick_params(axis="x", colors="#4B5563")
+
+
+def draw_protocol_panel(ax, rows: list[dict], *, chinese: bool) -> None:
+    brainuicl = rows[-1]
+    ax.axis("off")
+    if chinese:
+        title = "对齐协议与资源差异"
+        lines = (
+            "共同条件",
+            "同一数据、split、个体顺序、checkpoint、seed、10+10 轮、学习率与冻结 BN",
+            "",
+            "五种无回放方法",
+            "当前个体全部硬伪标签；历史 buffer：0",
+            "",
+            "BrainUICL",
+            f"置信度阈值：0.9；新序列进入 replay：{100.0 * brainuicl['pseudo_sequence_coverage']:.2f}%",
+            f"最终 replay buffer：{brainuicl['final_buffer_sequences']} 个序列（含初始历史训练数据）",
+        )
+    else:
+        title = "Aligned Protocol and Resource Differences"
+        lines = (
+            "Common conditions",
+            "Same data, split, order, checkpoint, seed, 10+10 epochs, learning rate, and frozen BN",
+            "",
+            "Five no-replay methods",
+            "All current hard pseudo labels; historical buffer: 0",
+            "",
+            "BrainUICL",
+            f"Confidence threshold: 0.9; new sequences entering replay: {100.0 * brainuicl['pseudo_sequence_coverage']:.2f}%",
+            f"Final replay buffer: {brainuicl['final_buffer_sequences']} sequences (including initial history)",
+        )
+    ax.set_title(title, fontsize=12, fontweight="bold", color="#111827", pad=9)
+    y = 0.88
+    for line in lines:
+        is_heading = line in {"共同条件", "五种无回放方法", "BrainUICL", "Common conditions", "Five no-replay methods"}
+        ax.text(0.03, y, line, transform=ax.transAxes, fontsize=10 if is_heading else 9.2, fontweight="bold" if is_heading else "normal", color="#111827" if is_heading else "#4B5563", va="top")
+        y -= 0.09 if line else 0.055
+
+
 def plot(path_stem: Path, rows: list[dict], *, chinese: bool = False) -> None:
     plt.rcParams.update(
         {
@@ -179,23 +254,25 @@ def plot(path_stem: Path, rows: list[dict], *, chinese: bool = False) -> None:
             "figure.facecolor": "#FFFFFF",
         }
     )
-    fig, axes = plt.subplots(2, 2, figsize=(13.2, 8.6), constrained_layout=False)
+    fig, axes = plt.subplots(3, 2, figsize=(13.2, 11.6), constrained_layout=False)
     if chinese:
         panels = (
             ("final_old_acc", "最终旧个体 ACC"),
             ("final_old_mf1", "最终旧个体宏平均 F1"),
-            ("mean_current_after_acc", "新个体适配后平均 ACC"),
-            ("mean_current_after_mf1", "新个体适配后平均宏平均 F1"),
+            ("final_seen_acc", "最终新个体 ACC"),
+            ("final_seen_mf1", "最终新个体宏平均 F1"),
         )
     else:
         panels = (
             ("final_old_acc", "Final Old-Subject ACC"),
             ("final_old_mf1", "Final Old-Subject Macro-F1"),
-            ("mean_current_after_acc", "Mean New-Subject ACC After Adaptation"),
-            ("mean_current_after_mf1", "Mean New-Subject Macro-F1 After Adaptation"),
+            ("final_seen_acc", "Final Seen New-Subject ACC"),
+            ("final_seen_mf1", "Final Seen New-Subject Macro-F1"),
         )
-    for ax, (key, title) in zip(axes.flat, panels):
+    for ax, (key, title) in zip(axes.flat[:4], panels):
         draw_panel(ax, rows, key, title, chinese=chinese)
+    draw_bwt_panel(axes.flat[4], rows, chinese=chinese)
+    draw_protocol_panel(axes.flat[5], rows, chinese=chinese)
 
     fig.suptitle(
         "无攻击 EEG 持续学习性能" if chinese else "Clean EEG Continual Learning Performance",
@@ -220,12 +297,12 @@ def plot(path_stem: Path, rows: list[dict], *, chinese: bool = False) -> None:
         0.5,
         0.018,
         (
-            "单随机种子结果，无误差条。BrainUICL（菱形）使用回放和置信度筛选；其余五种方法不使用回放，硬伪标签覆盖率为 100%。横轴从 50% 开始。"
+            "单随机种子结果，无误差条。BrainUICL（菱形）使用回放和置信度筛选；其余五种方法不使用回放，硬伪标签覆盖率为 100%。性能横轴从 45% 开始。"
             if chinese
             else (
                 "Single-seed results; no uncertainty bars. BrainUICL (diamond) uses replay and confidence-based "
                 "selection; the five comparison methods use no replay and 100% hard pseudo-label coverage. "
-                "The x-axis begins at 50%."
+                "Performance x-axes begin at 45%."
             )
         ),
         ha="center",
@@ -233,7 +310,7 @@ def plot(path_stem: Path, rows: list[dict], *, chinese: bool = False) -> None:
         fontsize=8.7,
         color="#4B5563",
     )
-    fig.subplots_adjust(left=0.12, right=0.96, top=0.88, bottom=0.10, wspace=0.28, hspace=0.34)
+    fig.subplots_adjust(left=0.12, right=0.96, top=0.90, bottom=0.08, wspace=0.28, hspace=0.36)
     for extension in ("png", "pdf", "svg"):
         target = path_stem.with_suffix(f".{extension}")
         fig.savefig(target, dpi=260 if extension == "png" else None, bbox_inches="tight")
@@ -244,10 +321,10 @@ def main():
     args = parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)
     rows = load_rows(args.regularization_summary, args.brainuicl_metrics)
-    output_stem = args.output_dir / "regularization_vs_brainuicl_clean49"
+    output_stem = args.output_dir / "aligned_regularization_vs_brainuicl_clean49"
     write_csv(output_stem.with_suffix(".csv"), rows)
     plot(output_stem, rows)
-    plot(args.output_dir / "regularization_vs_brainuicl_clean49_zh", rows, chinese=True)
+    plot(args.output_dir / "aligned_regularization_vs_brainuicl_clean49_zh", rows, chinese=True)
     print(output_stem)
 
 

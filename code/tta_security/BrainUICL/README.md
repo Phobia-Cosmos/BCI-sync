@@ -7,6 +7,10 @@ _An Unsupervised Individual Continual Learning Framework for EEG Applications_
 </div>
 🔥 NEWS: This paper has been accepted by ICLR 2025
 
+## Repository experiment map
+
+The current SPR-EEG, PuriDivER-EEG, BrainUICL, and regularization CL-EEG migration lines are indexed in [EEG_CL_METHOD_MIGRATION_OVERVIEW_ZH.md](EEG_CL_METHOD_MIGRATION_OVERVIEW_ZH.md).
+
 ## 🔍 About
 We propose **BrainUICL**, a novel unsupervised individual continual learning framework, for continual EEG decoding on various clinical and BCI application.
 The camera-ready version of the paper will be available at [Openreview](https://openreview.net/forum?id=6jjAYmppGQ&referrer=%5BAuthor%20Console%5D(%2Fgroup%3Fid%3DICLR.cc%2F2025%2FConference%2FAuthors%23your-submissions))

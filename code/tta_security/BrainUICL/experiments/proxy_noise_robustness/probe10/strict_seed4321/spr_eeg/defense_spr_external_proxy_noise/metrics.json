@@ -1,0 +1,725 @@
+{
+  "performance": {
+    "stability": {
+      "ACC": [
+        0.7024550898203593,
+        0.7351497005988024,
+        0.728682634730539,
+        0.7368263473053892,
+        0.7334730538922156,
+        0.7362874251497006,
+        0.7355688622754492,
+        0.7288622754491018,
+        0.729940119760479,
+        0.732874251497006,
+        0.731437125748503
+      ],
+      "MF1": [
+        0.6880332943309935,
+        0.7129741023486885,
+        0.7098445814327436,
+        0.7126814679850907,
+        0.7105347110301647,
+        0.7167806003969174,
+        0.7103122910142069,
+        0.6986616870962302,
+        0.7032945950360661,
+        0.7045337966773411,
+        0.7047400487107032
+      ],
+      "AAA": [
+        0.7024550898203593,
+        0.7188023952095808,
+        0.7220958083832335,
+        0.7257784431137724,
+        0.727317365269461,
+        0.7288123752495009,
+        0.7297775876817792,
+        0.7296631736526946,
+        0.7296939454424485,
+        0.7300119760479042,
+        0.730141535111595
+      ],
+      "AAF1": [
+        0.6880332943309935,
+        0.7005036983398409,
+        0.7036173260374752,
+        0.705883361524379,
+        0.7068136314255362,
+        0.7084747929207663,
+        0.7087372926484007,
+        0.7074778419543795,
+        0.7070130367412335,
+        0.7067651127348442,
+        0.7065810160053769
+      ],
+      "FR": [
+        0.0,
+        0.04654334668826177,
+        0.03733697042025403,
+        0.04893018497996754,
+        0.04415650839655616,
+        0.04816298695763355,
+        0.04714005626118833,
+        0.03759270309436526,
+        0.03912709913903324,
+        0.04330406614951837,
+        0.04125820475662763
+      ]
+    },
+    "plasticity": {
+      "64": {
+        "ACC": [
+          0.7290697674418605,
+          0.7290697674418605,
+          0.7581395348837209
+        ],
+        "MF1": [
+          0.7631163096154122,
+          0.7631163096154122,
+          0.7792835551061073
+        ]
+      },
+      "89": {
+        "ACC": [
+          0.801,
+          0.798,
+          0.801
+        ],
+        "MF1": [
+          0.7326458009878241,
+          0.7187933754841627,
+          0.7175211195030993
+        ]
+      },
+      "1": {
+        "ACC": [
+          0.2,
+          0.23837209302325582,
+          0.2593023255813954
+        ],
+        "MF1": [
+          0.09178451178451179,
+          0.15012904064416677,
+          0.1631575248917536
+        ]
+      },
+      "27": {
+        "ACC": [
+          0.7170454545454545,
+          0.7875,
+          0.8125
+        ],
+        "MF1": [
+          0.6478294628169081,
+          0.7207619154946395,
+          0.7312695086994728
+        ]
+      },
+      "60": {
+        "ACC": [
+          0.7068181818181818,
+          0.6556818181818181,
+          0.6636363636363637
+        ],
+        "MF1": [
+          0.6198544430288646,
+          0.5764452970112132,
+          0.5810749557930526
+        ]
+      },
+      "5": {
+        "ACC": [
+          0.3107142857142857,
+          0.41309523809523807,
+          0.4154761904761905
+        ],
+        "MF1": [
+          0.11302397770724026,
+          0.2053501940678515,
+          0.212430596799001
+        ]
+      },
+      "52": {
+        "ACC": [
+          0.7977272727272727,
+          0.8477272727272728,
+          0.8568181818181818
+        ],
+        "MF1": [
+          0.7618650459366945,
+          0.8070194840642589,
+          0.8107326058899276
+        ]
+      },
+      "42": {
+        "ACC": [
+          0.7897435897435897,
+          0.7551282051282051,
+          0.7589743589743589
+        ],
+        "MF1": [
+          0.5786981067581205,
+          0.5819572996972505,
+          0.6055538056313016
+        ]
+      },
+      "80": {
+        "ACC": [
+          0.6744186046511628,
+          0.7593023255813953,
+          0.7546511627906977
+        ],
+        "MF1": [
+          0.6381494707872878,
+          0.7269003646491162,
+          0.7193756903439785
+        ]
+      },
+      "26": {
+        "ACC": [
+          0.19326923076923078,
+          0.28846153846153844,
+          0.29615384615384616
+        ],
+        "MF1": [
+          0.07782986135697392,
+          0.15840807174887891,
+          0.1727878235533738
+        ]
+      }
+    },
+    "buffer": [
+      {
+        "step": 1,
+        "subject": 64,
+        "added": 15,
+        "length": 1045,
+        "total_sequences": 43,
+        "candidate_sequences": 21,
+        "accepted_sequences": 15,
+        "rejected_sequences": 6,
+        "acceptance_rate": 0.7142857142857143,
+        "pseudo_label_error_before": 0.25,
+        "pseudo_label_error_after": 0.2,
+        "mean_sequence_clean_score": 0.563152602967582
+      },
+      {
+        "step": 2,
+        "subject": 89,
+        "added": 20,
+        "length": 1065,
+        "total_sequences": 50,
+        "candidate_sequences": 28,
+        "accepted_sequences": 20,
+        "rejected_sequences": 8,
+        "acceptance_rate": 0.7142857142857143,
+        "pseudo_label_error_before": 0.18571428571428572,
+        "pseudo_label_error_after": 0.1475,
+        "mean_sequence_clean_score": 0.6229712905063417
+      },
+      {
+        "step": 3,
+        "subject": 1,
+        "added": 0,
+        "length": 1065,
+        "total_sequences": 43,
+        "candidate_sequences": 0,
+        "accepted_sequences": 0,
+        "rejected_sequences": 0,
+        "acceptance_rate": 0.0,
+        "pseudo_label_error_before": null,
+        "pseudo_label_error_after": null,
+        "mean_sequence_clean_score": null
+      },
+      {
+        "step": 4,
+        "subject": 27,
+        "added": 26,
+        "length": 1091,
+        "total_sequences": 44,
+        "candidate_sequences": 36,
+        "accepted_sequences": 26,
+        "rejected_sequences": 10,
+        "acceptance_rate": 0.7222222222222222,
+        "pseudo_label_error_before": 0.19583333333333333,
+        "pseudo_label_error_after": 0.12692307692307692,
+        "mean_sequence_clean_score": 0.6601754913015299
+      },
+      {
+        "step": 5,
+        "subject": 60,
+        "added": 17,
+        "length": 1108,
+        "total_sequences": 44,
+        "candidate_sequences": 23,
+        "accepted_sequences": 17,
+        "rejected_sequences": 6,
+        "acceptance_rate": 0.7391304347826086,
+        "pseudo_label_error_before": 0.2847826086956522,
+        "pseudo_label_error_after": 0.18235294117647058,
+        "mean_sequence_clean_score": 0.6273892353094055
+      },
+      {
+        "step": 6,
+        "subject": 5,
+        "added": 0,
+        "length": 1108,
+        "total_sequences": 42,
+        "candidate_sequences": 0,
+        "accepted_sequences": 0,
+        "rejected_sequences": 0,
+        "acceptance_rate": 0.0,
+        "pseudo_label_error_before": null,
+        "pseudo_label_error_after": null,
+        "mean_sequence_clean_score": null
+      },
+      {
+        "step": 7,
+        "subject": 52,
+        "added": 15,
+        "length": 1123,
+        "total_sequences": 44,
+        "candidate_sequences": 20,
+        "accepted_sequences": 15,
+        "rejected_sequences": 5,
+        "acceptance_rate": 0.75,
+        "pseudo_label_error_before": 0.1225,
+        "pseudo_label_error_after": 0.06,
+        "mean_sequence_clean_score": 0.6188619642494402
+      },
+      {
+        "step": 8,
+        "subject": 42,
+        "added": 12,
+        "length": 1135,
+        "total_sequences": 39,
+        "candidate_sequences": 15,
+        "accepted_sequences": 12,
+        "rejected_sequences": 3,
+        "acceptance_rate": 0.8,
+        "pseudo_label_error_before": 0.07,
+        "pseudo_label_error_after": 0.05,
+        "mean_sequence_clean_score": 0.6265221409803223
+      },
+      {
+        "step": 9,
+        "subject": 80,
+        "added": 14,
+        "length": 1149,
+        "total_sequences": 43,
+        "candidate_sequences": 20,
+        "accepted_sequences": 14,
+        "rejected_sequences": 6,
+        "acceptance_rate": 0.7,
+        "pseudo_label_error_before": 0.1875,
+        "pseudo_label_error_after": 0.1357142857142857,
+        "mean_sequence_clean_score": 0.6510782930163106
+      },
+      {
+        "step": 10,
+        "subject": 26,
+        "added": 0,
+        "length": 1149,
+        "total_sequences": 52,
+        "candidate_sequences": 0,
+        "accepted_sequences": 0,
+        "rejected_sequences": 0,
+        "acceptance_rate": 0.0,
+        "pseudo_label_error_before": null,
+        "pseudo_label_error_after": null,
+        "mean_sequence_clean_score": null
+      }
+    ],
+    "noise_diagnostics": [],
+    "purification": [],
+    "uploaded_subjects": [
+      {
+        "task": 1,
+        "step": 1,
+        "subject": 64,
+        "uploaded": 43,
+        "reference": "base_train",
+        "reference_label_mode": "pseudo",
+        "noisy_sequences": 9,
+        "noise_fraction": 0.20930232558139536,
+        "noise_indices": [
+          3,
+          9,
+          11,
+          15,
+          17,
+          18,
+          23,
+          36,
+          41
+        ],
+        "source": "experiments/proxy_noise_robustness/probe10/strict_seed4321/generator_brainuicl/noise_proxy_guided/noisy_uploads"
+      },
+      {
+        "task": 2,
+        "step": 2,
+        "subject": 89,
+        "uploaded": 50,
+        "reference": "base_train",
+        "reference_label_mode": "pseudo",
+        "noisy_sequences": 10,
+        "noise_fraction": 0.2,
+        "noise_indices": [
+          0,
+          1,
+          11,
+          15,
+          26,
+          28,
+          33,
+          34,
+          38,
+          41
+        ],
+        "source": "experiments/proxy_noise_robustness/probe10/strict_seed4321/generator_brainuicl/noise_proxy_guided/noisy_uploads"
+      },
+      {
+        "task": 3,
+        "step": 3,
+        "subject": 1,
+        "uploaded": 43,
+        "reference": "base_train",
+        "reference_label_mode": "pseudo",
+        "noisy_sequences": 9,
+        "noise_fraction": 0.20930232558139536,
+        "noise_indices": [
+          0,
+          4,
+          8,
+          14,
+          15,
+          22,
+          26,
+          29,
+          36
+        ],
+        "source": "experiments/proxy_noise_robustness/probe10/strict_seed4321/generator_brainuicl/noise_proxy_guided/noisy_uploads"
+      },
+      {
+        "task": 4,
+        "step": 4,
+        "subject": 27,
+        "uploaded": 44,
+        "reference": "base_train",
+        "reference_label_mode": "pseudo",
+        "noisy_sequences": 9,
+        "noise_fraction": 0.20454545454545456,
+        "noise_indices": [
+          2,
+          11,
+          15,
+          16,
+          18,
+          21,
+          33,
+          38,
+          39
+        ],
+        "source": "experiments/proxy_noise_robustness/probe10/strict_seed4321/generator_brainuicl/noise_proxy_guided/noisy_uploads"
+      },
+      {
+        "task": 5,
+        "step": 5,
+        "subject": 60,
+        "uploaded": 44,
+        "reference": "base_train",
+        "reference_label_mode": "pseudo",
+        "noisy_sequences": 9,
+        "noise_fraction": 0.20454545454545456,
+        "noise_indices": [
+          7,
+          8,
+          10,
+          18,
+          19,
+          33,
+          35,
+          37,
+          38
+        ],
+        "source": "experiments/proxy_noise_robustness/probe10/strict_seed4321/generator_brainuicl/noise_proxy_guided/noisy_uploads"
+      },
+      {
+        "task": 6,
+        "step": 6,
+        "subject": 5,
+        "uploaded": 42,
+        "reference": "base_train",
+        "reference_label_mode": "pseudo",
+        "noisy_sequences": 9,
+        "noise_fraction": 0.21428571428571427,
+        "noise_indices": [
+          1,
+          2,
+          7,
+          16,
+          22,
+          23,
+          27,
+          35,
+          40
+        ],
+        "source": "experiments/proxy_noise_robustness/probe10/strict_seed4321/generator_brainuicl/noise_proxy_guided/noisy_uploads"
+      },
+      {
+        "task": 7,
+        "step": 7,
+        "subject": 52,
+        "uploaded": 44,
+        "reference": "base_train",
+        "reference_label_mode": "pseudo",
+        "noisy_sequences": 9,
+        "noise_fraction": 0.20454545454545456,
+        "noise_indices": [
+          4,
+          10,
+          21,
+          27,
+          29,
+          35,
+          37,
+          40,
+          41
+        ],
+        "source": "experiments/proxy_noise_robustness/probe10/strict_seed4321/generator_brainuicl/noise_proxy_guided/noisy_uploads"
+      },
+      {
+        "task": 8,
+        "step": 8,
+        "subject": 42,
+        "uploaded": 39,
+        "reference": "base_train",
+        "reference_label_mode": "pseudo",
+        "noisy_sequences": 8,
+        "noise_fraction": 0.20512820512820512,
+        "noise_indices": [
+          0,
+          1,
+          3,
+          10,
+          13,
+          14,
+          18,
+          38
+        ],
+        "source": "experiments/proxy_noise_robustness/probe10/strict_seed4321/generator_brainuicl/noise_proxy_guided/noisy_uploads"
+      },
+      {
+        "task": 9,
+        "step": 9,
+        "subject": 80,
+        "uploaded": 43,
+        "reference": "base_train",
+        "reference_label_mode": "pseudo",
+        "noisy_sequences": 9,
+        "noise_fraction": 0.20930232558139536,
+        "noise_indices": [
+          4,
+          13,
+          14,
+          15,
+          25,
+          31,
+          34,
+          35,
+          36
+        ],
+        "source": "experiments/proxy_noise_robustness/probe10/strict_seed4321/generator_brainuicl/noise_proxy_guided/noisy_uploads"
+      },
+      {
+        "task": 10,
+        "step": 10,
+        "subject": 26,
+        "uploaded": 52,
+        "reference": "base_train",
+        "reference_label_mode": "pseudo",
+        "noisy_sequences": 11,
+        "noise_fraction": 0.21153846153846154,
+        "noise_indices": [
+          7,
+          15,
+          17,
+          24,
+          25,
+          27,
+          32,
+          33,
+          43,
+          46,
+          47
+        ],
+        "source": "experiments/proxy_noise_robustness/probe10/strict_seed4321/generator_brainuicl/noise_proxy_guided/noisy_uploads"
+      }
+    ],
+    "retention_snapshots": {
+      "10": {
+        "64": {
+          "acc": 0.7151162790697675,
+          "mf1": 0.7289162043211947,
+          "n_epochs": 860
+        },
+        "89": {
+          "acc": 0.72,
+          "mf1": 0.6352686467004947,
+          "n_epochs": 1000
+        },
+        "1": {
+          "acc": 0.3813953488372093,
+          "mf1": 0.32372374863333625,
+          "n_epochs": 860
+        },
+        "27": {
+          "acc": 0.8102272727272727,
+          "mf1": 0.7297672107863657,
+          "n_epochs": 880
+        },
+        "60": {
+          "acc": 0.6261363636363636,
+          "mf1": 0.5221193423356747,
+          "n_epochs": 880
+        },
+        "5": {
+          "acc": 0.4583333333333333,
+          "mf1": 0.26596459179005405,
+          "n_epochs": 840
+        },
+        "52": {
+          "acc": 0.8534090909090909,
+          "mf1": 0.803932372377089,
+          "n_epochs": 880
+        },
+        "42": {
+          "acc": 0.7923076923076923,
+          "mf1": 0.681745408981854,
+          "n_epochs": 780
+        },
+        "80": {
+          "acc": 0.7569767441860465,
+          "mf1": 0.7261664410023193,
+          "n_epochs": 860
+        },
+        "26": {
+          "acc": 0.29615384615384616,
+          "mf1": 0.1727878235533738,
+          "n_epochs": 1040
+        }
+      }
+    },
+    "final": {
+      "old_generalization": {
+        "acc": 0.731437125748503,
+        "mf1": 0.7047400487107032,
+        "n_epochs": 16700
+      },
+      "seen_subjects": {
+        "64": {
+          "acc": 0.7151162790697675,
+          "mf1": 0.7289162043211947,
+          "n_epochs": 860
+        },
+        "89": {
+          "acc": 0.72,
+          "mf1": 0.6352686467004947,
+          "n_epochs": 1000
+        },
+        "1": {
+          "acc": 0.3813953488372093,
+          "mf1": 0.32372374863333625,
+          "n_epochs": 860
+        },
+        "27": {
+          "acc": 0.8102272727272727,
+          "mf1": 0.7297672107863657,
+          "n_epochs": 880
+        },
+        "60": {
+          "acc": 0.6261363636363636,
+          "mf1": 0.5221193423356747,
+          "n_epochs": 880
+        },
+        "5": {
+          "acc": 0.4583333333333333,
+          "mf1": 0.26596459179005405,
+          "n_epochs": 840
+        },
+        "52": {
+          "acc": 0.8534090909090909,
+          "mf1": 0.803932372377089,
+          "n_epochs": 880
+        },
+        "42": {
+          "acc": 0.7923076923076923,
+          "mf1": 0.681745408981854,
+          "n_epochs": 780
+        },
+        "80": {
+          "acc": 0.7569767441860465,
+          "mf1": 0.7261664410023193,
+          "n_epochs": 860
+        },
+        "26": {
+          "acc": 0.29615384615384616,
+          "mf1": 0.1727878235533738,
+          "n_epochs": 1040
+        }
+      }
+    },
+    "order": [
+      64,
+      89,
+      1,
+      27,
+      60,
+      5,
+      52,
+      42,
+      80,
+      26
+    ],
+    "input_condition": "noise",
+    "defense_mode": "spr",
+    "protocol": {
+      "replay": true,
+      "pseudo_labels": "confidence-filtered hard labels from the CPC guide",
+      "confidence_threshold": 0.9,
+      "external_proxy_noise": "experiments/proxy_noise_robustness/probe10/strict_seed4321/generator_brainuicl/noise_proxy_guided/noisy_uploads",
+      "student_batch_norm_running_stats": "frozen",
+      "true_target_labels_used_for_training": false,
+      "final_seen_evaluation": true
+    },
+    "noise_mode": "external_proxy_noise"
+  },
+  "summary": {
+    "initial_acc": 0.591980638741104,
+    "before_acc": 0.6272338258640585,
+    "after_acc": 0.6376651964314755,
+    "initial_mf1": 0.5024796990779837,
+    "before_mf1": 0.5408881352476949,
+    "after_mf1": 0.5493187186211068,
+    "final_old_acc": 0.731437125748503,
+    "final_old_mf1": 0.7047400487107032,
+    "old_aaa": 0.730141535111595,
+    "old_aaf1": 0.7065810160053769,
+    "old_fr": 0.04125820475662763,
+    "mean_current_before_acc": 0.6272338258640585,
+    "mean_current_after_acc": 0.6376651964314755,
+    "mean_current_acc_gain": 0.010431370567416942,
+    "mean_current_before_mf1": 0.5408881352476949,
+    "mean_current_after_mf1": 0.5493187186211068,
+    "mean_current_mf1_gain": 0.00843058337341196,
+    "final_seen_acc": 0.6410055971160623,
+    "final_seen_mf1": 0.5590391790481756,
+    "bwt_acc": 0.0033404006845867197,
+    "bwt_mf1": 0.009720460427068828,
+    "high_confidence_candidate_rate": 0.36711711711711714,
+    "candidate_acceptance_rate": 0.7300613496932515,
+    "pseudo_sequence_coverage": 0.268018018018018,
+    "final_buffer_sequences": 1149
+  }
+}

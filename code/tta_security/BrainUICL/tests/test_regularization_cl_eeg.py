@@ -1,6 +1,10 @@
 import inspect
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
+import numpy as np
 import torch
 import torch.nn as nn
 
@@ -17,6 +21,7 @@ from experiments.regularization_cl_attacks import (
     pacol_gradient_matching_batch,
 )
 from experiments.regularization_cl_eeg import resolve_attack_tasks
+from experiments.rttdp_brainuicl_full import external_proxy_upload_paths
 
 
 def tiny_blocks():
@@ -29,6 +34,49 @@ def tiny_blocks():
 
 
 class RegularizationCLEEGTest(unittest.TestCase):
+    def test_external_proxy_upload_preserves_clean_label_paths(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            task_root = root / "individual_2"
+            data_dir = task_root / "data"
+            data_dir.mkdir(parents=True)
+            for index in range(2):
+                np.save(data_dir / f"{index}.npy", np.array([index], dtype=np.float32))
+            (task_root / "metadata.json").write_text(
+                json.dumps({"task": 2, "subject": 89, "poisoned": 2})
+            )
+            clean_data = [Path("clean-0.npy"), Path("clean-1.npy")]
+            clean_labels = [Path("label-0.npy"), Path("label-1.npy")]
+
+            uploaded, metadata = external_proxy_upload_paths(
+                root,
+                (clean_data, clean_labels),
+                task_index=2,
+                subject=89,
+            )
+
+            self.assertEqual([path.name for path in uploaded[0]], ["0.npy", "1.npy"])
+            self.assertEqual(uploaded[1], clean_labels)
+            self.assertEqual(metadata["poisoned"], 2)
+
+    def test_external_proxy_upload_rejects_wrong_subject(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            task_root = root / "individual_1"
+            data_dir = task_root / "data"
+            data_dir.mkdir(parents=True)
+            np.save(data_dir / "0.npy", np.array([0], dtype=np.float32))
+            (task_root / "metadata.json").write_text(
+                json.dumps({"task": 1, "subject": 64})
+            )
+            with self.assertRaises(ValueError):
+                external_proxy_upload_paths(
+                    root,
+                    ([Path("clean.npy")], [Path("label.npy")]),
+                    task_index=1,
+                    subject=89,
+                )
+
     def test_attack_interfaces_do_not_accept_true_labels(self):
         for function in (
             pacol_gradient_matching_batch,

@@ -1,0 +1,22 @@
+{
+  "task": 30,
+  "step": 30,
+  "subject": 57,
+  "uploaded": 49,
+  "reference": "base_train",
+  "reference_label_mode": "pseudo",
+  "noisy_sequences": 10,
+  "noise_fraction": 0.20408163265306123,
+  "noise_indices": [
+    2,
+    10,
+    12,
+    15,
+    17,
+    20,
+    33,
+    34,
+    35,
+    37
+  ]
+}
