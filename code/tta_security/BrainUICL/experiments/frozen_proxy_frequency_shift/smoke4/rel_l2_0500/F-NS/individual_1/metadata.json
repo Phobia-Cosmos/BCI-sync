@@ -1,0 +1,43 @@
+{
+  "task": 1,
+  "subject": 64,
+  "stream": "F-NS",
+  "frequency": "frequent",
+  "shifted": false,
+  "uploaded": 43,
+  "noisy_sequences": 3,
+  "noise_fraction": 0.06976744186046512,
+  "noise_indices": [
+    24,
+    27,
+    40
+  ],
+  "signs": {
+    "24": -1,
+    "27": 1,
+    "40": 1
+  },
+  "sign_positive": 2,
+  "sign_negative": 1,
+  "relative_l2_budget": 0.05,
+  "linf_std_scale": 0.1,
+  "eog_relative_l2": {
+    "mean": 0.037435496846834816,
+    "max": 0.03895670920610428
+  },
+  "eeg_relative_l2": {
+    "mean": 0.03662437324722608,
+    "max": 0.037592947483062744
+  },
+  "eog_linf_over_std": {
+    "mean": 0.10000000149011612,
+    "max": 0.10000000149011612
+  },
+  "eeg_linf_over_std": {
+    "mean": 0.10000000149011612,
+    "max": 0.10000000149011612
+  },
+  "proxy_pseudo_label_preservation": 0.4000000059604645,
+  "empirical_sequence_mean_ratio": 0.5776812260753571,
+  "clean_source": "/home/undefined/Disk/datasets/brainuicl/processed/isruc_group1_npy_float32/64/data"
+}

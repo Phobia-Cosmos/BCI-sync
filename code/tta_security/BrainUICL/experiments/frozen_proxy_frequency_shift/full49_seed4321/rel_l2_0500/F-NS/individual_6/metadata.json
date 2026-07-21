@@ -1,0 +1,59 @@
+{
+  "task": 6,
+  "subject": 5,
+  "stream": "F-NS",
+  "frequency": "frequent",
+  "shifted": false,
+  "uploaded": 42,
+  "noisy_sequences": 0,
+  "noise_fraction": 0.0,
+  "noise_indices": [],
+  "signs": {},
+  "sign_positive": 0,
+  "sign_negative": 0,
+  "relative_l2_budget": 0.05,
+  "linf_std_scale": 0.2,
+  "eog_relative_l2": {
+    "mean": 0.0,
+    "max": 0.0
+  },
+  "eeg_relative_l2": {
+    "mean": 0.0,
+    "max": 0.0
+  },
+  "eog_linf_over_std": {
+    "mean": 0.0,
+    "max": 0.0
+  },
+  "eeg_linf_over_std": {
+    "mean": 0.0,
+    "max": 0.0
+  },
+  "eog_spectral_total_variation": {
+    "mean": 0.0,
+    "max": 0.0
+  },
+  "eeg_spectral_total_variation": {
+    "mean": 0.0,
+    "max": 0.0
+  },
+  "eog_perturbation_out_of_band_fraction": {
+    "mean": 0.0,
+    "max": 0.0
+  },
+  "eeg_perturbation_out_of_band_fraction": {
+    "mean": 0.0,
+    "max": 0.0
+  },
+  "eog_sample_outside_clean_range_fraction": {
+    "mean": 0.0,
+    "max": 0.0
+  },
+  "eeg_sample_outside_clean_range_fraction": {
+    "mean": 0.0,
+    "max": 0.0
+  },
+  "proxy_pseudo_label_preservation": 1.0,
+  "empirical_sequence_mean_ratio": 0.0,
+  "clean_source": "/home/undefined/Disk/datasets/brainuicl/processed/isruc_group1_npy_float32/5/data"
+}

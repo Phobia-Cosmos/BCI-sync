@@ -35,6 +35,11 @@ from model.regularization_cl import (  # noqa: E402
     hard_pseudo_label_loss,
     named_trainable_parameters,
 )
+from model.icml2026_cl_defenses import (  # noqa: E402
+    RobustFeatureDefense,
+    T2TDetector,
+    diagonal_t2t_score,
+)
 from regularization_cl_attacks import (  # noqa: E402
     brainwash_one_step_batch,
     materialize_poisoned_subject,
@@ -64,6 +69,7 @@ from utils.util import compute_aaf1, compute_aaa, compute_forget, fix_randomness
 
 METHODS = ("finetune", "ewc", "online_ewc", "si", "mas")
 ATTACK_MODES = ("none", "pacol", "brainwash_reckless", "brainwash_cautious")
+DEFENSE_MODES = ("none", "t2t", "robust_feature")
 
 
 def parse_int_set(value: str) -> set[int]:
@@ -100,6 +106,105 @@ def metric_view(result: dict) -> dict[str, float | int]:
         "mf1": float(result["mf1"]),
         "n_epochs": int(result["n_epochs"]),
     }
+
+
+def parameter_names_for_scope(
+    parameters: list[tuple[str, torch.nn.Parameter]],
+    scope: str,
+) -> set[str]:
+    if scope == "all":
+        return {name for name, _parameter in parameters}
+    if scope == "head":
+        return {
+            name
+            for name, _parameter in parameters
+            if name.startswith("sleep_classifier.")
+        }
+    if scope == "classifier":
+        return {
+            name
+            for name, _parameter in parameters
+            if name.startswith("sleep_classifier.sleep_stage_classifier.")
+        }
+    raise ValueError(f"Unknown parameter scope: {scope}")
+
+
+def snapshot_parameters(
+    parameters: list[tuple[str, torch.nn.Parameter]],
+    names: set[str] | None = None,
+) -> dict[str, torch.Tensor]:
+    return {
+        name: parameter.detach().cpu().clone()
+        for name, parameter in parameters
+        if names is None or name in names
+    }
+
+
+def snapshot_tensor_map(
+    values: dict[str, torch.Tensor],
+    names: set[str],
+) -> dict[str, torch.Tensor]:
+    return {
+        name: values[name].detach().cpu().clone()
+        for name in names
+    }
+
+
+def snapshot_blocks(blocks) -> tuple[dict[str, torch.Tensor], ...]:
+    return tuple(
+        {
+            name: tensor.detach().cpu().clone()
+            for name, tensor in block.state_dict().items()
+        }
+        for block in blocks
+    )
+
+
+def restore_blocks(blocks, states: tuple[dict[str, torch.Tensor], ...]) -> None:
+    if len(blocks) != len(states):
+        raise ValueError("Block snapshot has an incompatible length")
+    for block, state in zip(blocks, states):
+        block.load_state_dict(state)
+
+
+@torch.no_grad()
+def estimate_classifier_feature_covariance(
+    student_blocks,
+    loader,
+    args,
+) -> tuple[torch.Tensor, int]:
+    """Estimate X^T X/n for the final linear EEG classifier without labels."""
+    set_train(student_blocks, False)
+    classifier = student_blocks[2].sleep_stage_classifier
+    feature_dim = classifier.in_features
+    second_moment = torch.zeros(
+        feature_dim,
+        feature_dim,
+        device=args.device,
+        dtype=torch.float64,
+    )
+    sample_count = 0
+    for eog, eeg, _labels in loader:
+        eog = eog.to(args.device).reshape(
+            -1,
+            args.model_param.EogNum,
+            args.model_param.EpochLength,
+        )
+        eeg = eeg.to(args.device).reshape(
+            -1,
+            args.model_param.EegNum,
+            args.model_param.EpochLength,
+        )
+        features = student_blocks[0](eeg, eog)
+        features = student_blocks[1](features)
+        features = student_blocks[2].sleep_stage_mlp(features)
+        features = features.reshape(-1, feature_dim).double()
+        second_moment.add_(features.T @ features)
+        sample_count += features.shape[0]
+    if sample_count == 0:
+        raise RuntimeError("Cannot estimate feature covariance from an empty task")
+    covariance = (second_moment / sample_count).to(dtype=classifier.weight.dtype)
+    return covariance, sample_count
 
 
 @torch.no_grad()
@@ -254,7 +359,11 @@ def train_student_task(
     args,
     task_index: int,
     subject: int,
-) -> tuple[dict, dict]:
+    *,
+    robust_feature_defense: RobustFeatureDefense | None = None,
+    need_fisher_curvature: bool = False,
+    curvature_loader=None,
+) -> tuple[dict, dict, dict[str, torch.Tensor] | None]:
     parameters = named_trainable_parameters(student_blocks)
     optimizer = torch.optim.Adam(
         [parameter for _name, parameter in parameters],
@@ -272,6 +381,7 @@ def train_student_task(
         set_train(guiding_blocks, False)
         pseudo_losses: list[float] = []
         regularization_losses: list[float] = []
+        defense_losses: list[float] = []
         total_losses: list[float] = []
 
         for eog, eeg, _labels in loader:
@@ -289,7 +399,14 @@ def train_student_task(
                 guiding_logits,
             )
             regularization_loss = strategy.penalty(parameters)
-            loss = pseudo_loss + regularization_loss
+            defense_loss = (
+                robust_feature_defense.penalty(
+                    student_blocks[2].sleep_stage_classifier.weight
+                )
+                if robust_feature_defense is not None
+                else pseudo_loss.new_zeros(())
+            )
+            loss = pseudo_loss + regularization_loss + defense_loss
 
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
@@ -306,12 +423,14 @@ def train_student_task(
             regularization_losses.append(
                 float(regularization_loss.detach().cpu())
             )
+            defense_losses.append(float(defense_loss.detach().cpu()))
             total_losses.append(float(loss.detach().cpu()))
 
         row = {
             "epoch": epoch,
             "pseudo_loss": float(np.mean(pseudo_losses)),
             "regularization_loss": float(np.mean(regularization_losses)),
+            "defense_loss": float(np.mean(defense_losses)),
             "total_loss": float(np.mean(total_losses)),
         }
         epoch_rows.append(row)
@@ -319,7 +438,8 @@ def train_student_task(
             f"[student:{strategy.method}] task={task_index} subject={subject} "
             f"epoch={epoch}/{args.incremental_epoch} "
             f"pseudo={row['pseudo_loss']:.6f} "
-            f"reg={row['regularization_loss']:.6f}",
+            f"reg={row['regularization_loss']:.6f} "
+            f"defense={row['defense_loss']:.6f}",
             flush=True,
         )
 
@@ -333,6 +453,21 @@ def train_student_task(
             args,
             mode,
         )
+    fisher_curvature = None
+    if need_fisher_curvature:
+        if (
+            isinstance(strategy, QuadraticImportanceStrategy)
+            and strategy.method in {"ewc", "online_ewc"}
+        ):
+            fisher_curvature = estimated_importance
+        else:
+            fisher_curvature = estimate_diagonal_importance(
+                student_blocks,
+                guiding_blocks,
+                curvature_loader if curvature_loader is not None else loader,
+                args,
+                "fisher",
+            )
     strategy.consolidate(parameters, estimated_importance)
 
     consolidated = getattr(strategy, "importance", None)
@@ -340,7 +475,8 @@ def train_student_task(
         "epochs": epoch_rows,
         "last_pseudo_loss": epoch_rows[-1]["pseudo_loss"],
         "last_regularization_loss": epoch_rows[-1]["regularization_loss"],
-    }, importance_summary(consolidated)
+        "last_defense_loss": epoch_rows[-1]["defense_loss"],
+    }, importance_summary(consolidated), fisher_curvature
 
 
 def evaluate_seen_subjects(blocks, subjects, args) -> dict[str, dict]:
@@ -380,7 +516,7 @@ def summarize_run(performance: dict) -> dict:
         for subject in final_seen
     ]
 
-    return {
+    summary = {
         "final_old_acc": old_acc[-1],
         "final_old_mf1": old_mf1[-1],
         "old_aaa": float(compute_aaa(old_acc)),
@@ -404,6 +540,42 @@ def summarize_run(performance: dict) -> dict:
         ),
         "pseudo_label_coverage": 1.0,
     }
+    defense_mode = performance["protocol"].get("icml2026_defense", "none")
+    if defense_mode == "t2t":
+        decisions = [
+            row["defense"]
+            for row in task_rows
+            if row.get("defense", {}).get("valid")
+        ]
+        summary.update(
+            {
+                "t2t_valid_scores": len(decisions),
+                "t2t_detected_pairs": sum(
+                    int(row.get("detected", False)) for row in decisions
+                ),
+                "t2t_rejected_updates": sum(
+                    len(row.get("rejected_task_indices", [])) for row in decisions
+                ),
+            }
+        )
+    elif defense_mode == "robust_feature":
+        rows = [row["defense"] for row in task_rows if row.get("defense")]
+        summary.update(
+            {
+                "robust_mean_protected_fraction": float(
+                    np.mean([row["protected_fraction"] for row in rows])
+                ),
+                "robust_mean_lambda": float(
+                    np.mean([row["lambda_mean"] for row in rows])
+                ),
+                "robust_mean_defense_loss": float(
+                    np.mean(
+                        [row["training_last_defense_loss"] for row in rows]
+                    )
+                ),
+            }
+        )
+    return summary
 
 
 def write_report(path: Path, method: str, performance: dict, summary: dict) -> None:
@@ -411,6 +583,7 @@ def write_report(path: Path, method: str, performance: dict, summary: dict) -> N
         f"# Regularization-only EEG CL: {method}\n",
         "\n",
         "Guiding-model hard pseudo labels are used for every target epoch. No confidence filtering, replay, DCB, or CEA is used.\n",
+        f"ICML 2026 defense mode: `{performance['protocol'].get('icml2026_defense', 'none')}`.\n",
         "\n",
         "## Final summary\n",
         "\n",
@@ -463,6 +636,50 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
         mas_strength=args.mas_strength,
         mas_decay=args.mas_decay,
     )
+    robust_feature_defense = (
+        RobustFeatureDefense(
+            sigma2=args.robust_feature_sigma2,
+            budget_per_dimension=args.robust_feature_budget_per_dimension,
+            initial_risk=args.robust_feature_initial_risk,
+            eps=args.robust_feature_eps,
+            max_regularizer=args.robust_feature_max_regularizer,
+        )
+        if args.defense_mode == "robust_feature"
+        else None
+    )
+    t2t_detector = (
+        T2TDetector(
+            threshold_multiplier=args.t2t_threshold_multiplier,
+            window=args.t2t_window,
+            minimum_history=args.t2t_minimum_history,
+            score_floor=args.t2t_score_floor,
+        )
+        if args.defense_mode == "t2t"
+        else None
+    )
+    initial_parameters = named_trainable_parameters(student_blocks)
+    t2t_names = (
+        parameter_names_for_scope(initial_parameters, args.t2t_param_scope)
+        if t2t_detector is not None
+        else set()
+    )
+    t2t_dimension_count = sum(
+        parameter.numel()
+        for name, parameter in initial_parameters
+        if name in t2t_names
+    )
+    t2t_history: list[dict] = []
+    if t2t_detector is not None:
+        t2t_history.append(
+            {
+                "task": 0,
+                "parameters": snapshot_parameters(initial_parameters, t2t_names),
+                "blocks": snapshot_blocks(student_blocks),
+                "strategy": strategy.state_dict(),
+                "hessian": None,
+                "regularizer": None,
+            }
+        )
 
     old_loader = make_loader(
         args.data_root,
@@ -515,6 +732,18 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
             ),
             "proxy_reference_inputs_used_by_learner": False,
             "true_target_labels_used_for_training": False,
+            "icml2026_defense": args.defense_mode,
+            "t2t_parameter_scope": (
+                args.t2t_param_scope if t2t_detector is not None else None
+            ),
+            "t2t_action": (
+                args.t2t_action if t2t_detector is not None else None
+            ),
+            "robust_feature_scope": (
+                "sleep_stage_classifier.weight"
+                if robust_feature_defense is not None
+                else None
+            ),
         },
         "config": vars_for_json(args),
         "initial": {
@@ -652,7 +881,30 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
             if attack_diagnostics is not None or noise_diagnostics is not None
             else pseudo_diagnostics
         )
-        train_diagnostics, current_importance = train_student_task(
+        task_parameters = named_trainable_parameters(student_blocks)
+        t2t_regularizer = None
+        if t2t_detector is not None:
+            t2t_regularizer = snapshot_tensor_map(
+                strategy.curvature(task_parameters),
+                t2t_names,
+            )
+
+        defense_diagnostics = None
+        if robust_feature_defense is not None:
+            feature_covariance, feature_sample_count = (
+                estimate_classifier_feature_covariance(
+                    student_blocks,
+                    loader_pseudo_eval,
+                    args,
+                )
+            )
+            defense_diagnostics = robust_feature_defense.prepare_task(
+                student_blocks[2].sleep_stage_classifier.weight,
+                feature_covariance,
+                feature_sample_count,
+            )
+
+        train_diagnostics, current_importance, task_fisher = train_student_task(
             student_blocks,
             guiding_blocks,
             loader_train,
@@ -660,7 +912,119 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
             args,
             task_index,
             subject,
+            robust_feature_defense=robust_feature_defense,
+            need_fisher_curvature=t2t_detector is not None,
+            curvature_loader=loader_pseudo_eval,
         )
+
+        if robust_feature_defense is not None:
+            defense_diagnostics = robust_feature_defense.finish_task()
+            defense_diagnostics["training_last_defense_loss"] = train_diagnostics[
+                "last_defense_loss"
+            ]
+
+        if t2t_detector is not None:
+            if task_fisher is None or t2t_regularizer is None:
+                raise RuntimeError("T2T requires task Fisher and regularizer curvature")
+            current_parameters = named_trainable_parameters(student_blocks)
+            current_parameter_snapshot = snapshot_parameters(
+                current_parameters,
+                t2t_names,
+            )
+            current_hessian = snapshot_tensor_map(task_fisher, t2t_names)
+            if len(t2t_history) >= 2:
+                previous = t2t_history[-1]
+                previous_previous = t2t_history[-2]
+                score = diagonal_t2t_score(
+                    current_parameter_snapshot,
+                    previous["parameters"],
+                    previous_previous["parameters"],
+                    current_hessian,
+                    previous["hessian"],
+                    t2t_regularizer,
+                    previous["regularizer"],
+                    pinv_rtol=args.t2t_pinv_rtol,
+                    eps=args.t2t_eps,
+                )
+                defense_diagnostics = t2t_detector.decide(score)
+                if not score["valid"]:
+                    defense_diagnostics["reason"] = "empty common diagonal subspace"
+            else:
+                defense_diagnostics = {
+                    "valid": False,
+                    "score": 0.0,
+                    "score_rms": 0.0,
+                    "active_dimensions": 0,
+                    "total_dimensions": t2t_dimension_count,
+                    "active_fraction": 0.0,
+                    "moving_mean": None,
+                    "threshold": None,
+                    "detected": False,
+                    "reason": "two previous model states are not yet available",
+                }
+
+            should_rollback = bool(
+                defense_diagnostics["detected"]
+                and args.t2t_action == "rollback"
+            )
+            defense_diagnostics["action"] = (
+                "rollback"
+                if should_rollback
+                else "monitor_only"
+                if defense_diagnostics["detected"]
+                else "accept"
+            )
+            if should_rollback:
+                provisional_current = metric_view(
+                    evaluate(
+                        student_blocks,
+                        loader_eval,
+                        args,
+                        max_batches=args.eval_max_batches,
+                    )
+                )
+                provisional_old = metric_view(
+                    evaluate(
+                        student_blocks,
+                        old_loader,
+                        args,
+                        max_batches=args.eval_max_batches,
+                    )
+                )
+                rollback_state = t2t_history[-2]
+                rejected_tasks = [int(t2t_history[-1]["task"]), task_index]
+                restore_blocks(student_blocks, rollback_state["blocks"])
+                restored_parameters = named_trainable_parameters(student_blocks)
+                strategy.load_state_dict(
+                    rollback_state["strategy"],
+                    restored_parameters,
+                )
+                t2t_history = [rollback_state]
+                defense_diagnostics.update(
+                    {
+                        "rollback_to_task": int(rollback_state["task"]),
+                        "rejected_task_indices": rejected_tasks,
+                        "provisional_current_after": provisional_current,
+                        "provisional_old_after": provisional_old,
+                    }
+                )
+                for previous_row in performance["tasks"]:
+                    if previous_row["task"] == rejected_tasks[0]:
+                        previous_row["rejected_later_by_t2t_at_task"] = task_index
+                current_importance = importance_summary(
+                    getattr(strategy, "importance", None)
+                )
+            else:
+                accepted_state = {
+                    "task": task_index,
+                    "parameters": current_parameter_snapshot,
+                    "blocks": snapshot_blocks(student_blocks),
+                    "strategy": strategy.state_dict(),
+                    "hessian": current_hessian,
+                    "regularizer": t2t_regularizer,
+                }
+                t2t_history.append(accepted_state)
+                t2t_history = t2t_history[-2:]
 
         after = metric_view(
             evaluate(student_blocks, loader_eval, args, max_batches=args.eval_max_batches)
@@ -684,6 +1048,7 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
             "noise": noise_diagnostics,
             "training": train_diagnostics,
             "importance": current_importance,
+            "defense": defense_diagnostics,
         }
         if args.noise_upload_root is None:
             task_row["attack"] = attack_diagnostics
@@ -700,6 +1065,16 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
             checkpoint_dir = method_dir / "checkpoints" / f"individual_{task_index}"
             save_blocks(student_blocks, checkpoint_dir, args.seed)
             torch.save(strategy.state_dict(), checkpoint_dir / "regularizer_state.pt")
+            if robust_feature_defense is not None:
+                torch.save(
+                    robust_feature_defense.state_dict(),
+                    checkpoint_dir / "icml2026_robust_feature_state.pt",
+                )
+            if t2t_detector is not None:
+                torch.save(
+                    t2t_detector.state_dict(),
+                    checkpoint_dir / "icml2026_t2t_detector_state.pt",
+                )
 
         save_progress(method_dir, performance)
         print(
@@ -816,6 +1191,57 @@ def parse_args():
             "during CL; BN affine parameters remain trainable."
         ),
     )
+    parser.add_argument(
+        "--defense-mode",
+        choices=DEFENSE_MODES,
+        default="none",
+        help=(
+            "ICML 2026 defense: task-to-task verification or the robust "
+            "feature-space regularizer."
+        ),
+    )
+    parser.add_argument(
+        "--t2t-param-scope",
+        choices=("all", "head", "classifier"),
+        default="all",
+    )
+    parser.add_argument(
+        "--t2t-action",
+        choices=("rollback", "monitor"),
+        default="rollback",
+        help=(
+            "Use monitor while calibrating a clean score distribution; "
+            "rollback reproduces Algorithm 1 after a threshold crossing."
+        ),
+    )
+    parser.add_argument("--t2t-threshold-multiplier", type=float, default=2.5)
+    parser.add_argument("--t2t-window", type=int, default=5)
+    parser.add_argument("--t2t-minimum-history", type=int, default=1)
+    parser.add_argument("--t2t-pinv-rtol", type=float, default=1e-6)
+    parser.add_argument("--t2t-eps", type=float, default=1e-12)
+    parser.add_argument("--t2t-score-floor", type=float, default=1e-12)
+    parser.add_argument("--robust-feature-sigma2", type=float, default=1.0)
+    parser.add_argument(
+        "--robust-feature-budget-per-dimension",
+        type=float,
+        default=2000.0 / (768.0 * 100.0),
+        help=(
+            "Assumed bounded non-shifted attack budget per classifier "
+            "parameter; the default transfers the paper's CIFAR-100 ratio."
+        ),
+    )
+    parser.add_argument(
+        "--robust-feature-initial-risk",
+        type=float,
+        default=0.0,
+        help="Per-direction R_0; zero estimates it from classifier weight energy.",
+    )
+    parser.add_argument("--robust-feature-eps", type=float, default=1e-12)
+    parser.add_argument(
+        "--robust-feature-max-regularizer",
+        type=float,
+        default=1e6,
+    )
     parser.add_argument("--ewc-strength", type=float, default=5000.0)
     parser.add_argument("--online-ewc-strength", type=float, default=6500.0)
     parser.add_argument("--online-ewc-decay", type=float, default=1.0)
@@ -868,6 +1294,27 @@ def main():
         raise ValueError(f"Unknown methods: {unknown}")
     if not requested_methods:
         raise ValueError("At least one method is required")
+    if args.defense_mode == "t2t" and "finetune" in requested_methods:
+        raise ValueError(
+            "T2T requires a non-zero historical quadratic regularizer; "
+            "Finetune has no H_t. Use EWC, Online EWC, SI, or MAS."
+        )
+    if args.t2t_window < 1 or args.t2t_minimum_history < 1:
+        raise ValueError("T2T window and minimum history must be positive")
+    if args.t2t_minimum_history > args.t2t_window:
+        raise ValueError("T2T minimum history cannot exceed its window")
+    if args.t2t_threshold_multiplier <= 0:
+        raise ValueError("T2T threshold multiplier must be positive")
+    if args.t2t_pinv_rtol < 0 or args.t2t_eps <= 0:
+        raise ValueError("T2T tolerances must be non-negative and positive")
+    if args.robust_feature_sigma2 <= 0:
+        raise ValueError("Robust-feature sigma2 must be positive")
+    if args.robust_feature_budget_per_dimension < 0:
+        raise ValueError("Robust-feature budget must be non-negative")
+    if args.robust_feature_initial_risk < 0:
+        raise ValueError("Robust-feature initial risk cannot be negative")
+    if args.robust_feature_eps <= 0 or args.robust_feature_max_regularizer <= 0:
+        raise ValueError("Robust-feature numerical limits must be positive")
 
     args.dataset = "ISRUC"
     args.model_param = ModelConfig(args.dataset)

@@ -75,6 +75,27 @@ class RegularizationStrategy:
     ) -> None:
         del parameters, importance
 
+    def curvature(
+        self,
+        parameters: Sequence[tuple[str, nn.Parameter]],
+    ) -> dict[str, torch.Tensor]:
+        """Return the diagonal Hessian of the active quadratic penalty."""
+        return {
+            name: torch.zeros_like(parameter)
+            for name, parameter in parameters
+        }
+
+    def load_state_dict(
+        self,
+        state: dict,
+        parameters: Sequence[tuple[str, nn.Parameter]],
+    ) -> None:
+        del parameters
+        if state.get("method") != self.method:
+            raise ValueError(
+                f"Cannot restore {state.get('method')} state into {self.method}"
+            )
+
     def state_dict(self) -> dict:
         return {"method": self.method}
 
@@ -149,11 +170,42 @@ class QuadraticImportanceStrategy(RegularizationStrategy):
             "strength": self.strength,
             "decay": self.decay,
             "importance": {
-                name: tensor.detach().cpu() for name, tensor in self.importance.items()
+                name: tensor.detach().cpu().clone()
+                for name, tensor in self.importance.items()
             },
             "anchor": {
-                name: tensor.detach().cpu() for name, tensor in self.anchor.items()
+                name: tensor.detach().cpu().clone()
+                for name, tensor in self.anchor.items()
             },
+        }
+
+    def curvature(
+        self,
+        parameters: Sequence[tuple[str, nn.Parameter]],
+    ) -> dict[str, torch.Tensor]:
+        return {
+            name: (
+                2.0 * self.strength * self.importance[name]
+                if name in self.importance
+                else torch.zeros_like(parameter)
+            )
+            for name, parameter in parameters
+        }
+
+    def load_state_dict(
+        self,
+        state: dict,
+        parameters: Sequence[tuple[str, nn.Parameter]],
+    ) -> None:
+        super().load_state_dict(state, parameters)
+        parameter_map = dict(parameters)
+        self.importance = {
+            name: tensor.detach().to(parameter_map[name].device).clone()
+            for name, tensor in state.get("importance", {}).items()
+        }
+        self.anchor = {
+            name: tensor.detach().to(parameter_map[name].device).clone()
+            for name, tensor in state.get("anchor", {}).items()
         }
 
 
@@ -232,12 +284,47 @@ class SynapticIntelligenceStrategy(RegularizationStrategy):
             "strength": self.strength,
             "xi": self.xi,
             "importance": {
-                name: tensor.detach().cpu() for name, tensor in self.importance.items()
+                name: tensor.detach().cpu().clone()
+                for name, tensor in self.importance.items()
             },
             "anchor": {
-                name: tensor.detach().cpu() for name, tensor in self.anchor.items()
+                name: tensor.detach().cpu().clone()
+                for name, tensor in self.anchor.items()
             },
         }
+
+    def curvature(
+        self,
+        parameters: Sequence[tuple[str, nn.Parameter]],
+    ) -> dict[str, torch.Tensor]:
+        return {
+            name: (
+                2.0 * self.strength * self.importance[name]
+                if name in self.importance
+                else torch.zeros_like(parameter)
+            )
+            for name, parameter in parameters
+        }
+
+    def load_state_dict(
+        self,
+        state: dict,
+        parameters: Sequence[tuple[str, nn.Parameter]],
+    ) -> None:
+        super().load_state_dict(state, parameters)
+        parameter_map = dict(parameters)
+        self.importance = {
+            name: tensor.detach().to(parameter_map[name].device).clone()
+            for name, tensor in state.get("importance", {}).items()
+        }
+        self.anchor = {
+            name: tensor.detach().to(parameter_map[name].device).clone()
+            for name, tensor in state.get("anchor", {}).items()
+        }
+        self.task_start = {}
+        self.path_integral = {}
+        self.pre_step = {}
+        self.step_gradient = {}
 
 
 def build_regularization_strategy(

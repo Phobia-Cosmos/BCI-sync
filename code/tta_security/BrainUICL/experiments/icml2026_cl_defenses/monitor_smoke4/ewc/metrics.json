@@ -1,0 +1,636 @@
+{
+  "method": "ewc",
+  "protocol": {
+    "pseudo_labels": "all hard argmax labels from the guiding model",
+    "confidence_filter": false,
+    "replay": false,
+    "dcb": false,
+    "cea": false,
+    "student_batch_norm_running_stats": "frozen",
+    "external_proxy_noise": null,
+    "proxy_reference_inputs_used_by_learner": false,
+    "true_target_labels_used_for_training": false,
+    "icml2026_defense": "t2t",
+    "t2t_parameter_scope": "all",
+    "t2t_action": "monitor",
+    "robust_feature_scope": null,
+    "attack": "none",
+    "attack_tasks": [],
+    "attacker_reference_inputs_used_by_learner": false
+  },
+  "config": {
+    "data_root": "/home/undefined/Disk/datasets/brainuicl/processed/isruc_group1_npy_float32",
+    "input_checkpoint_root": "/home/undefined/Disk/ai-storage/BrainUICL/model_parameter",
+    "output_root": "experiments/icml2026_cl_defenses/monitor_smoke4",
+    "methods": "ewc",
+    "seed": 4321,
+    "gpu": 0,
+    "batch": 16,
+    "num_worker": 0,
+    "max_subjects": 4,
+    "ssl_epoch": 1,
+    "incremental_epoch": 1,
+    "lr": 0.0001,
+    "ssl_lr": 1e-06,
+    "cl_lr": 1e-06,
+    "beta1": 0.5,
+    "beta2": 0.99,
+    "weight_decay": 0.0003,
+    "grad_clip": 5.0,
+    "freeze_bn_stats": true,
+    "defense_mode": "t2t",
+    "t2t_param_scope": "all",
+    "t2t_action": "monitor",
+    "t2t_threshold_multiplier": 2.5,
+    "t2t_window": 5,
+    "t2t_minimum_history": 1,
+    "t2t_pinv_rtol": 1e-06,
+    "t2t_eps": 1e-12,
+    "t2t_score_floor": 1e-12,
+    "robust_feature_sigma2": 1.0,
+    "robust_feature_budget_per_dimension": 0.026041666666666668,
+    "robust_feature_initial_risk": 0.0,
+    "robust_feature_eps": 1e-12,
+    "robust_feature_max_regularizer": 1000000.0,
+    "ewc_strength": 5000.0,
+    "online_ewc_strength": 6500.0,
+    "online_ewc_decay": 1.0,
+    "si_strength": 15.0,
+    "si_xi": 0.1,
+    "mas_strength": 1.0,
+    "mas_decay": 1.0,
+    "attack_mode": "none",
+    "attack_tasks": [],
+    "attack_fraction": 0.05,
+    "attack_eps_scale": 0.1,
+    "attack_steps": 5,
+    "attack_inner_lr": 0.0001,
+    "attack_cautious_weight": 1.0,
+    "attack_param_scope": "classifier",
+    "attack_reference_batch": 1,
+    "attack_random_start": false,
+    "noise_upload_root": null,
+    "no_save_checkpoints": true,
+    "eval_max_batches": 1,
+    "retention_milestones": [
+      4
+    ],
+    "checkpoint_milestones": [
+      0,
+      1,
+      10,
+      25,
+      49
+    ],
+    "dataset": "ISRUC",
+    "model_param": "<utils.config.ModelConfig object at 0x72bfc8b4f650>",
+    "device": "cuda:0"
+  },
+  "initial": {
+    "old_generalization": {
+      "acc": 0.74375,
+      "mf1": 0.7191395928108633,
+      "n_epochs": 320
+    },
+    "source_train": {
+      "acc": 0.6375,
+      "mf1": 0.7335245939823432,
+      "n_epochs": 320
+    },
+    "validation": {
+      "acc": 0.11875,
+      "mf1": 0.04466607163646242,
+      "n_epochs": 320
+    }
+  },
+  "stability": {
+    "acc": [
+      0.74375,
+      0.721875,
+      0.71875,
+      0.715625,
+      0.715625
+    ],
+    "mf1": [
+      0.7191395928108633,
+      0.7026680037949236,
+      0.6982477739447046,
+      0.7031966185177388,
+      0.7028616568085212
+    ]
+  },
+  "tasks": [
+    {
+      "task": 1,
+      "subject": 64,
+      "current_before": {
+        "acc": 0.79375,
+        "mf1": 0.641431997290651,
+        "n_epochs": 320
+      },
+      "current_after": {
+        "acc": 0.778125,
+        "mf1": 0.6300235666426243,
+        "n_epochs": 320
+      },
+      "old_generalization_after": {
+        "acc": 0.721875,
+        "mf1": 0.7026680037949236,
+        "n_epochs": 320
+      },
+      "pseudo_labels": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.7302325581395349,
+        "mf1_diagnostic_only": 0.7625041988698797,
+        "mean_confidence_diagnostic_only": 0.9160986415522043,
+        "pseudo_class_counts": [
+          136,
+          176,
+          311,
+          154,
+          83
+        ],
+        "n_epochs": 860
+      },
+      "pseudo_labels_on_clean_current": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.7302325581395349,
+        "mf1_diagnostic_only": 0.7625041988698797,
+        "mean_confidence_diagnostic_only": 0.9160986415522043,
+        "pseudo_class_counts": [
+          136,
+          176,
+          311,
+          154,
+          83
+        ],
+        "n_epochs": 860
+      },
+      "guiding_cpc_losses": [
+        99.65615844726562
+      ],
+      "noise": null,
+      "training": {
+        "epochs": [
+          {
+            "epoch": 1,
+            "pseudo_loss": 0.2743845184644063,
+            "regularization_loss": 0.0,
+            "defense_loss": 0.0,
+            "total_loss": 0.2743845184644063
+          }
+        ],
+        "last_pseudo_loss": 0.2743845184644063,
+        "last_regularization_loss": 0.0,
+        "last_defense_loss": 0.0
+      },
+      "importance": {
+        "mean": 0.03031396999187592,
+        "max": 8302.03125,
+        "nonzero_fraction": 0.8533425136195039
+      },
+      "defense": {
+        "valid": false,
+        "score": 0.0,
+        "score_rms": 0.0,
+        "active_dimensions": 0,
+        "total_dimensions": 6625792,
+        "active_fraction": 0.0,
+        "moving_mean": null,
+        "threshold": null,
+        "detected": false,
+        "reason": "two previous model states are not yet available",
+        "action": "accept"
+      },
+      "attack": null,
+      "attack_label_guiding_cpc_losses": []
+    },
+    {
+      "task": 2,
+      "subject": 89,
+      "current_before": {
+        "acc": 0.78125,
+        "mf1": 0.47660905305504614,
+        "n_epochs": 320
+      },
+      "current_after": {
+        "acc": 0.765625,
+        "mf1": 0.47951942520647384,
+        "n_epochs": 320
+      },
+      "old_generalization_after": {
+        "acc": 0.71875,
+        "mf1": 0.6982477739447046,
+        "n_epochs": 320
+      },
+      "pseudo_labels": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.779,
+        "mf1_diagnostic_only": 0.7134693394724334,
+        "mean_confidence_diagnostic_only": 0.9359875301122665,
+        "pseudo_class_counts": [
+          292,
+          76,
+          363,
+          151,
+          118
+        ],
+        "n_epochs": 1000
+      },
+      "pseudo_labels_on_clean_current": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.779,
+        "mf1_diagnostic_only": 0.7134693394724334,
+        "mean_confidence_diagnostic_only": 0.9359875301122665,
+        "pseudo_class_counts": [
+          292,
+          76,
+          363,
+          151,
+          118
+        ],
+        "n_epochs": 1000
+      },
+      "guiding_cpc_losses": [
+        90.98447704315186
+      ],
+      "noise": null,
+      "training": {
+        "epochs": [
+          {
+            "epoch": 1,
+            "pseudo_loss": 0.17231189832091331,
+            "regularization_loss": 0.0013322436716407537,
+            "defense_loss": 0.0,
+            "total_loss": 0.17364414408802986
+          }
+        ],
+        "last_pseudo_loss": 0.17231189832091331,
+        "last_regularization_loss": 0.0013322436716407537,
+        "last_defense_loss": 0.0
+      },
+      "importance": {
+        "mean": 0.08624861147407487,
+        "max": 32462.25,
+        "nonzero_fraction": 0.85494549179932
+      },
+      "defense": {
+        "valid": false,
+        "score": 0.0,
+        "score_rms": 0.0,
+        "active_dimensions": 0,
+        "total_dimensions": 6625792,
+        "active_fraction": 0.0,
+        "current_update_norm": 0.0064317189943982655,
+        "previous_update_norm": 0.005769283789740078,
+        "blocks": {
+          "feature_extractor": {
+            "score": 0.0,
+            "active_dimensions": 0,
+            "total_dimensions": 3308544
+          },
+          "feature_encoder": {
+            "score": 0.0,
+            "active_dimensions": 0,
+            "total_dimensions": 3152384
+          },
+          "sleep_classifier": {
+            "score": 0.0,
+            "active_dimensions": 0,
+            "total_dimensions": 164864
+          }
+        },
+        "moving_mean": null,
+        "threshold": null,
+        "threshold_multiplier": 2.5,
+        "window": 5,
+        "history_count": 0,
+        "detected": false,
+        "reason": "empty common diagonal subspace",
+        "action": "accept"
+      },
+      "attack": null,
+      "attack_label_guiding_cpc_losses": []
+    },
+    {
+      "task": 3,
+      "subject": 1,
+      "current_before": {
+        "acc": 0.16875,
+        "mf1": 0.0655282443283425,
+        "n_epochs": 320
+      },
+      "current_after": {
+        "acc": 0.203125,
+        "mf1": 0.0935481727574751,
+        "n_epochs": 320
+      },
+      "old_generalization_after": {
+        "acc": 0.715625,
+        "mf1": 0.7031966185177388,
+        "n_epochs": 320
+      },
+      "pseudo_labels": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.23372093023255813,
+        "mf1_diagnostic_only": 0.1647447410773221,
+        "mean_confidence_diagnostic_only": 0.6755342096090317,
+        "pseudo_class_counts": [
+          3,
+          176,
+          476,
+          200,
+          5
+        ],
+        "n_epochs": 860
+      },
+      "pseudo_labels_on_clean_current": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.23372093023255813,
+        "mf1_diagnostic_only": 0.1647447410773221,
+        "mean_confidence_diagnostic_only": 0.6755342096090317,
+        "pseudo_class_counts": [
+          3,
+          176,
+          476,
+          200,
+          5
+        ],
+        "n_epochs": 860
+      },
+      "guiding_cpc_losses": [
+        81.25963846842448
+      ],
+      "noise": null,
+      "training": {
+        "epochs": [
+          {
+            "epoch": 1,
+            "pseudo_loss": 0.919332762559255,
+            "regularization_loss": 0.0028636702530396483,
+            "defense_loss": 0.0,
+            "total_loss": 0.9221964279810587
+          }
+        ],
+        "last_pseudo_loss": 0.919332762559255,
+        "last_regularization_loss": 0.0028636702530396483,
+        "last_defense_loss": 0.0
+      },
+      "importance": {
+        "mean": 0.4939619664145104,
+        "max": 170184.65625,
+        "nonzero_fraction": 0.8556095633548412
+      },
+      "defense": {
+        "valid": true,
+        "score": 3220.566374006936,
+        "score_rms": 1.4403033925415074,
+        "active_dimensions": 4999845,
+        "total_dimensions": 6625792,
+        "active_fraction": 0.7546033742079438,
+        "current_update_norm": 0.006209617736919969,
+        "previous_update_norm": 0.0064317189943982655,
+        "blocks": {
+          "feature_extractor": {
+            "score": 3150.1426678128723,
+            "active_dimensions": 2976159,
+            "total_dimensions": 3308544
+          },
+          "feature_encoder": {
+            "score": 628.8212006589583,
+            "active_dimensions": 1884470,
+            "total_dimensions": 3152384
+          },
+          "sleep_classifier": {
+            "score": 230.72242936222565,
+            "active_dimensions": 139216,
+            "total_dimensions": 164864
+          }
+        },
+        "moving_mean": null,
+        "threshold": null,
+        "threshold_multiplier": 2.5,
+        "window": 5,
+        "history_count": 0,
+        "detected": false,
+        "action": "accept"
+      },
+      "attack": null,
+      "attack_label_guiding_cpc_losses": []
+    },
+    {
+      "task": 4,
+      "subject": 27,
+      "current_before": {
+        "acc": 0.753125,
+        "mf1": 0.6820607486047131,
+        "n_epochs": 320
+      },
+      "current_after": {
+        "acc": 0.7625,
+        "mf1": 0.7004187091282088,
+        "n_epochs": 320
+      },
+      "old_generalization_after": {
+        "acc": 0.715625,
+        "mf1": 0.7028616568085212,
+        "n_epochs": 320
+      },
+      "pseudo_labels": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.7806818181818181,
+        "mf1_diagnostic_only": 0.7163067039494233,
+        "mean_confidence_diagnostic_only": 0.958001469956203,
+        "pseudo_class_counts": [
+          276,
+          31,
+          353,
+          126,
+          94
+        ],
+        "n_epochs": 880
+      },
+      "pseudo_labels_on_clean_current": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.7806818181818181,
+        "mf1_diagnostic_only": 0.7163067039494233,
+        "mean_confidence_diagnostic_only": 0.958001469956203,
+        "pseudo_class_counts": [
+          276,
+          31,
+          353,
+          126,
+          94
+        ],
+        "n_epochs": 880
+      },
+      "guiding_cpc_losses": [
+        107.4350357055664
+      ],
+      "noise": null,
+      "training": {
+        "epochs": [
+          {
+            "epoch": 1,
+            "pseudo_loss": 0.2678541491429011,
+            "regularization_loss": 0.00720491186560442,
+            "defense_loss": 0.0,
+            "total_loss": 0.2750590592622757
+          }
+        ],
+        "last_pseudo_loss": 0.2678541491429011,
+        "last_regularization_loss": 0.00720491186560442,
+        "last_defense_loss": 0.0
+      },
+      "importance": {
+        "mean": 0.614962831539959,
+        "max": 185022.09375,
+        "nonzero_fraction": 0.855682460300595
+      },
+      "defense": {
+        "valid": true,
+        "score": 12647.465007353618,
+        "score_rms": 5.787074214391378,
+        "active_dimensions": 4776270,
+        "total_dimensions": 6625792,
+        "active_fraction": 0.7208602382930221,
+        "current_update_norm": 0.005615065839543739,
+        "previous_update_norm": 0.006209617736919969,
+        "blocks": {
+          "feature_extractor": {
+            "score": 8619.615001164833,
+            "active_dimensions": 2970610,
+            "total_dimensions": 3308544
+          },
+          "feature_encoder": {
+            "score": 9135.517963998183,
+            "active_dimensions": 1672983,
+            "total_dimensions": 3152384
+          },
+          "sleep_classifier": {
+            "score": 1484.2236601654681,
+            "active_dimensions": 132677,
+            "total_dimensions": 164864
+          }
+        },
+        "moving_mean": 3220.566374006936,
+        "threshold": 8051.4159350173395,
+        "threshold_multiplier": 2.5,
+        "window": 5,
+        "history_count": 1,
+        "detected": true,
+        "action": "monitor_only"
+      },
+      "attack": null,
+      "attack_label_guiding_cpc_losses": []
+    }
+  ],
+  "retention_snapshots": {
+    "4": {
+      "64": {
+        "acc": 0.775,
+        "mf1": 0.6282288577564168,
+        "n_epochs": 320
+      },
+      "89": {
+        "acc": 0.775,
+        "mf1": 0.4934847330886935,
+        "n_epochs": 320
+      },
+      "1": {
+        "acc": 0.203125,
+        "mf1": 0.09350649350649351,
+        "n_epochs": 320
+      },
+      "27": {
+        "acc": 0.7625,
+        "mf1": 0.7004187091282088,
+        "n_epochs": 320
+      }
+    }
+  },
+  "final": {
+    "old_generalization": {
+      "acc": 0.715625,
+      "mf1": 0.7028616568085212,
+      "n_epochs": 320
+    },
+    "source_train": {
+      "acc": 0.746875,
+      "mf1": 0.7934881903218047,
+      "n_epochs": 320
+    },
+    "validation": {
+      "acc": 0.134375,
+      "mf1": 0.06129793510324484,
+      "n_epochs": 320
+    },
+    "seen_subjects": {
+      "64": {
+        "acc": 0.775,
+        "mf1": 0.6282288577564168,
+        "n_epochs": 320
+      },
+      "89": {
+        "acc": 0.775,
+        "mf1": 0.4934847330886935,
+        "n_epochs": 320
+      },
+      "1": {
+        "acc": 0.203125,
+        "mf1": 0.09350649350649351,
+        "n_epochs": 320
+      },
+      "27": {
+        "acc": 0.7625,
+        "mf1": 0.7004187091282088,
+        "n_epochs": 320
+      }
+    },
+    "initial_model_seen_subjects": {
+      "64": {
+        "acc": 0.79375,
+        "mf1": 0.641431997290651,
+        "n_epochs": 320
+      },
+      "89": {
+        "acc": 0.771875,
+        "mf1": 0.43241255573485227,
+        "n_epochs": 320
+      },
+      "1": {
+        "acc": 0.178125,
+        "mf1": 0.07330635958086938,
+        "n_epochs": 320
+      },
+      "27": {
+        "acc": 0.75625,
+        "mf1": 0.713654548026107,
+        "n_epochs": 320
+      }
+    }
+  },
+  "summary": {
+    "final_old_acc": 0.715625,
+    "final_old_mf1": 0.7028616568085212,
+    "old_aaa": 0.7231250000000001,
+    "old_aaf1": 0.7052227291753503,
+    "old_fr": 0.037815126050420256,
+    "mean_current_before_acc": 0.62421875,
+    "mean_current_after_acc": 0.62734375,
+    "mean_current_acc_gain": 0.003124999999999975,
+    "mean_current_before_mf1": 0.46640751081968823,
+    "mean_current_after_mf1": 0.47587746843369555,
+    "mean_current_mf1_gain": 0.009469957614007304,
+    "final_seen_acc": 0.62890625,
+    "final_seen_mf1": 0.4789096983699532,
+    "bwt_acc": 0.0015625000000000222,
+    "bwt_mf1": 0.003032229936257652,
+    "mean_pseudo_acc_diagnostic_only": 0.6309088266384778,
+    "mean_pseudo_mf1_diagnostic_only": 0.5892562458422647,
+    "pseudo_label_coverage": 1.0,
+    "t2t_valid_scores": 2,
+    "t2t_detected_pairs": 1,
+    "t2t_rejected_updates": 0
+  }
+}

@@ -1,0 +1,192 @@
+{
+  "config": {
+    "seed": 4321,
+    "attack_seed": 1701,
+    "data_root": "/home/undefined/Disk/datasets/brainuicl/processed/isruc_group1_npy_float32",
+    "input_checkpoint_root": "/home/undefined/Disk/ai-storage/BrainUICL/model_parameter",
+    "output_root": "experiments/frozen_proxy_frequency_shift/smoke4",
+    "proxy": "source-pretrained frozen EEG model",
+    "direction_objective": "one-step source-proxy retention loss maximization",
+    "total_tasks": 4,
+    "frequent_tasks": [
+      1,
+      4
+    ],
+    "infrequent_tasks": [
+      1
+    ],
+    "sequence_fraction": 0.05,
+    "relative_l2_budgets": [
+      0.05
+    ],
+    "linf_std_scale": 0.1,
+    "direction_eps_std_scale": 0.2,
+    "direction_steps": 1,
+    "direction_inner_lr": 0.0001,
+    "sample_rate": 100.0,
+    "band_hz": [
+      0.3,
+      35.0
+    ],
+    "split": {
+      "seed": 4321,
+      "train_idx": [
+        50,
+        79,
+        37,
+        18,
+        28,
+        71,
+        38,
+        41,
+        7,
+        93,
+        35,
+        30,
+        74,
+        53,
+        23,
+        69,
+        48,
+        24,
+        82,
+        94,
+        78,
+        16,
+        34,
+        45
+      ],
+      "val_idx": [
+        12,
+        21,
+        29,
+        58,
+        76,
+        77
+      ],
+      "old_idx": [
+        100,
+        72,
+        88,
+        43,
+        90,
+        56,
+        92,
+        39,
+        62,
+        32,
+        44,
+        73,
+        68,
+        67,
+        51,
+        59,
+        75,
+        6,
+        14
+      ],
+      "new_order": [
+        64,
+        89,
+        1,
+        27
+      ],
+      "full_new_order": [
+        64,
+        89,
+        1,
+        27,
+        60,
+        5,
+        52,
+        42,
+        80,
+        26,
+        91,
+        22,
+        61,
+        85,
+        17,
+        36,
+        98,
+        33,
+        55,
+        86,
+        54,
+        84,
+        49,
+        3,
+        2,
+        10,
+        87,
+        15,
+        95,
+        57,
+        70,
+        11,
+        47,
+        65,
+        66,
+        96,
+        83,
+        9,
+        46,
+        31,
+        4,
+        19,
+        99,
+        63,
+        81,
+        25,
+        97,
+        20,
+        13
+      ]
+    },
+    "checkpoint_hashes": {
+      "feature_encoder_parameter_4321.pkl": "bcb2b4924a7b79396a6f5ed0e01b0894a3f4d687878a59ca2c3714245090d219",
+      "feature_extractor_parameter_4321.pkl": "70d7d07f989eb18438d82c6600eade88a74ce908e0353be302c9b7c73bf3ba4c",
+      "sleep_classifier_parameter_4321.pkl": "a9ac72fc5e848f5fc9aa96df8849ebb9cf0b0ac0b1d7705ef1234fc661927ef9"
+    }
+  },
+  "proxy_parameter_sha256_before": "e1bdbe4fe1c2e73530311f77d6658d47a43d7946d319a8599f533f65fb5d27c3",
+  "proxy_parameter_sha256_after": "e1bdbe4fe1c2e73530311f77d6658d47a43d7946d319a8599f533f65fb5d27c3",
+  "proxy_parameters_unchanged": true,
+  "stream_summaries": {
+    "rel_l2_0500": {
+      "I-NS": {
+        "tasks": 1,
+        "noisy_sequences": 3,
+        "uploaded": 180
+      },
+      "I-S": {
+        "tasks": 1,
+        "noisy_sequences": 3,
+        "uploaded": 180
+      },
+      "F-NS": {
+        "tasks": 2,
+        "noisy_sequences": 6,
+        "uploaded": 180
+      },
+      "F-S": {
+        "tasks": 2,
+        "noisy_sequences": 6,
+        "uploaded": 180
+      }
+    }
+  },
+  "direction_diagnostics_mean": {
+    "epsilon_eog": 5.826001256536983e-06,
+    "epsilon_eeg": 3.7283643905539066e-06,
+    "linf_eog": 5.82600841880776e-06,
+    "linf_eeg": 3.728369847522117e-06,
+    "relative_l2_eog": 0.20836491510272026,
+    "relative_l2_eeg": 0.20193366333842278,
+    "objective_initial": -0.06963695213198662,
+    "objective_final": -0.0698526119813323,
+    "surrogate_old_loss_final": 0.0698526119813323,
+    "surrogate_current_loss_final": 0.1296973554417491,
+    "pseudo_label_preservation": 0.5125000029802322
+  }
+}

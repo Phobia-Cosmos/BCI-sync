@@ -1,0 +1,79 @@
+{
+  "task": 31,
+  "subject": 70,
+  "stream": "F-NS",
+  "frequency": "frequent",
+  "shifted": false,
+  "uploaded": 43,
+  "noisy_sequences": 9,
+  "noise_fraction": 0.20930232558139536,
+  "noise_indices": [
+    0,
+    1,
+    4,
+    9,
+    12,
+    15,
+    25,
+    28,
+    38
+  ],
+  "signs": {
+    "0": -1,
+    "1": 1,
+    "4": -1,
+    "9": -1,
+    "12": 1,
+    "15": -1,
+    "25": -1,
+    "28": 1,
+    "38": 1
+  },
+  "sign_positive": 4,
+  "sign_negative": 5,
+  "relative_l2_budget": 0.05,
+  "linf_std_scale": 0.2,
+  "eog_relative_l2": {
+    "mean": 0.05000000115897921,
+    "max": 0.05000000447034836
+  },
+  "eeg_relative_l2": {
+    "mean": 0.05000000115897921,
+    "max": 0.05000000447034836
+  },
+  "eog_linf_over_std": {
+    "mean": 0.17055255505773756,
+    "max": 0.18147088587284088
+  },
+  "eeg_linf_over_std": {
+    "mean": 0.16587659385469225,
+    "max": 0.18512751162052155
+  },
+  "eog_spectral_total_variation": {
+    "mean": 0.004679980454966426,
+    "max": 0.007139200810343027
+  },
+  "eeg_spectral_total_variation": {
+    "mean": 0.0031024824258767897,
+    "max": 0.004013159312307835
+  },
+  "eog_perturbation_out_of_band_fraction": {
+    "mean": 2.2056343982066735e-14,
+    "max": 2.3123574249502878e-14
+  },
+  "eeg_perturbation_out_of_band_fraction": {
+    "mean": 2.1453649170450112e-14,
+    "max": 2.1641625733777488e-14
+  },
+  "eog_sample_outside_clean_range_fraction": {
+    "mean": 1.3888889144355846e-05,
+    "max": 2.5000001187436283e-05
+  },
+  "eeg_sample_outside_clean_range_fraction": {
+    "mean": 3.3950617661402148e-06,
+    "max": 8.333333425980527e-06
+  },
+  "proxy_pseudo_label_preservation": 0.6277777552604675,
+  "empirical_sequence_mean_ratio": 0.3334249798697135,
+  "clean_source": "/home/undefined/Disk/datasets/brainuicl/processed/isruc_group1_npy_float32/70/data"
+}

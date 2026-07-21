@@ -142,10 +142,13 @@ CL-EEG 是当前仓库对传统参数正则化持续学习的 EEG 迁移线。�
 | 正则器 | `model/regularization_cl.py` | EWC、Online EWC、SI、MAS、BN 统计冻结 |
 | 主入口 | `experiments/regularization_cl_eeg.py` | 49 个体干净 CL、统一 old/final-seen/BWT、checkpoint 和报告 |
 | 攻击探针 | `experiments/regularization_cl_attacks.py` | PACOL-style 梯度匹配和 BrainWash-style 一步双层近似 |
+| ICML 2026 防御 | `model/icml2026_cl_defenses.py` | T2T 对角 Fisher 检测/回滚与 Robust Feature protected-set 正则 |
 | 干净 full49 | `experiments/regularization_cl_eeg_runs/clean49_bn_frozen_e10_lr1e6_seed4321/` | 五方法完整结果 |
 | 主报告 | `experiments/regularization_cl_eeg_runs/clean49_bn_frozen_e10_lr1e6_seed4321/RESULTS.md` | 参数、结果、BN 消融和 BrainUICL 对齐表 |
 | 中文对齐文档 | `experiments/regularization_cl_eeg_runs/clean49_bn_frozen_e10_lr1e6_seed4321/ALIGNED_COMPARISON_ZH.md` | 六方法同口径结果与资源差异 |
 | 轻量攻击结果 | `experiments/regularization_cl_eeg_runs/attack_compare9_e10_lr1e6_seed4321/RESULTS.md` | PACOL/BrainWash 小规模适配与限制 |
+| ICML 2026 clean 防御结果 | `experiments/icml2026_cl_defenses/full49/SUMMARY_ZH.md` | 两种防御的接入边界、full49 指标、T2T clean 误报与 Robust Feature 代价 |
+| 攻击与防御验证设计 | `experiments/icml2026_cl_defenses/ATTACK_DEFENSE_DESIGN_ZH.md` | Replay/正则化共同攻击入口、论文差异、阈值解释和 BrainWash-T2T 首轮结果 |
 
 ### 已验证结果
 
@@ -160,6 +163,8 @@ CL-EEG 是当前仓库对传统参数正则化持续学习的 EEG 迁移线。�
 这些结果证明标准正则化 CL 可以迁移到无标签 EEG 个体流。SI 和 MAS 能在不保存历史 EEG 的情况下接近保持预训练模型，但其当前个体平均增益接近 0，优势主要是稳定而不是强适配。冻结学生 BatchNorm running statistics 是必要实现条件；不冻结时，即使参数正则很强，跨个体统计漂移仍会造成旧域性能突降。
 
 PACOL/BrainWash 当前只是 classifier-scope、source-proxy 的轻量 EEG 适配，不是原论文完整复现。它们在 9-task 小实验中只对 Finetune 产生约 0.6 个 ACC 百分点影响，对 SI/MAS 影响很小；这一结果只能说明攻击接口和优化方向已跑通，不能用于证明普遍鲁棒性。
+
+ICML 2026 的 T2T 与 Robust Feature Defense 也已接入并完成无攻击 full49 对照。T2T 只能原样用于具有历史二次正则项的 EWC、Online EWC、SI 和 MAS；固定论文阈值会在 clean EEG 个体流上回滚 6--12 个正常任务，说明自然跨个体漂移会造成明显误报。Robust Feature 可作为最终线性分类器上的额外二次项接到五种方法，clean 指标变化大多小于 0.35 个百分点，但其默认预算下防御损失仅约 `1e-8`--`1e-6`。这些结果证明实现可运行并量化了 clean 代价，尚未证明攻击防护能力。
 
 ## 哪些结果可以放在同一张主表
 
@@ -185,3 +190,5 @@ SPR-EEG 和 PuriDivER-EEG 暂时应单列为 method-transfer validation：SPR �
 - PuriDivER 防御接入：`PURIDIVER_EEG_DEFENSE_REPORT.md`
 - BrainUICL aligned 对比：`experiments/regularization_cl_eeg_runs/clean49_bn_frozen_e10_lr1e6_seed4321/ALIGNED_COMPARISON_ZH.md`
 - CL-EEG 干净结果：`experiments/regularization_cl_eeg_runs/clean49_bn_frozen_e10_lr1e6_seed4321/RESULTS.md`
+- ICML 2026 两种防御 clean full49：`experiments/icml2026_cl_defenses/full49/SUMMARY_ZH.md`
+- EEG 攻击入口与 ICML 2026 防御验证设计：`experiments/icml2026_cl_defenses/ATTACK_DEFENSE_DESIGN_ZH.md`

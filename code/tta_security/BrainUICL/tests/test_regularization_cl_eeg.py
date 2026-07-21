@@ -164,6 +164,28 @@ class RegularizationCLEEGTest(unittest.TestCase):
             torch.allclose(strategy.importance[name], 2.5 * torch.ones_like(parameter))
         )
 
+    def test_quadratic_strategy_state_and_curvature_can_be_rolled_back(self):
+        blocks = tiny_blocks()
+        parameters = named_trainable_parameters(blocks)
+        name, parameter = parameters[0]
+        strategy = QuadraticImportanceStrategy("online_ewc", strength=3.0)
+        strategy.consolidate(parameters, {name: 2.0 * torch.ones_like(parameter)})
+        snapshot = strategy.state_dict()
+        expected_anchor = strategy.anchor[name].clone()
+        expected_curvature = 12.0 * torch.ones_like(parameter)
+        self.assertTrue(
+            torch.allclose(strategy.curvature(parameters)[name], expected_curvature)
+        )
+
+        with torch.no_grad():
+            parameter.add_(4.0)
+        strategy.consolidate(parameters, {name: 5.0 * torch.ones_like(parameter)})
+        strategy.load_state_dict(snapshot, parameters)
+        self.assertTrue(torch.allclose(strategy.anchor[name], expected_anchor))
+        self.assertTrue(
+            torch.allclose(strategy.curvature(parameters)[name], expected_curvature)
+        )
+
     def test_synaptic_intelligence_accumulates_positive_importance(self):
         blocks = tiny_blocks()
         parameters = named_trainable_parameters(blocks)
