@@ -1,0 +1,1069 @@
+{
+  "method": "ewc",
+  "protocol": {
+    "pseudo_labels": "all hard argmax labels from the guiding model",
+    "confidence_filter": false,
+    "replay": false,
+    "dcb": false,
+    "cea": false,
+    "student_batch_norm_running_stats": "frozen",
+    "external_proxy_noise": null,
+    "proxy_reference_inputs_used_by_learner": false,
+    "true_target_labels_used_for_training": false,
+    "icml2026_defense": "none",
+    "t2t_parameter_scope": null,
+    "t2t_action": null,
+    "robust_feature_scope": null,
+    "attack": "none",
+    "attack_tasks": [],
+    "attacker_reference_inputs_used_by_learner": false
+  },
+  "config": {
+    "data_root": "/home/undefined/Disk/datasets/brainuicl/processed/isruc_group1_npy_float32",
+    "input_checkpoint_root": "/home/undefined/Disk/ai-storage/BrainUICL/model_parameter",
+    "output_root": "experiments/regularization_cl_eeg_runs/proxy_dual_harm_clean_probe10_e1",
+    "methods": "ewc",
+    "seed": 4321,
+    "gpu": 0,
+    "batch": 4,
+    "num_worker": 0,
+    "max_subjects": 10,
+    "ssl_epoch": 1,
+    "incremental_epoch": 1,
+    "lr": 0.0001,
+    "ssl_lr": 1e-06,
+    "cl_lr": 1e-06,
+    "beta1": 0.5,
+    "beta2": 0.99,
+    "weight_decay": 0.0003,
+    "grad_clip": 5.0,
+    "freeze_bn_stats": true,
+    "defense_mode": "none",
+    "t2t_param_scope": "all",
+    "t2t_action": "rollback",
+    "t2t_threshold_multiplier": 2.5,
+    "t2t_window": 5,
+    "t2t_minimum_history": 1,
+    "t2t_pinv_rtol": 1e-06,
+    "t2t_eps": 1e-12,
+    "t2t_score_floor": 1e-12,
+    "robust_feature_sigma2": 1.0,
+    "robust_feature_budget_per_dimension": 0.026041666666666668,
+    "robust_feature_initial_risk": 0.0,
+    "robust_feature_eps": 1e-12,
+    "robust_feature_max_regularizer": 1000000.0,
+    "ewc_strength": 5000.0,
+    "online_ewc_strength": 6500.0,
+    "online_ewc_decay": 1.0,
+    "si_strength": 15.0,
+    "si_xi": 0.1,
+    "mas_strength": 1.0,
+    "mas_decay": 1.0,
+    "attack_mode": "none",
+    "attack_tasks": [],
+    "attack_fraction": 0.05,
+    "attack_eps_scale": 0.1,
+    "attack_steps": 5,
+    "attack_inner_lr": 0.0001,
+    "attack_cautious_weight": 1.0,
+    "attack_param_scope": "classifier",
+    "attack_reference_batch": 1,
+    "attack_random_start": false,
+    "attack_generation_batch": 1,
+    "attack_max_relative_l2": 0.0,
+    "attack_target_weight": 1.0,
+    "attack_conflict_weight": 1.0,
+    "attack_gradient_norm_weight": 0.1,
+    "attack_virtual_old_weight": 1.0,
+    "attack_virtual_new_weight": 1.0,
+    "attack_new_proxy_weight": 1.0,
+    "attack_curvature_scale": 1.0,
+    "attack_min_confidence": 0.0,
+    "attack_confidence_weight": 0.0,
+    "attack_l2_weight": 0.0,
+    "noise_upload_root": null,
+    "no_save_checkpoints": true,
+    "eval_max_batches": 0,
+    "retention_milestones": [
+      10
+    ],
+    "checkpoint_milestones": [
+      10
+    ],
+    "dataset": "ISRUC",
+    "model_param": "<utils.config.ModelConfig object at 0x721e7cd4cb60>",
+    "device": "cuda:0"
+  },
+  "initial": {
+    "old_generalization": {
+      "acc": 0.7024550898203593,
+      "mf1": 0.6880332943309935,
+      "n_epochs": 16700
+    },
+    "source_train": {
+      "acc": 0.7500970873786408,
+      "mf1": 0.7321142684197317,
+      "n_epochs": 20600
+    },
+    "validation": {
+      "acc": 0.6414448669201521,
+      "mf1": 0.613332711486469,
+      "n_epochs": 5260
+    }
+  },
+  "stability": {
+    "acc": [
+      0.7024550898203593,
+      0.7035329341317366,
+      0.7101796407185629,
+      0.7102395209580838,
+      0.7125748502994012,
+      0.7114970059880239,
+      0.7125748502994012,
+      0.7144910179640719,
+      0.7131137724550898,
+      0.7164071856287425,
+      0.718622754491018
+    ],
+    "mf1": [
+      0.6880332943309935,
+      0.6847626418295916,
+      0.6931618923229788,
+      0.6932941336008875,
+      0.6957148097401203,
+      0.6952163484064228,
+      0.696035976890366,
+      0.6980792725082164,
+      0.6966514462750507,
+      0.7004456379835304,
+      0.7021603656609813
+    ]
+  },
+  "tasks": [
+    {
+      "task": 1,
+      "subject": 64,
+      "current_before": {
+        "acc": 0.7290697674418605,
+        "mf1": 0.7631163096154122,
+        "n_epochs": 860
+      },
+      "current_after": {
+        "acc": 0.7011627906976744,
+        "mf1": 0.7336234716974014,
+        "n_epochs": 860
+      },
+      "old_generalization_after": {
+        "acc": 0.7035329341317366,
+        "mf1": 0.6847626418295916,
+        "n_epochs": 16700
+      },
+      "pseudo_labels": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.7034883720930233,
+        "mf1_diagnostic_only": 0.7324860376803612,
+        "mean_confidence_diagnostic_only": 0.9385324486119803,
+        "pseudo_class_counts": [
+          139,
+          145,
+          339,
+          159,
+          78
+        ],
+        "n_epochs": 860
+      },
+      "pseudo_labels_on_clean_current": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.7034883720930233,
+        "mf1_diagnostic_only": 0.7324860376803612,
+        "mean_confidence_diagnostic_only": 0.9385324486119803,
+        "pseudo_class_counts": [
+          139,
+          145,
+          339,
+          159,
+          78
+        ],
+        "n_epochs": 860
+      },
+      "guiding_cpc_losses": [
+        53.00223367864435
+      ],
+      "noise": null,
+      "training": {
+        "epochs": [
+          {
+            "epoch": 1,
+            "pseudo_loss": 0.31306445598602295,
+            "regularization_loss": 0.0,
+            "defense_loss": 0.0,
+            "total_loss": 0.31306445598602295
+          }
+        ],
+        "last_pseudo_loss": 0.31306445598602295,
+        "last_regularization_loss": 0.0,
+        "last_defense_loss": 0.0
+      },
+      "importance": {
+        "mean": 0.060891742892093155,
+        "max": 14140.7548828125,
+        "nonzero_fraction": 0.8530796016536589
+      },
+      "defense": null,
+      "attack": null,
+      "attack_label_guiding_cpc_losses": []
+    },
+    {
+      "task": 2,
+      "subject": 89,
+      "current_before": {
+        "acc": 0.778,
+        "mf1": 0.7123987121259393,
+        "n_epochs": 1000
+      },
+      "current_after": {
+        "acc": 0.762,
+        "mf1": 0.7024941299831827,
+        "n_epochs": 1000
+      },
+      "old_generalization_after": {
+        "acc": 0.7101796407185629,
+        "mf1": 0.6931618923229788,
+        "n_epochs": 16700
+      },
+      "pseudo_labels": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.723,
+        "mf1_diagnostic_only": 0.6709159756316024,
+        "mean_confidence_diagnostic_only": 0.9179529872238636,
+        "pseudo_class_counts": [
+          247,
+          107,
+          328,
+          182,
+          136
+        ],
+        "n_epochs": 1000
+      },
+      "pseudo_labels_on_clean_current": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.723,
+        "mf1_diagnostic_only": 0.6709159756316024,
+        "mean_confidence_diagnostic_only": 0.9179529872238636,
+        "pseudo_class_counts": [
+          247,
+          107,
+          328,
+          182,
+          136
+        ],
+        "n_epochs": 1000
+      },
+      "guiding_cpc_losses": [
+        36.8795118698707
+      ],
+      "noise": null,
+      "training": {
+        "epochs": [
+          {
+            "epoch": 1,
+            "pseudo_loss": 0.5617068444307034,
+            "regularization_loss": 0.007160965066689711,
+            "defense_loss": 0.0,
+            "total_loss": 0.5688678140823658
+          }
+        ],
+        "last_pseudo_loss": 0.5617068444307034,
+        "last_regularization_loss": 0.007160965066689711,
+        "last_defense_loss": 0.0
+      },
+      "importance": {
+        "mean": 6.578141918287593,
+        "max": 6745876.0,
+        "nonzero_fraction": 0.8540166971737114
+      },
+      "defense": null,
+      "attack": null,
+      "attack_label_guiding_cpc_losses": []
+    },
+    {
+      "task": 3,
+      "subject": 1,
+      "current_before": {
+        "acc": 0.2058139534883721,
+        "mf1": 0.0899842808174061,
+        "n_epochs": 860
+      },
+      "current_after": {
+        "acc": 0.20348837209302326,
+        "mf1": 0.0965547587441197,
+        "n_epochs": 860
+      },
+      "old_generalization_after": {
+        "acc": 0.7102395209580838,
+        "mf1": 0.6932941336008875,
+        "n_epochs": 16700
+      },
+      "pseudo_labels": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.1569767441860465,
+        "mf1_diagnostic_only": 0.10075754211476666,
+        "mean_confidence_diagnostic_only": 0.7505736184328101,
+        "pseudo_class_counts": [
+          37,
+          11,
+          619,
+          189,
+          4
+        ],
+        "n_epochs": 860
+      },
+      "pseudo_labels_on_clean_current": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.1569767441860465,
+        "mf1_diagnostic_only": 0.10075754211476666,
+        "mean_confidence_diagnostic_only": 0.7505736184328101,
+        "pseudo_class_counts": [
+          37,
+          11,
+          619,
+          189,
+          4
+        ],
+        "n_epochs": 860
+      },
+      "guiding_cpc_losses": [
+        33.57936876470392
+      ],
+      "noise": null,
+      "training": {
+        "epochs": [
+          {
+            "epoch": 1,
+            "pseudo_loss": 1.0029139789667996,
+            "regularization_loss": 0.05192835088713433,
+            "defense_loss": 0.0,
+            "total_loss": 1.054842320355502
+          }
+        ],
+        "last_pseudo_loss": 1.0029139789667996,
+        "last_regularization_loss": 0.05192835088713433,
+        "last_defense_loss": 0.0
+      },
+      "importance": {
+        "mean": 6.739375347655356,
+        "max": 6812804.0,
+        "nonzero_fraction": 0.8547065769646859
+      },
+      "defense": null,
+      "attack": null,
+      "attack_label_guiding_cpc_losses": []
+    },
+    {
+      "task": 4,
+      "subject": 27,
+      "current_before": {
+        "acc": 0.759090909090909,
+        "mf1": 0.6749333818912333,
+        "n_epochs": 880
+      },
+      "current_after": {
+        "acc": 0.7715909090909091,
+        "mf1": 0.6856616223377181,
+        "n_epochs": 880
+      },
+      "old_generalization_after": {
+        "acc": 0.7125748502994012,
+        "mf1": 0.6957148097401203,
+        "n_epochs": 16700
+      },
+      "pseudo_labels": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.8545454545454545,
+        "mf1_diagnostic_only": 0.8123592154608754,
+        "mean_confidence_diagnostic_only": 0.9525269998068159,
+        "pseudo_class_counts": [
+          279,
+          47,
+          265,
+          174,
+          115
+        ],
+        "n_epochs": 880
+      },
+      "pseudo_labels_on_clean_current": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.8545454545454545,
+        "mf1_diagnostic_only": 0.8123592154608754,
+        "mean_confidence_diagnostic_only": 0.9525269998068159,
+        "pseudo_class_counts": [
+          279,
+          47,
+          265,
+          174,
+          115
+        ],
+        "n_epochs": 880
+      },
+      "guiding_cpc_losses": [
+        34.743958473205566
+      ],
+      "noise": null,
+      "training": {
+        "epochs": [
+          {
+            "epoch": 1,
+            "pseudo_loss": 0.5823730067773298,
+            "regularization_loss": 0.03558270446956158,
+            "defense_loss": 0.0,
+            "total_loss": 0.6179557022723284
+          }
+        ],
+        "last_pseudo_loss": 0.5823730067773298,
+        "last_regularization_loss": 0.03558270446956158,
+        "last_defense_loss": 0.0
+      },
+      "importance": {
+        "mean": 7.2626873113507004,
+        "max": 6866020.5,
+        "nonzero_fraction": 0.854784454447106
+      },
+      "defense": null,
+      "attack": null,
+      "attack_label_guiding_cpc_losses": []
+    },
+    {
+      "task": 5,
+      "subject": 60,
+      "current_before": {
+        "acc": 0.6761363636363636,
+        "mf1": 0.5885004427445704,
+        "n_epochs": 880
+      },
+      "current_after": {
+        "acc": 0.6897727272727273,
+        "mf1": 0.597590940815455,
+        "n_epochs": 880
+      },
+      "old_generalization_after": {
+        "acc": 0.7114970059880239,
+        "mf1": 0.6952163484064228,
+        "n_epochs": 16700
+      },
+      "pseudo_labels": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.7329545454545454,
+        "mf1_diagnostic_only": 0.670977193452212,
+        "mean_confidence_diagnostic_only": 0.9478842165321112,
+        "pseudo_class_counts": [
+          129,
+          61,
+          425,
+          196,
+          69
+        ],
+        "n_epochs": 880
+      },
+      "pseudo_labels_on_clean_current": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.7329545454545454,
+        "mf1_diagnostic_only": 0.670977193452212,
+        "mean_confidence_diagnostic_only": 0.9478842165321112,
+        "pseudo_class_counts": [
+          129,
+          61,
+          425,
+          196,
+          69
+        ],
+        "n_epochs": 880
+      },
+      "guiding_cpc_losses": [
+        37.51482599431818
+      ],
+      "noise": null,
+      "training": {
+        "epochs": [
+          {
+            "epoch": 1,
+            "pseudo_loss": 0.3852239413694902,
+            "regularization_loss": 0.03954656066542322,
+            "defense_loss": 0.0,
+            "total_loss": 0.42477050152691925
+          }
+        ],
+        "last_pseudo_loss": 0.3852239413694902,
+        "last_regularization_loss": 0.03954656066542322,
+        "last_defense_loss": 0.0
+      },
+      "importance": {
+        "mean": 8.15445347553591,
+        "max": 6874147.5,
+        "nonzero_fraction": 0.8548564458407387
+      },
+      "defense": null,
+      "attack": null,
+      "attack_label_guiding_cpc_losses": []
+    },
+    {
+      "task": 6,
+      "subject": 5,
+      "current_before": {
+        "acc": 0.3047619047619048,
+        "mf1": 0.11175476473942754,
+        "n_epochs": 840
+      },
+      "current_after": {
+        "acc": 0.30238095238095236,
+        "mf1": 0.12019416765254723,
+        "n_epochs": 840
+      },
+      "old_generalization_after": {
+        "acc": 0.7125748502994012,
+        "mf1": 0.696035976890366,
+        "n_epochs": 16700
+      },
+      "pseudo_labels": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.2130952380952381,
+        "mf1_diagnostic_only": 0.1577694663066841,
+        "mean_confidence_diagnostic_only": 0.7157737249419802,
+        "pseudo_class_counts": [
+          74,
+          3,
+          350,
+          297,
+          116
+        ],
+        "n_epochs": 840
+      },
+      "pseudo_labels_on_clean_current": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.2130952380952381,
+        "mf1_diagnostic_only": 0.1577694663066841,
+        "mean_confidence_diagnostic_only": 0.7157737249419802,
+        "pseudo_class_counts": [
+          74,
+          3,
+          350,
+          297,
+          116
+        ],
+        "n_epochs": 840
+      },
+      "guiding_cpc_losses": [
+        32.264685197310015
+      ],
+      "noise": null,
+      "training": {
+        "epochs": [
+          {
+            "epoch": 1,
+            "pseudo_loss": 1.6199417060071772,
+            "regularization_loss": 0.044279964471405205,
+            "defense_loss": 0.0,
+            "total_loss": 1.6642216444015503
+          }
+        ],
+        "last_pseudo_loss": 1.6199417060071772,
+        "last_regularization_loss": 0.044279964471405205,
+        "last_defense_loss": 0.0
+      },
+      "importance": {
+        "mean": 9.310203798865079,
+        "max": 7815211.0,
+        "nonzero_fraction": 0.854877424464879
+      },
+      "defense": null,
+      "attack": null,
+      "attack_label_guiding_cpc_losses": []
+    },
+    {
+      "task": 7,
+      "subject": 52,
+      "current_before": {
+        "acc": 0.8011363636363636,
+        "mf1": 0.7510830926731576,
+        "n_epochs": 880
+      },
+      "current_after": {
+        "acc": 0.8079545454545455,
+        "mf1": 0.7625533504644366,
+        "n_epochs": 880
+      },
+      "old_generalization_after": {
+        "acc": 0.7144910179640719,
+        "mf1": 0.6980792725082164,
+        "n_epochs": 16700
+      },
+      "pseudo_labels": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.8272727272727273,
+        "mf1_diagnostic_only": 0.7903114648858054,
+        "mean_confidence_diagnostic_only": 0.9425522638992829,
+        "pseudo_class_counts": [
+          125,
+          91,
+          341,
+          222,
+          101
+        ],
+        "n_epochs": 880
+      },
+      "pseudo_labels_on_clean_current": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.8272727272727273,
+        "mf1_diagnostic_only": 0.7903114648858054,
+        "mean_confidence_diagnostic_only": 0.9425522638992829,
+        "pseudo_class_counts": [
+          125,
+          91,
+          341,
+          222,
+          101
+        ],
+        "n_epochs": 880
+      },
+      "guiding_cpc_losses": [
+        47.70414031635631
+      ],
+      "noise": null,
+      "training": {
+        "epochs": [
+          {
+            "epoch": 1,
+            "pseudo_loss": 0.20162410187450322,
+            "regularization_loss": 0.05245705253698609,
+            "defense_loss": 0.0,
+            "total_loss": 0.2540811537341638
+          }
+        ],
+        "last_pseudo_loss": 0.20162410187450322,
+        "last_regularization_loss": 0.05245705253698609,
+        "last_defense_loss": 0.0
+      },
+      "importance": {
+        "mean": 9.510696960019937,
+        "max": 7951315.5,
+        "nonzero_fraction": 0.8549239094737655
+      },
+      "defense": null,
+      "attack": null,
+      "attack_label_guiding_cpc_losses": []
+    },
+    {
+      "task": 8,
+      "subject": 42,
+      "current_before": {
+        "acc": 0.7858974358974359,
+        "mf1": 0.6059686553106487,
+        "n_epochs": 780
+      },
+      "current_after": {
+        "acc": 0.7858974358974359,
+        "mf1": 0.6104341721695994,
+        "n_epochs": 780
+      },
+      "old_generalization_after": {
+        "acc": 0.7131137724550898,
+        "mf1": 0.6966514462750507,
+        "n_epochs": 16700
+      },
+      "pseudo_labels": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.7987179487179488,
+        "mf1_diagnostic_only": 0.7094271100118232,
+        "mean_confidence_diagnostic_only": 0.9098035991573945,
+        "pseudo_class_counts": [
+          374,
+          60,
+          283,
+          31,
+          32
+        ],
+        "n_epochs": 780
+      },
+      "pseudo_labels_on_clean_current": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.7987179487179488,
+        "mf1_diagnostic_only": 0.7094271100118232,
+        "mean_confidence_diagnostic_only": 0.9098035991573945,
+        "pseudo_class_counts": [
+          374,
+          60,
+          283,
+          31,
+          32
+        ],
+        "n_epochs": 780
+      },
+      "guiding_cpc_losses": [
+        44.413484287261966
+      ],
+      "noise": null,
+      "training": {
+        "epochs": [
+          {
+            "epoch": 1,
+            "pseudo_loss": 0.3171327017247677,
+            "regularization_loss": 0.07271467968821525,
+            "defense_loss": 0.0,
+            "total_loss": 0.38984737992286683
+          }
+        ],
+        "last_pseudo_loss": 0.3171327017247677,
+        "last_regularization_loss": 0.07271467968821525,
+        "last_defense_loss": 0.0
+      },
+      "importance": {
+        "mean": 10.001378946674274,
+        "max": 8279887.0,
+        "nonzero_fraction": 0.8549337196217448
+      },
+      "defense": null,
+      "attack": null,
+      "attack_label_guiding_cpc_losses": []
+    },
+    {
+      "task": 9,
+      "subject": 80,
+      "current_before": {
+        "acc": 0.686046511627907,
+        "mf1": 0.6330245627150941,
+        "n_epochs": 860
+      },
+      "current_after": {
+        "acc": 0.6918604651162791,
+        "mf1": 0.6424665577605138,
+        "n_epochs": 860
+      },
+      "old_generalization_after": {
+        "acc": 0.7164071856287425,
+        "mf1": 0.7004456379835304,
+        "n_epochs": 16700
+      },
+      "pseudo_labels": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.7430232558139535,
+        "mf1_diagnostic_only": 0.7135555651401435,
+        "mean_confidence_diagnostic_only": 0.9320748820207839,
+        "pseudo_class_counts": [
+          71,
+          108,
+          439,
+          164,
+          78
+        ],
+        "n_epochs": 860
+      },
+      "pseudo_labels_on_clean_current": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.7430232558139535,
+        "mf1_diagnostic_only": 0.7135555651401435,
+        "mean_confidence_diagnostic_only": 0.9320748820207839,
+        "pseudo_class_counts": [
+          71,
+          108,
+          439,
+          164,
+          78
+        ],
+        "n_epochs": 860
+      },
+      "guiding_cpc_losses": [
+        49.16022491455078
+      ],
+      "noise": null,
+      "training": {
+        "epochs": [
+          {
+            "epoch": 1,
+            "pseudo_loss": 0.44169154221361334,
+            "regularization_loss": 0.08711889826438644,
+            "defense_loss": 0.0,
+            "total_loss": 0.528810438784686
+          }
+        ],
+        "last_pseudo_loss": 0.44169154221361334,
+        "last_regularization_loss": 0.08711889826438644,
+        "last_defense_loss": 0.0
+      },
+      "importance": {
+        "mean": 10.720291058555473,
+        "max": 8479525.0,
+        "nonzero_fraction": 0.8549447371725524
+      },
+      "defense": null,
+      "attack": null,
+      "attack_label_guiding_cpc_losses": []
+    },
+    {
+      "task": 10,
+      "subject": 26,
+      "current_before": {
+        "acc": 0.19615384615384615,
+        "mf1": 0.0962039203786159,
+        "n_epochs": 1040
+      },
+      "current_after": {
+        "acc": 0.19615384615384615,
+        "mf1": 0.09594210390281725,
+        "n_epochs": 1040
+      },
+      "old_generalization_after": {
+        "acc": 0.718622754491018,
+        "mf1": 0.7021603656609813,
+        "n_epochs": 16700
+      },
+      "pseudo_labels": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.3326923076923077,
+        "mf1_diagnostic_only": 0.2610064295526096,
+        "mean_confidence_diagnostic_only": 0.6550358980607528,
+        "pseudo_class_counts": [
+          225,
+          0,
+          564,
+          236,
+          15
+        ],
+        "n_epochs": 1040
+      },
+      "pseudo_labels_on_clean_current": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.3326923076923077,
+        "mf1_diagnostic_only": 0.2610064295526096,
+        "mean_confidence_diagnostic_only": 0.6550358980607528,
+        "pseudo_class_counts": [
+          225,
+          0,
+          564,
+          236,
+          15
+        ],
+        "n_epochs": 1040
+      },
+      "guiding_cpc_losses": [
+        37.86616765535795
+      ],
+      "noise": null,
+      "training": {
+        "epochs": [
+          {
+            "epoch": 1,
+            "pseudo_loss": 1.2538994413155775,
+            "regularization_loss": 0.10899613224543057,
+            "defense_loss": 0.0,
+            "total_loss": 1.3628955804384673
+          }
+        ],
+        "last_pseudo_loss": 1.2538994413155775,
+        "last_regularization_loss": 0.10899613224543057,
+        "last_defense_loss": 0.0
+      },
+      "importance": {
+        "mean": 11.355035711343232,
+        "max": 9350486.0,
+        "nonzero_fraction": 0.8549447371725524
+      },
+      "defense": null,
+      "attack": null,
+      "attack_label_guiding_cpc_losses": []
+    }
+  ],
+  "retention_snapshots": {
+    "10": {
+      "64": {
+        "acc": 0.7255813953488373,
+        "mf1": 0.7600337084757045,
+        "n_epochs": 860
+      },
+      "89": {
+        "acc": 0.77,
+        "mf1": 0.7066752820890583,
+        "n_epochs": 1000
+      },
+      "1": {
+        "acc": 0.20465116279069767,
+        "mf1": 0.10357142857142856,
+        "n_epochs": 860
+      },
+      "27": {
+        "acc": 0.7727272727272727,
+        "mf1": 0.6903563695238601,
+        "n_epochs": 880
+      },
+      "60": {
+        "acc": 0.6806818181818182,
+        "mf1": 0.591899350409167,
+        "n_epochs": 880
+      },
+      "5": {
+        "acc": 0.3130952380952381,
+        "mf1": 0.14431724427460518,
+        "n_epochs": 840
+      },
+      "52": {
+        "acc": 0.8125,
+        "mf1": 0.7654340133263255,
+        "n_epochs": 880
+      },
+      "42": {
+        "acc": 0.7948717948717948,
+        "mf1": 0.6423775550327769,
+        "n_epochs": 780
+      },
+      "80": {
+        "acc": 0.6918604651162791,
+        "mf1": 0.6424665577605138,
+        "n_epochs": 860
+      },
+      "26": {
+        "acc": 0.19615384615384615,
+        "mf1": 0.09594210390281725,
+        "n_epochs": 1040
+      }
+    }
+  },
+  "final": {
+    "old_generalization": {
+      "acc": 0.718622754491018,
+      "mf1": 0.7021603656609813,
+      "n_epochs": 16700
+    },
+    "source_train": {
+      "acc": 0.7575242718446602,
+      "mf1": 0.7338809561939141,
+      "n_epochs": 20600
+    },
+    "validation": {
+      "acc": 0.6492395437262357,
+      "mf1": 0.6160456575012822,
+      "n_epochs": 5260
+    },
+    "seen_subjects": {
+      "64": {
+        "acc": 0.7255813953488373,
+        "mf1": 0.7600337084757045,
+        "n_epochs": 860
+      },
+      "89": {
+        "acc": 0.77,
+        "mf1": 0.7066752820890583,
+        "n_epochs": 1000
+      },
+      "1": {
+        "acc": 0.20465116279069767,
+        "mf1": 0.10357142857142856,
+        "n_epochs": 860
+      },
+      "27": {
+        "acc": 0.7727272727272727,
+        "mf1": 0.6903563695238601,
+        "n_epochs": 880
+      },
+      "60": {
+        "acc": 0.6806818181818182,
+        "mf1": 0.591899350409167,
+        "n_epochs": 880
+      },
+      "5": {
+        "acc": 0.3130952380952381,
+        "mf1": 0.14431724427460518,
+        "n_epochs": 840
+      },
+      "52": {
+        "acc": 0.8125,
+        "mf1": 0.7654340133263255,
+        "n_epochs": 880
+      },
+      "42": {
+        "acc": 0.7948717948717948,
+        "mf1": 0.6423775550327769,
+        "n_epochs": 780
+      },
+      "80": {
+        "acc": 0.6918604651162791,
+        "mf1": 0.6424665577605138,
+        "n_epochs": 860
+      },
+      "26": {
+        "acc": 0.19615384615384615,
+        "mf1": 0.09594210390281725,
+        "n_epochs": 1040
+      }
+    },
+    "initial_model_seen_subjects": {
+      "64": {
+        "acc": 0.7290697674418605,
+        "mf1": 0.7631163096154122,
+        "n_epochs": 860
+      },
+      "89": {
+        "acc": 0.801,
+        "mf1": 0.7326458009878241,
+        "n_epochs": 1000
+      },
+      "1": {
+        "acc": 0.2,
+        "mf1": 0.09178451178451179,
+        "n_epochs": 860
+      },
+      "27": {
+        "acc": 0.7170454545454545,
+        "mf1": 0.6478294628169081,
+        "n_epochs": 880
+      },
+      "60": {
+        "acc": 0.7068181818181818,
+        "mf1": 0.6198544430288646,
+        "n_epochs": 880
+      },
+      "5": {
+        "acc": 0.3107142857142857,
+        "mf1": 0.11302397770724026,
+        "n_epochs": 840
+      },
+      "52": {
+        "acc": 0.7977272727272727,
+        "mf1": 0.7618650459366945,
+        "n_epochs": 880
+      },
+      "42": {
+        "acc": 0.7897435897435897,
+        "mf1": 0.5786981067581205,
+        "n_epochs": 780
+      },
+      "80": {
+        "acc": 0.6744186046511628,
+        "mf1": 0.6381494707872878,
+        "n_epochs": 860
+      },
+      "26": {
+        "acc": 0.19326923076923078,
+        "mf1": 0.07782986135697392,
+        "n_epochs": 1040
+      }
+    }
+  },
+  "summary": {
+    "final_old_acc": 0.718622754491018,
+    "final_old_mf1": 0.7021603656609813,
+    "old_aaa": 0.7114262384322264,
+    "old_aaf1": 0.6948687108681035,
+    "old_fr": 0.02301594067001958,
+    "mean_current_before_acc": 0.5922107055734963,
+    "mean_current_after_acc": 0.5912262044157394,
+    "mean_current_acc_gain": -0.0009845011577569673,
+    "mean_current_before_mf1": 0.5026968123011505,
+    "mean_current_after_mf1": 0.5047515275527792,
+    "mean_current_mf1_gain": 0.002054715251628603,
+    "final_seen_acc": 0.5962122993285784,
+    "final_seen_mf1": 0.5143073613366258,
+    "bwt_acc": 0.0049860949128390925,
+    "bwt_mf1": 0.009555833783846593,
+    "mean_pseudo_acc_diagnostic_only": 0.6085766593871245,
+    "mean_pseudo_mf1_diagnostic_only": 0.5619566000236884,
+    "pseudo_label_coverage": 1.0
+  }
+}

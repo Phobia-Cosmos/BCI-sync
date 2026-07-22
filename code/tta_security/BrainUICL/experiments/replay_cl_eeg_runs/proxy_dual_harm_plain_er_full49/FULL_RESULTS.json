@@ -1,0 +1,190 @@
+{
+  "run_root": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/replay_cl_eeg_runs/proxy_dual_harm_plain_er_full49",
+  "validation": {
+    "same_attack_tasks": true,
+    "attack_task_count": 25,
+    "volume_matched": true,
+    "reservoir_candidates_matched": true,
+    "replay_draws_matched": true,
+    "input_budget_valid": true,
+    "true_target_labels_used_for_training": false,
+    "same_49_task_split": true
+  },
+  "summaries": {
+    "clean": {
+      "final_old_acc": 0.6718562874251497,
+      "final_old_mf1": 0.6475125584096658,
+      "old_aaa": 0.6971245508982037,
+      "old_aaf1": 0.6759291313513813,
+      "old_fr": 0.04355979882362976,
+      "mean_current_before_acc": 0.6483398427796185,
+      "mean_current_after_acc": 0.6570527840744522,
+      "mean_current_acc_gain": 0.00871294129483377,
+      "mean_current_before_mf1": 0.5654446793350214,
+      "mean_current_after_mf1": 0.5799716068373344,
+      "mean_current_mf1_gain": 0.014526927502313105,
+      "final_seen_acc": 0.6269019139006823,
+      "final_seen_mf1": 0.546013618887634,
+      "bwt_acc": -0.03015087017377015,
+      "bwt_mf1": -0.03395798794970047,
+      "mean_pseudo_acc_diagnostic_only": 0.655703013897075,
+      "mean_pseudo_mf1_diagnostic_only": 0.5917517744038063,
+      "pseudo_label_coverage": 1.0,
+      "final_memory_size": 1000,
+      "final_memory_poisoned_fraction": 0.0,
+      "replay_poisoned_fraction": 0.0,
+      "total_replay_draws": 21050
+    },
+    "repeat_clean": {
+      "final_old_acc": 0.6579640718562875,
+      "final_old_mf1": 0.6405049632117141,
+      "old_aaa": 0.6964538922155689,
+      "old_aaf1": 0.6767001535416294,
+      "old_fr": 0.06333645895490579,
+      "mean_current_before_acc": 0.6412910919696697,
+      "mean_current_after_acc": 0.6468220791805951,
+      "mean_current_acc_gain": 0.005530987210925368,
+      "mean_current_before_mf1": 0.5637792967285532,
+      "mean_current_after_mf1": 0.5720825524495226,
+      "mean_current_mf1_gain": 0.008303255720969288,
+      "final_seen_acc": 0.6237894556388295,
+      "final_seen_mf1": 0.5599346421973416,
+      "bwt_acc": -0.023032623541765586,
+      "bwt_mf1": -0.01214791025218101,
+      "mean_pseudo_acc_diagnostic_only": 0.6527754845337329,
+      "mean_pseudo_mf1_diagnostic_only": 0.5916014577381619,
+      "pseudo_label_coverage": 1.0,
+      "final_memory_size": 1000,
+      "final_memory_poisoned_fraction": 0.0,
+      "replay_poisoned_fraction": 0.0,
+      "total_replay_draws": 51920
+    },
+    "attack_shared": {
+      "final_old_acc": 0.6294610778443114,
+      "final_old_mf1": 0.6034712382754618,
+      "old_aaa": 0.6503221556886227,
+      "old_aaf1": 0.6233188980211206,
+      "old_fr": 0.10391270991390338,
+      "mean_current_before_acc": 0.5856614906489205,
+      "mean_current_after_acc": 0.5985336446709546,
+      "mean_current_acc_gain": 0.012872154022034238,
+      "mean_current_before_mf1": 0.4985075889007847,
+      "mean_current_after_mf1": 0.5153735980558495,
+      "mean_current_mf1_gain": 0.016866009155064744,
+      "final_seen_acc": 0.5760346550766389,
+      "final_seen_mf1": 0.5021418662726084,
+      "bwt_acc": -0.022498989594315757,
+      "bwt_mf1": -0.013231731783241057,
+      "mean_pseudo_acc_diagnostic_only": 0.43766622803620225,
+      "mean_pseudo_mf1_diagnostic_only": 0.38976960723123893,
+      "pseudo_label_coverage": 1.0,
+      "final_memory_size": 1000,
+      "final_memory_poisoned_fraction": 0.803,
+      "replay_poisoned_fraction": 0.8021571648690293,
+      "total_replay_draws": 51920
+    }
+  },
+  "deltas": {
+    "repeat_clean_minus_clean": {
+      "final_old_acc": -0.01389221556886222,
+      "final_old_mf1": -0.007007595197951688,
+      "final_seen_acc": -0.003112458261852802,
+      "final_seen_mf1": 0.01392102330970757,
+      "bwt_acc": 0.007118246632004565,
+      "bwt_mf1": 0.021810077697519463
+    },
+    "attack_shared_minus_clean": {
+      "final_old_acc": -0.04239520958083831,
+      "final_old_mf1": -0.04404132013420403,
+      "final_seen_acc": -0.050867258824043415,
+      "final_seen_mf1": -0.04387175261502563,
+      "bwt_acc": 0.007651880579454394,
+      "bwt_mf1": 0.020726256166459414
+    },
+    "attack_minus_repeat_clean": {
+      "final_old_acc": -0.02850299401197609,
+      "final_old_mf1": -0.037033724936252344,
+      "final_seen_acc": -0.047754800562190614,
+      "final_seen_mf1": -0.0577927759247332,
+      "bwt_acc": 0.000533633947449829,
+      "bwt_mf1": -0.001083821531060047
+    }
+  },
+  "memory_purity_posthoc": {
+    "clean": {
+      "records": 1000,
+      "epoch_labels": 20000,
+      "purity": 0.65125,
+      "poisoned_purity": 0.0,
+      "clean_purity": 0.65125,
+      "poisoned_epoch_labels": 0
+    },
+    "repeat_clean": {
+      "records": 1000,
+      "epoch_labels": 20000,
+      "purity": 0.6832,
+      "poisoned_purity": 0.0,
+      "clean_purity": 0.6832,
+      "poisoned_epoch_labels": 0
+    },
+    "attack_shared": {
+      "records": 1000,
+      "epoch_labels": 20000,
+      "purity": 0.34,
+      "poisoned_purity": 0.2772727272727273,
+      "clean_purity": 0.5956852791878172,
+      "poisoned_epoch_labels": 16060
+    }
+  },
+  "replay_stats": {
+    "clean": {
+      "capacity": 1000,
+      "size": 1000,
+      "total_seen": 2148,
+      "unique_paths": 1000,
+      "poisoned_records": 0,
+      "poisoned_fraction": 0.0,
+      "repeated_upload_records": 0,
+      "repeated_upload_fraction": 0.0,
+      "total_replay_draws": 21050,
+      "poisoned_replay_draws": 0,
+      "poisoned_replay_fraction": 0.0
+    },
+    "repeat_clean": {
+      "capacity": 1000,
+      "size": 1000,
+      "total_seen": 5364,
+      "unique_paths": 796,
+      "poisoned_records": 0,
+      "poisoned_fraction": 0.0,
+      "repeated_upload_records": 602,
+      "repeated_upload_fraction": 0.602,
+      "total_replay_draws": 51920,
+      "poisoned_replay_draws": 0,
+      "poisoned_replay_fraction": 0.0
+    },
+    "attack_shared": {
+      "capacity": 1000,
+      "size": 1000,
+      "total_seen": 5364,
+      "unique_paths": 796,
+      "poisoned_records": 803,
+      "poisoned_fraction": 0.803,
+      "repeated_upload_records": 602,
+      "repeated_upload_fraction": 0.602,
+      "total_replay_draws": 51920,
+      "poisoned_replay_draws": 41648,
+      "poisoned_replay_fraction": 0.8021571648690293
+    }
+  },
+  "attack_diagnostics": {
+    "tasks": 25,
+    "attacked_stream_pseudo_acc": 0.2832205198307271,
+    "clean_current_pseudo_acc": 0.5885394255068367,
+    "pseudo_label_preservation": 0.24091709191218785,
+    "guiding_confidence": 0.8555662669751548,
+    "relative_l2_eog": 0.19991843448310334,
+    "relative_l2_eeg": 0.19996607548725223
+  },
+  "effective_after_volume_control": true
+}

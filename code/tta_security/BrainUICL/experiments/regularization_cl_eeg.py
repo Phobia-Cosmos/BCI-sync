@@ -42,6 +42,7 @@ from model.icml2026_cl_defenses import (  # noqa: E402
 )
 from regularization_cl_attacks import (  # noqa: E402
     brainwash_one_step_batch,
+    materialize_batched_proxy_dual_harm_subject,
     materialize_poisoned_subject,
     pacol_gradient_matching_batch,
 )
@@ -68,7 +69,14 @@ from utils.util import compute_aaf1, compute_aaa, compute_forget, fix_randomness
 
 
 METHODS = ("finetune", "ewc", "online_ewc", "si", "mas")
-ATTACK_MODES = ("none", "pacol", "brainwash_reckless", "brainwash_cautious")
+ATTACK_MODES = (
+    "none",
+    "benign_repeat",
+    "pacol",
+    "brainwash_reckless",
+    "brainwash_cautious",
+    "proxy_dual_harm",
+)
 DEFENSE_MODES = ("none", "t2t", "robust_feature")
 
 
@@ -619,6 +627,19 @@ def save_progress(method_dir: Path, performance: dict) -> None:
     )
 
 
+def delete_generated_inputs(paths: list[Path], generated_root: Path) -> int:
+    root = generated_root.resolve()
+    deleted = 0
+    for path in paths:
+        resolved = path.resolve()
+        if not resolved.is_relative_to(root):
+            raise ValueError(f"Refusing to delete input outside {root}: {resolved}")
+        if resolved.is_file():
+            resolved.unlink()
+            deleted += 1
+    return deleted
+
+
 def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
     fix_randomness(args.seed)
     method_dir = args.output_root / method
@@ -791,6 +812,7 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
         attack_diagnostics = None
         noise_diagnostics = None
         attack_label_cpc_losses: list[float] = []
+        generated_poisoned_paths: list[Path] = []
         if args.noise_upload_root is not None:
             training_paths, noise_diagnostics = external_proxy_upload_paths(
                 args.noise_upload_root,
@@ -813,38 +835,96 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
                 num_workers=args.num_worker,
             )
         elif task_index in args.attack_tasks:
-            clean_label_loader = make_subject_loader(args, subject, shuffle=True)
-            label_blocks, attack_label_cpc_losses = adapt_guiding_model(
-                student_blocks,
-                clean_label_loader,
-                args,
-                task_index,
-                subject,
-            )
-            if args.attack_mode == "pacol":
-                attack_function = pacol_gradient_matching_batch
-            elif args.attack_mode in {"brainwash_reckless", "brainwash_cautious"}:
-                attack_function = brainwash_one_step_batch
+            if args.attack_mode == "benign_repeat":
+                poisoned_data_paths = list(clean_paths[0])
+                attack_diagnostics = {
+                    "mode": "benign_repeat",
+                    "task": int(task_index),
+                    "subject": int(subject),
+                    "poisoned_sequences": 0,
+                    "total_sequences": len(clean_paths[0]),
+                    "poison_fraction": 0.0,
+                    "poison_indices": list(range(len(clean_paths[0]))),
+                    "generated_inputs": False,
+                    "learner_replay": False,
+                    "diagnostics_mean": {
+                        "relative_l2_eog": 0.0,
+                        "relative_l2_eeg": 0.0,
+                        "pseudo_label_preservation": 1.0,
+                    },
+                }
             else:
-                raise ValueError(
-                    f"Attack tasks were supplied for unsupported mode {args.attack_mode}"
+                clean_label_loader = make_subject_loader(args, subject, shuffle=True)
+                label_blocks, attack_label_cpc_losses = adapt_guiding_model(
+                    student_blocks,
+                    clean_label_loader,
+                    args,
+                    task_index,
+                    subject,
                 )
-            poisoned_data_paths, attack_diagnostics = materialize_poisoned_subject(
-                attack=attack_function,
-                student_blocks=student_blocks,
-                label_blocks=label_blocks,
-                current_data_paths=clean_paths[0],
-                reference_data_paths=attack_reference_data_paths,
-                output_dir=(
-                    method_dir
-                    / "poisoned_inputs"
-                    / f"task_{task_index}_subject_{subject}"
-                ),
-                task_index=task_index,
-                subject=subject,
-                args=args,
-            )
-            training_paths = (poisoned_data_paths, clean_paths[1])
+            if args.attack_mode == "proxy_dual_harm":
+                poisoned_data_paths, attack_diagnostics = (
+                    materialize_batched_proxy_dual_harm_subject(
+                        student_blocks=student_blocks,
+                        label_blocks=label_blocks,
+                        strategy=strategy,
+                        current_data_paths=clean_paths[0],
+                        reference_data_paths=attack_reference_data_paths,
+                        output_dir=(
+                            method_dir
+                            / "poisoned_inputs"
+                            / f"task_{task_index}_subject_{subject}"
+                        ),
+                        task_index=task_index,
+                        subject=subject,
+                        args=args,
+                    )
+                )
+            elif args.attack_mode != "benign_repeat":
+                if args.attack_mode == "pacol":
+                    attack_function = pacol_gradient_matching_batch
+                elif args.attack_mode in {"brainwash_reckless", "brainwash_cautious"}:
+                    attack_function = brainwash_one_step_batch
+                else:
+                    raise ValueError(
+                        f"Attack tasks were supplied for unsupported mode {args.attack_mode}"
+                    )
+                poisoned_data_paths, attack_diagnostics = materialize_poisoned_subject(
+                    attack=attack_function,
+                    student_blocks=student_blocks,
+                    label_blocks=label_blocks,
+                    current_data_paths=clean_paths[0],
+                    reference_data_paths=attack_reference_data_paths,
+                    output_dir=(
+                        method_dir
+                        / "poisoned_inputs"
+                        / f"task_{task_index}_subject_{subject}"
+                    ),
+                    task_index=task_index,
+                    subject=subject,
+                    args=args,
+                )
+            training_data_paths = list(poisoned_data_paths)
+            training_label_paths = list(clean_paths[1])
+            if attack_diagnostics.get("generated_inputs", True):
+                generated_poisoned_paths = [
+                    poisoned_data_paths[index]
+                    for index in attack_diagnostics["poison_indices"]
+                ]
+            injected_proxy_sequences = 0
+            if args.attack_proxy_repeat > 0 and attack_diagnostics is not None:
+                repeat_indices = attack_diagnostics["poison_indices"]
+                proxy_paths = [poisoned_data_paths[index] for index in repeat_indices]
+                proxy_labels = [clean_paths[1][index] for index in repeat_indices]
+                training_data_paths.extend(proxy_paths * args.attack_proxy_repeat)
+                training_label_paths.extend(proxy_labels * args.attack_proxy_repeat)
+                injected_proxy_sequences = len(proxy_paths) * args.attack_proxy_repeat
+                attack_diagnostics["injected_proxy_sequences"] = injected_proxy_sequences
+                attack_diagnostics["training_sequences_after_injection"] = len(
+                    training_data_paths
+                )
+                attack_diagnostics["proxy_repeat"] = args.attack_proxy_repeat
+            training_paths = (training_data_paths, training_label_paths)
             # Attack generation has extra model/data passes. Restore the task
             # seed so the formal guide/student run remains method-comparable.
             fix_randomness(args.seed + 1000 * task_index)
@@ -1035,6 +1115,18 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
         performance["stability"]["acc"].append(old["acc"])
         performance["stability"]["mf1"].append(old["mf1"])
         seen_subjects.append(int(subject))
+
+        if attack_diagnostics is not None:
+            attack_diagnostics["materialized_files_retained"] = not (
+                args.delete_poisoned_inputs_after_task
+            )
+        if args.delete_poisoned_inputs_after_task:
+            deleted_files = delete_generated_inputs(
+                generated_poisoned_paths,
+                method_dir / "poisoned_inputs",
+            )
+            if attack_diagnostics is not None:
+                attack_diagnostics["materialized_files_deleted"] = deleted_files
 
         task_row = {
             "task": task_index,
@@ -1274,12 +1366,51 @@ def parse_args():
     parser.add_argument("--attack-reference-batch", type=int, default=1)
     parser.add_argument("--attack-random-start", action="store_true")
     parser.add_argument(
+        "--attack-generation-batch",
+        type=int,
+        default=1,
+        help="Sequences jointly optimized by proxy_dual_harm per white-box step.",
+    )
+    parser.add_argument(
+        "--attack-max-relative-l2",
+        type=float,
+        default=0.0,
+        help="Optional per-sequence relative L2 cap in addition to attack-eps-scale.",
+    )
+    parser.add_argument("--attack-target-weight", type=float, default=1.0)
+    parser.add_argument("--attack-conflict-weight", type=float, default=1.0)
+    parser.add_argument("--attack-gradient-norm-weight", type=float, default=0.1)
+    parser.add_argument("--attack-virtual-old-weight", type=float, default=1.0)
+    parser.add_argument("--attack-virtual-new-weight", type=float, default=1.0)
+    parser.add_argument("--attack-new-proxy-weight", type=float, default=1.0)
+    parser.add_argument("--attack-curvature-scale", type=float, default=1.0)
+    parser.add_argument("--attack-min-confidence", type=float, default=0.0)
+    parser.add_argument("--attack-confidence-weight", type=float, default=0.0)
+    parser.add_argument("--attack-l2-weight", type=float, default=0.0)
+    parser.add_argument(
+        "--attack-proxy-repeat",
+        type=int,
+        default=0,
+        help=(
+            "Extra data-only upload copies per poisoned sequence. This changes "
+            "the incoming stream length but never learner labels or losses."
+        ),
+    )
+    parser.add_argument(
         "--noise-upload-root",
         type=Path,
         default=None,
         help="Read a fixed per-task proxy-noise stream while keeping clean labels.",
     )
     parser.add_argument("--no-save-checkpoints", action="store_true")
+    parser.add_argument(
+        "--delete-poisoned-inputs-after-task",
+        action="store_true",
+        help=(
+            "Delete only runner-generated poisoned .npy files after the task's "
+            "training, importance estimation, and evaluation are complete."
+        ),
+    )
     parser.add_argument("--eval-max-batches", type=int, default=0)
     parser.add_argument("--retention-milestones", type=str, default="10,25,49")
     parser.add_argument("--checkpoint-milestones", type=str, default="0,1,10,25,49")
@@ -1349,6 +1480,16 @@ def main():
         raise ValueError("--attack-steps must be positive")
     if args.attack_reference_batch < 1:
         raise ValueError("--attack-reference-batch must be positive")
+    if args.attack_generation_batch < 1:
+        raise ValueError("--attack-generation-batch must be positive")
+    if args.attack_max_relative_l2 < 0:
+        raise ValueError("--attack-max-relative-l2 cannot be negative")
+    if args.attack_proxy_repeat < 0:
+        raise ValueError("--attack-proxy-repeat cannot be negative")
+    if not 0.0 <= args.attack_min_confidence <= 1.0:
+        raise ValueError("--attack-min-confidence must be in [0, 1]")
+    if args.attack_mode == "proxy_dual_harm" and args.attack_param_scope != "classifier":
+        raise ValueError("proxy_dual_harm currently requires --attack-param-scope classifier")
     (args.output_root / "split.json").write_text(
         json.dumps(split, indent=2, ensure_ascii=False)
     )

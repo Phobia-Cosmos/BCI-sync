@@ -1,0 +1,26 @@
+{
+  "plain_er": {
+    "final_old_acc": 0.711437125748503,
+    "final_old_mf1": 0.6965289292752747,
+    "old_aaa": 0.7060479041916169,
+    "old_aaf1": 0.6912793949429027,
+    "old_fr": 0.012786633705566468,
+    "mean_current_before_acc": 0.7600348837209303,
+    "mean_current_after_acc": 0.7536395348837209,
+    "mean_current_acc_gain": -0.006395348837209325,
+    "mean_current_before_mf1": 0.74402172430645,
+    "mean_current_after_mf1": 0.7370555318351193,
+    "mean_current_mf1_gain": -0.006966192471330568,
+    "final_seen_acc": 0.756546511627907,
+    "final_seen_mf1": 0.7398226246901272,
+    "bwt_acc": 0.0029069767441860517,
+    "bwt_mf1": 0.002767092855007758,
+    "mean_pseudo_acc_diagnostic_only": 0.7567209302325582,
+    "mean_pseudo_mf1_diagnostic_only": 0.740568979472354,
+    "pseudo_label_coverage": 1.0,
+    "final_memory_size": 64,
+    "final_memory_poisoned_fraction": 0.0,
+    "replay_poisoned_fraction": 0.0,
+    "total_replay_draws": 50
+  }
+}

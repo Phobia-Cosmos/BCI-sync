@@ -49,6 +49,40 @@ def _attack_parameters(blocks, scope: str) -> list[nn.Parameter]:
     return [parameter for block in selected for parameter in block.parameters()]
 
 
+def _all_named_parameters(blocks) -> list[tuple[str, nn.Parameter]]:
+    block_names = ("feature_extractor", "feature_encoder", "sleep_classifier")
+    parameters: list[tuple[str, nn.Parameter]] = []
+    for block_name, block in zip(block_names, blocks):
+        parameters.extend(
+            (f"{block_name}.{name}", parameter)
+            for name, parameter in block.named_parameters()
+            if parameter.requires_grad
+        )
+    return parameters
+
+
+def _attack_named_parameters(
+    blocks,
+    scope: str,
+) -> list[tuple[str, nn.Parameter]]:
+    all_parameters = _all_named_parameters(blocks)
+    if scope == "classifier":
+        return [
+            (name, parameter)
+            for name, parameter in all_parameters
+            if name.startswith("sleep_classifier.")
+        ]
+    if scope == "encoder_head":
+        return [
+            (name, parameter)
+            for name, parameter in all_parameters
+            if name.startswith(("feature_encoder.", "sleep_classifier."))
+        ]
+    if scope == "all":
+        return all_parameters
+    raise ValueError(f"Unsupported attack parameter scope: {scope}")
+
+
 def _gradient_cosine(
     candidate: Sequence[torch.Tensor | None],
     target: Sequence[torch.Tensor | None],
@@ -77,9 +111,21 @@ def _project(
     epsilon: torch.Tensor,
     value_min: torch.Tensor,
     value_max: torch.Tensor,
+    max_relative_l2: float = 0.0,
 ) -> torch.Tensor:
     delta = delta.clamp(-epsilon, epsilon)
-    return ((base + delta).clamp(value_min, value_max) - base).detach()
+    delta = (base + delta).clamp(value_min, value_max) - base
+    if max_relative_l2 > 0:
+        flat_delta = delta.reshape(delta.shape[0], -1)
+        flat_base = base.reshape(base.shape[0], -1)
+        max_norm = (
+            torch.linalg.vector_norm(flat_base, dim=1).clamp_min(1e-12)
+            * max_relative_l2
+        )
+        delta_norm = torch.linalg.vector_norm(flat_delta, dim=1).clamp_min(1e-12)
+        scale = torch.minimum(torch.ones_like(delta_norm), max_norm / delta_norm)
+        delta = delta * scale.view(-1, 1, 1, 1)
+    return delta.detach()
 
 
 def _initialize_delta(
@@ -461,6 +507,469 @@ def brainwash_one_step_batch(
     return eog_adv, eeg_adv, diagnostics
 
 
+def _gradient_norm(gradients: Sequence[torch.Tensor | None]) -> torch.Tensor:
+    available = [gradient for gradient in gradients if gradient is not None]
+    if not available:
+        raise RuntimeError("The selected attack parameters produced no gradients")
+    return sum(gradient.pow(2).sum() for gradient in available).sqrt()
+
+
+def _normalized_gradient_sum(
+    first: Sequence[torch.Tensor | None],
+    second: Sequence[torch.Tensor | None],
+    second_weight: float,
+) -> list[torch.Tensor | None]:
+    first_norm = _gradient_norm(first).clamp_min(1e-12)
+    second_norm = _gradient_norm(second).clamp_min(1e-12)
+    result: list[torch.Tensor | None] = []
+    for first_gradient, second_gradient in zip(first, second):
+        if first_gradient is None and second_gradient is None:
+            result.append(None)
+        elif first_gradient is None:
+            result.append(second_weight * second_gradient.detach() / second_norm)
+        elif second_gradient is None:
+            result.append(first_gradient.detach() / first_norm)
+        else:
+            result.append(
+                first_gradient.detach() / first_norm
+                + second_weight * second_gradient.detach() / second_norm
+            )
+    return result
+
+
+def _weighted_gradient_cosine(
+    candidate: Sequence[torch.Tensor | None],
+    target: Sequence[torch.Tensor | None],
+    weights: Sequence[torch.Tensor],
+) -> torch.Tensor:
+    available = [
+        (candidate_gradient, target_gradient, weight)
+        for candidate_gradient, target_gradient, weight in zip(
+            candidate,
+            target,
+            weights,
+        )
+        if candidate_gradient is not None and target_gradient is not None
+    ]
+    if not available:
+        raise RuntimeError("The selected attack parameters produced no common gradients")
+    dot = sum(
+        ((candidate_gradient * weight) * target_gradient).sum()
+        for candidate_gradient, target_gradient, weight in available
+    )
+    candidate_norm = sum(
+        (candidate_gradient * weight).pow(2).sum()
+        for candidate_gradient, _target_gradient, weight in available
+    ).sqrt()
+    target_norm = sum(
+        target_gradient.pow(2).sum()
+        for _candidate_gradient, target_gradient, _weight in available
+    ).sqrt()
+    return dot / (candidate_norm * target_norm + 1e-12)
+
+
+def _curvature_bypass_weights(
+    strategy,
+    all_parameters: Sequence[tuple[str, nn.Parameter]],
+    attack_parameters: Sequence[tuple[str, nn.Parameter]],
+    scale: float,
+) -> list[torch.Tensor]:
+    if strategy is None or scale <= 0:
+        return [torch.ones_like(parameter) for _name, parameter in attack_parameters]
+    curvature = strategy.curvature(all_parameters)
+    selected = [curvature[name].detach().abs() for name, _parameter in attack_parameters]
+    positive = [values[values > 0] for values in selected if (values > 0).any()]
+    if not positive:
+        return [torch.ones_like(values) for values in selected]
+    reference = torch.cat(positive).median().clamp_min(1e-12)
+    return [1.0 / (1.0 + scale * values / reference) for values in selected]
+
+
+def _classifier_parameter_map(
+    attack_parameters: Sequence[tuple[str, nn.Parameter]],
+) -> list[tuple[str, nn.Parameter]]:
+    prefix = "sleep_classifier."
+    if any(not name.startswith(prefix) for name, _parameter in attack_parameters):
+        raise ValueError(
+            "The differentiable proxy unroll currently requires "
+            "--attack-param-scope classifier"
+        )
+    return [
+        (name.removeprefix(prefix), parameter)
+        for name, parameter in attack_parameters
+    ]
+
+
+def _proxy_dual_harm_terms(
+    *,
+    student_blocks,
+    label_blocks,
+    eog_adv: torch.Tensor,
+    eeg_adv: torch.Tensor,
+    reference_features: torch.Tensor,
+    clean_current_features: torch.Tensor,
+    source_labels: torch.Tensor,
+    clean_pseudo_labels: torch.Tensor,
+    target_labels: torch.Tensor,
+    all_parameters: Sequence[tuple[str, nn.Parameter]],
+    parameter_tensors: Sequence[nn.Parameter],
+    classifier_parameters: Sequence[tuple[str, nn.Parameter]],
+    harmful_gradients: Sequence[torch.Tensor | None],
+    harmful_norm: torch.Tensor,
+    curvature_weights: Sequence[torch.Tensor],
+    eps_eog: torch.Tensor,
+    eps_eeg: torch.Tensor,
+    delta_eog: torch.Tensor,
+    delta_eeg: torch.Tensor,
+    strategy,
+    args,
+    create_graph: bool,
+) -> dict[str, torch.Tensor]:
+    """Evaluate the differentiable one-step proxy objective at one upload."""
+    guiding_logits = flat_logits(forward_blocks(label_blocks, eog_adv, eeg_adv, args))
+    guiding_probs = guiding_logits.softmax(dim=1)
+    guiding_confidence = guiding_probs.max(dim=1).values
+    actual_pseudo_labels = guiding_logits.detach().argmax(dim=1)
+    student_logits = flat_logits(forward_blocks(student_blocks, eog_adv, eeg_adv, args))
+    inner_loss = F.cross_entropy(student_logits, actual_pseudo_labels)
+    if strategy is not None:
+        inner_loss = inner_loss + strategy.penalty(all_parameters)
+    update_gradients = torch.autograd.grad(
+        inner_loss,
+        parameter_tensors,
+        create_graph=create_graph,
+        retain_graph=create_graph,
+        allow_unused=True,
+    )
+    gradient_conflict = _weighted_gradient_cosine(
+        update_gradients,
+        harmful_gradients,
+        curvature_weights,
+    )
+    update_norm = _gradient_norm(update_gradients)
+    updated_parameters = {
+        name: parameter - args.attack_inner_lr * gradient
+        for (name, parameter), gradient in zip(
+            classifier_parameters,
+            update_gradients,
+        )
+        if gradient is not None
+    }
+    virtual_old_logits = flat_logits(
+        functional_call(
+            student_blocks[2],
+            updated_parameters,
+            (reference_features,),
+            strict=False,
+        )
+    )
+    virtual_new_logits = flat_logits(
+        functional_call(
+            student_blocks[2],
+            updated_parameters,
+            (clean_current_features,),
+            strict=False,
+        )
+    )
+    virtual_old_loss = F.cross_entropy(virtual_old_logits, source_labels)
+    virtual_new_loss = F.cross_entropy(virtual_new_logits, clean_pseudo_labels)
+    target_loss = F.cross_entropy(guiding_logits, target_labels)
+    confidence_loss = F.relu(args.attack_min_confidence - guiding_confidence).mean()
+    l2_loss = (
+        delta_eog.pow(2).mean() / eps_eog.pow(2).clamp_min(1e-12)
+        + delta_eeg.pow(2).mean() / eps_eeg.pow(2).clamp_min(1e-12)
+    )
+    objective = (
+        args.attack_target_weight * target_loss
+        + args.attack_conflict_weight * gradient_conflict
+        - args.attack_gradient_norm_weight
+        * update_norm
+        / harmful_norm.clamp_min(1e-12)
+        - args.attack_virtual_old_weight * virtual_old_loss
+        - args.attack_virtual_new_weight * virtual_new_loss
+        + args.attack_confidence_weight * confidence_loss
+        + args.attack_l2_weight * l2_loss
+    )
+    return {
+        "objective": objective,
+        "gradient_conflict": gradient_conflict,
+        "virtual_old_loss": virtual_old_loss,
+        "virtual_new_loss": virtual_new_loss,
+        "guiding_logits": guiding_logits,
+        "guiding_confidence": guiding_confidence,
+    }
+
+
+def proxy_dual_harm_batch(
+    student_blocks,
+    label_blocks,
+    eog: torch.Tensor,
+    eeg: torch.Tensor,
+    reference_eog: torch.Tensor,
+    reference_eeg: torch.Tensor,
+    args,
+    *,
+    strategy=None,
+) -> tuple[torch.Tensor, torch.Tensor, dict[str, float]]:
+    """State-aware white-box input poisoning for regularization CL.
+
+    A private source proxy supplies an old-loss gradient while clean current
+    inputs supply a plasticity gradient. The attack chooses a pseudo-label
+    shift that conflicts with both, then differentiates through a one-step
+    classifier update to optimize the uploaded EEG/EOG values only.
+    """
+    if args.attack_param_scope != "classifier":
+        raise ValueError(
+            "proxy_dual_harm currently requires --attack-param-scope classifier"
+        )
+
+    student_modes = [block.training for block in student_blocks]
+    label_modes = [block.training for block in label_blocks]
+    set_train(student_blocks, False)
+    set_train(label_blocks, False)
+
+    eog_base = eog.detach()
+    eeg_base = eeg.detach()
+    all_parameters = _all_named_parameters(student_blocks)
+    attack_parameters = _attack_named_parameters(student_blocks, args.attack_param_scope)
+    parameter_tensors = [parameter for _name, parameter in attack_parameters]
+    classifier_parameters = _classifier_parameter_map(attack_parameters)
+    curvature_weights = _curvature_bypass_weights(
+        strategy,
+        all_parameters,
+        attack_parameters,
+        args.attack_curvature_scale,
+    )
+
+    with torch.no_grad():
+        clean_guiding_logits = flat_logits(
+            forward_blocks(label_blocks, eog_base, eeg_base, args)
+        )
+        clean_pseudo_labels = clean_guiding_logits.argmax(dim=1)
+        source_logits = flat_logits(
+            forward_blocks(student_blocks, reference_eog, reference_eeg, args)
+        )
+        source_labels = source_logits.argmax(dim=1)
+        reference_features = _encoded_features(
+            student_blocks,
+            reference_eog,
+            reference_eeg,
+            args,
+        ).detach()
+        clean_current_features = _encoded_features(
+            student_blocks,
+            eog_base,
+            eeg_base,
+            args,
+        ).detach()
+
+    old_logits = flat_logits(
+        forward_blocks(student_blocks, reference_eog, reference_eeg, args)
+    )
+    old_loss = F.cross_entropy(old_logits, source_labels)
+    old_gradients = [
+        None if gradient is None else gradient.detach()
+        for gradient in torch.autograd.grad(
+            old_loss,
+            parameter_tensors,
+            allow_unused=True,
+        )
+    ]
+    clean_logits = flat_logits(forward_blocks(student_blocks, eog_base, eeg_base, args))
+    clean_loss = F.cross_entropy(clean_logits, clean_pseudo_labels)
+    clean_gradients = [
+        None if gradient is None else gradient.detach()
+        for gradient in torch.autograd.grad(
+            clean_loss,
+            parameter_tensors,
+            allow_unused=True,
+        )
+    ]
+    harmful_gradients = _normalized_gradient_sum(
+        old_gradients,
+        clean_gradients,
+        args.attack_new_proxy_weight,
+    )
+    harmful_norm = _gradient_norm(harmful_gradients).detach()
+
+    class_count = clean_guiding_logits.shape[1]
+    candidate_rows: list[tuple[float, int, torch.Tensor]] = []
+    for shift in range(1, class_count):
+        target_labels = (clean_pseudo_labels + shift) % class_count
+        target_logits = flat_logits(
+            forward_blocks(student_blocks, eog_base, eeg_base, args)
+        )
+        target_loss = F.cross_entropy(target_logits, target_labels)
+        target_gradients = torch.autograd.grad(
+            target_loss,
+            parameter_tensors,
+            allow_unused=True,
+        )
+        conflict = _weighted_gradient_cosine(
+            target_gradients,
+            harmful_gradients,
+            curvature_weights,
+        )
+        candidate_rows.append((float(conflict.detach().cpu()), shift, target_labels))
+    target_conflict, target_shift, target_labels = min(
+        candidate_rows,
+        key=lambda row: row[0],
+    )
+
+    eps_eog, eog_min, eog_max = _bounds(eog_base, args.attack_eps_scale)
+    eps_eeg, eeg_min, eeg_max = _bounds(eeg_base, args.attack_eps_scale)
+    delta_eog = _initialize_delta(
+        eog_base,
+        eps_eog,
+        eog_min,
+        eog_max,
+        args.attack_random_start,
+    )
+    delta_eeg = _initialize_delta(
+        eeg_base,
+        eps_eeg,
+        eeg_min,
+        eeg_max,
+        args.attack_random_start,
+    )
+    delta_eog = _project(
+        delta_eog,
+        eog_base,
+        eps_eog,
+        eog_min,
+        eog_max,
+        args.attack_max_relative_l2,
+    )
+    delta_eeg = _project(
+        delta_eeg,
+        eeg_base,
+        eps_eeg,
+        eeg_min,
+        eeg_max,
+        args.attack_max_relative_l2,
+    )
+    step_eog = 2.0 * eps_eog / max(args.attack_steps, 1)
+    step_eeg = 2.0 * eps_eeg / max(args.attack_steps, 1)
+
+    initial_objective = None
+    for _step in range(args.attack_steps):
+        delta_eog.requires_grad_(True)
+        delta_eeg.requires_grad_(True)
+        eog_adv = eog_base + delta_eog
+        eeg_adv = eeg_base + delta_eeg
+        terms = _proxy_dual_harm_terms(
+            student_blocks=student_blocks,
+            label_blocks=label_blocks,
+            eog_adv=eog_adv,
+            eeg_adv=eeg_adv,
+            reference_features=reference_features,
+            clean_current_features=clean_current_features,
+            source_labels=source_labels,
+            clean_pseudo_labels=clean_pseudo_labels,
+            target_labels=target_labels,
+            all_parameters=all_parameters,
+            parameter_tensors=parameter_tensors,
+            classifier_parameters=classifier_parameters,
+            harmful_gradients=harmful_gradients,
+            harmful_norm=harmful_norm,
+            curvature_weights=curvature_weights,
+            eps_eog=eps_eog,
+            eps_eeg=eps_eeg,
+            delta_eog=delta_eog,
+            delta_eeg=delta_eeg,
+            strategy=strategy,
+            args=args,
+            create_graph=True,
+        )
+        if initial_objective is None:
+            initial_objective = float(terms["objective"].detach().cpu())
+        gradient_eog, gradient_eeg = torch.autograd.grad(
+            terms["objective"],
+            (delta_eog, delta_eeg),
+        )
+        delta_eog = _project(
+            delta_eog - step_eog * gradient_eog.sign(),
+            eog_base,
+            eps_eog,
+            eog_min,
+            eog_max,
+            args.attack_max_relative_l2,
+        )
+        delta_eeg = _project(
+            delta_eeg - step_eeg * gradient_eeg.sign(),
+            eeg_base,
+            eps_eeg,
+            eeg_min,
+            eeg_max,
+            args.attack_max_relative_l2,
+        )
+    eog_adv = (eog_base + delta_eog).detach()
+    eeg_adv = (eeg_base + delta_eeg).detach()
+    final_terms = _proxy_dual_harm_terms(
+        student_blocks=student_blocks,
+        label_blocks=label_blocks,
+        eog_adv=eog_adv,
+        eeg_adv=eeg_adv,
+        reference_features=reference_features,
+        clean_current_features=clean_current_features,
+        source_labels=source_labels,
+        clean_pseudo_labels=clean_pseudo_labels,
+        target_labels=target_labels,
+        all_parameters=all_parameters,
+        parameter_tensors=parameter_tensors,
+        classifier_parameters=classifier_parameters,
+        harmful_gradients=harmful_gradients,
+        harmful_norm=harmful_norm,
+        curvature_weights=curvature_weights,
+        eps_eog=eps_eog,
+        eps_eeg=eps_eeg,
+        delta_eog=delta_eog,
+        delta_eeg=delta_eeg,
+        strategy=strategy,
+        args=args,
+        create_graph=False,
+    )
+    with torch.no_grad():
+        final_guiding_labels = final_terms["guiding_logits"].argmax(dim=1)
+        pseudo_preservation = (final_guiding_labels == clean_pseudo_labels).float().mean()
+        target_hit_rate = (final_guiding_labels == target_labels).float().mean()
+    diagnostics = _perturbation_metrics(
+        eog_base,
+        eeg_base,
+        eog_adv,
+        eeg_adv,
+        eps_eog,
+        eps_eeg,
+    )
+    diagnostics.update(
+        {
+            "objective_initial": float(initial_objective or 0.0),
+            "objective_final": float(final_terms["objective"].detach().cpu()),
+            "gradient_conflict_final": float(
+                final_terms["gradient_conflict"].detach().cpu()
+            ),
+            "virtual_old_loss_final": float(
+                final_terms["virtual_old_loss"].detach().cpu()
+            ),
+            "virtual_new_loss_final": float(
+                final_terms["virtual_new_loss"].detach().cpu()
+            ),
+            "target_shift": float(target_shift),
+            "target_shift_conflict": float(target_conflict),
+            "target_hit_rate": float(target_hit_rate.cpu()),
+            "pseudo_label_preservation": float(pseudo_preservation.cpu()),
+            "guiding_confidence": float(
+                final_terms["guiding_confidence"].mean().detach().cpu()
+            ),
+        }
+    )
+    for block, mode in zip(student_blocks, student_modes):
+        block.train(mode)
+    for block, mode in zip(label_blocks, label_modes):
+        block.train(mode)
+    return eog_adv, eeg_adv, diagnostics
+
+
 def materialize_poisoned_subject(
     *,
     attack: Callable,
@@ -532,4 +1041,98 @@ def materialize_poisoned_subject(
         "reference": "source-training inputs with victim hard pseudo labels",
         "learner_replay": False,
         "diagnostics_mean": aggregate,
+    }
+
+
+def materialize_batched_proxy_dual_harm_subject(
+    *,
+    student_blocks,
+    label_blocks,
+    strategy,
+    current_data_paths: Sequence[Path],
+    reference_data_paths: Sequence[Path],
+    output_dir: Path,
+    task_index: int,
+    subject: int,
+    args,
+) -> tuple[list[Path], dict]:
+    """Materialize the state-aware attack in batches, not one sequence at a time."""
+    total = len(current_data_paths)
+    poison_count = int(math.ceil(total * args.attack_fraction))
+    poison_count = min(max(poison_count, 0), total)
+    rng = np.random.default_rng(args.seed + 1009 * task_index + 9173 * subject)
+    poison_indices = sorted(
+        rng.choice(total, poison_count, replace=False).astype(int).tolist()
+    ) if poison_count else []
+    mixed_paths = list(current_data_paths)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    rows: list[dict[str, float]] = []
+    row_weights: list[int] = []
+    generation_batch = max(1, int(args.attack_generation_batch))
+
+    for batch_number, start in enumerate(range(0, len(poison_indices), generation_batch)):
+        indices = poison_indices[start:start + generation_batch]
+        eog, eeg = _stack_sequences(
+            [current_data_paths[index] for index in indices],
+            args.device,
+        )
+        reference_start = (
+            args.seed + 37 * task_index + batch_number * args.attack_reference_batch
+        ) % len(reference_data_paths)
+        reference_indices = [
+            (reference_start + offset) % len(reference_data_paths)
+            for offset in range(args.attack_reference_batch)
+        ]
+        reference_eog, reference_eeg = _stack_sequences(
+            [reference_data_paths[index] for index in reference_indices],
+            args.device,
+        )
+        eog_adv, eeg_adv, diagnostics = proxy_dual_harm_batch(
+            student_blocks,
+            label_blocks,
+            eog,
+            eeg,
+            reference_eog,
+            reference_eeg,
+            args,
+            strategy=strategy,
+        )
+        for row, index in enumerate(indices):
+            poisoned_path = output_dir / f"{index}.npy"
+            poisoned = torch.cat((eog_adv[row], eeg_adv[row]), dim=1)
+            np.save(poisoned_path, poisoned.cpu().numpy().astype(np.float32))
+            mixed_paths[index] = poisoned_path
+        rows.append(diagnostics)
+        row_weights.append(len(indices))
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+    aggregate: dict[str, float] = {}
+    batch_macro_aggregate: dict[str, float] = {}
+    if rows:
+        for key in rows[0]:
+            values = [row[key] for row in rows]
+            aggregate[key] = float(np.average(values, weights=row_weights))
+            batch_macro_aggregate[key] = float(np.mean(values))
+    return mixed_paths, {
+        "mode": "proxy_dual_harm",
+        "task": int(task_index),
+        "subject": int(subject),
+        "poisoned_sequences": int(poison_count),
+        "total_sequences": int(total),
+        "poison_fraction": float(poison_count / max(total, 1)),
+        "poison_indices": poison_indices,
+        "eps_scale_of_modality_std": float(args.attack_eps_scale),
+        "max_relative_l2": float(args.attack_max_relative_l2),
+        "steps": int(args.attack_steps),
+        "generation_batch": generation_batch,
+        "parameter_scope": args.attack_param_scope,
+        "reference": "source-training inputs with victim hard pseudo labels",
+        "learner_replay": False,
+        "regularizer_state_visible_to_attacker": strategy is not None,
+        "generated_inputs": True,
+        "diagnostics_aggregation": "sequence_weighted",
+        "generation_batch_sizes": row_weights,
+        "diagnostics_mean": aggregate,
+        "diagnostics_batch_macro_mean": batch_macro_aggregate,
     }

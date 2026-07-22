@@ -1,0 +1,968 @@
+{
+  "method": "plain_er",
+  "protocol": {
+    "backbone": "source-pretrained BrainUICL architecture only",
+    "continual_learning": "fixed-capacity reservoir experience replay",
+    "pseudo_labels": "task-local CPC guide hard argmax",
+    "confidence_filter": false,
+    "replay": true,
+    "replay_ratio": 1.0,
+    "memory_capacity_sequences": 16,
+    "memory_admission": "reservoir over every uploaded sequence occurrence",
+    "stored_targets": "admission-time hard pseudo labels",
+    "regularization_cl_penalty": false,
+    "brainuicl_cea": false,
+    "brainuicl_dcb": false,
+    "brainuicl_source_replay": false,
+    "true_target_labels_used_for_training": false,
+    "attack": "proxy_dual_harm",
+    "attack_tasks": [
+      1
+    ]
+  },
+  "config": {
+    "data_root": "/home/undefined/Disk/datasets/brainuicl/processed/isruc_group1_npy_float32",
+    "input_checkpoint_root": "/home/undefined/Disk/ai-storage/BrainUICL/model_parameter",
+    "output_root": "experiments/replay_cl_eeg_runs/smoke2_attack",
+    "seed": 4321,
+    "gpu": 0,
+    "batch": 8,
+    "num_worker": 0,
+    "max_subjects": 2,
+    "ssl_epoch": 1,
+    "incremental_epoch": 1,
+    "lr": 0.0001,
+    "ssl_lr": 1e-06,
+    "cl_lr": 1e-06,
+    "beta1": 0.5,
+    "beta2": 0.99,
+    "weight_decay": 0.0003,
+    "grad_clip": 5.0,
+    "freeze_bn_stats": true,
+    "memory_capacity": 16,
+    "replay_ratio": 1.0,
+    "attack_mode": "proxy_dual_harm",
+    "attack_tasks": [
+      1
+    ],
+    "attack_fraction": 0.25,
+    "attack_eps_scale": 0.5,
+    "attack_max_relative_l2": 0.2,
+    "attack_steps": 1,
+    "attack_inner_lr": 0.0001,
+    "attack_param_scope": "classifier",
+    "attack_reference_batch": 2,
+    "attack_generation_batch": 2,
+    "attack_random_start": true,
+    "attack_target_weight": 5.0,
+    "attack_conflict_weight": 1.0,
+    "attack_gradient_norm_weight": 0.25,
+    "attack_virtual_old_weight": 1.0,
+    "attack_virtual_new_weight": 1.0,
+    "attack_new_proxy_weight": 1.0,
+    "attack_curvature_scale": 0.0,
+    "attack_min_confidence": 0.85,
+    "attack_confidence_weight": 2.0,
+    "attack_l2_weight": 0.01,
+    "attack_proxy_repeat": 1,
+    "eval_max_batches": 0,
+    "retention_milestones": [
+      1,
+      2
+    ],
+    "dataset": "ISRUC",
+    "model_param": "<utils.config.ModelConfig object at 0x780bfb2d6e70>",
+    "device": "cuda:0"
+  },
+  "initial": {
+    "old_generalization": {
+      "acc": 0.7024550898203593,
+      "mf1": 0.6880332943309935,
+      "n_epochs": 16700
+    },
+    "source_train": {
+      "acc": 0.7500970873786408,
+      "mf1": 0.7321142684197317,
+      "n_epochs": 20600
+    },
+    "validation": {
+      "acc": 0.6414448669201521,
+      "mf1": 0.613332711486469,
+      "n_epochs": 5260
+    }
+  },
+  "stability": {
+    "acc": [
+      0.7024550898203593,
+      0.6965269461077844,
+      0.7038922155688623
+    ],
+    "mf1": [
+      0.6880332943309935,
+      0.6787792844138865,
+      0.6848906479722849
+    ]
+  },
+  "tasks": [
+    {
+      "task": 1,
+      "subject": 64,
+      "current_before": {
+        "acc": 0.7290697674418605,
+        "mf1": 0.7631163096154122,
+        "n_epochs": 860
+      },
+      "current_after": {
+        "acc": 0.6976744186046512,
+        "mf1": 0.7343532062757355,
+        "n_epochs": 860
+      },
+      "old_generalization_after": {
+        "acc": 0.6965269461077844,
+        "mf1": 0.6787792844138865,
+        "n_epochs": 16700
+      },
+      "pseudo_labels": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.387037037037037,
+        "mf1_diagnostic_only": 0.3909445751917889,
+        "mean_confidence_diagnostic_only": 0.9013647341893779,
+        "pseudo_class_counts": [
+          206,
+          118,
+          400,
+          128,
+          228
+        ],
+        "n_epochs": 1080
+      },
+      "pseudo_labels_on_clean_current": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.6151162790697674,
+        "mf1_diagnostic_only": 0.6445831963130766,
+        "mean_confidence_diagnostic_only": 0.9269455467892248,
+        "pseudo_class_counts": [
+          113,
+          95,
+          421,
+          163,
+          68
+        ],
+        "n_epochs": 860
+      },
+      "guiding_cpc_losses": [
+        69.82528632027763
+      ],
+      "training": {
+        "epochs": [
+          {
+            "epoch": 1,
+            "current_loss": 0.48494123561041697,
+            "replay_loss": 0.0,
+            "total_loss": 0.48494123561041697,
+            "replay_sequences": 0,
+            "poisoned_replay_sequences": 0,
+            "poisoned_replay_fraction": 0.0
+          }
+        ],
+        "last_current_loss": 0.48494123561041697,
+        "last_replay_loss": 0.0,
+        "last_total_loss": 0.48494123561041697,
+        "replay_sequences": 0,
+        "poisoned_replay_sequences": 0
+      },
+      "memory_update": {
+        "candidates": 54,
+        "inserted": 16,
+        "replaced": 19,
+        "discarded": 19,
+        "total_seen": 54,
+        "size": 16
+      },
+      "memory": {
+        "capacity": 16,
+        "size": 16,
+        "total_seen": 54,
+        "unique_paths": 13,
+        "poisoned_records": 9,
+        "poisoned_fraction": 0.5625,
+        "repeated_upload_records": 3,
+        "repeated_upload_fraction": 0.1875,
+        "total_replay_draws": 0,
+        "poisoned_replay_draws": 0,
+        "poisoned_replay_fraction": 0.0
+      },
+      "attack": {
+        "mode": "proxy_dual_harm",
+        "task": 1,
+        "subject": 64,
+        "poisoned_sequences": 11,
+        "total_sequences": 43,
+        "poison_fraction": 0.2558139534883721,
+        "poison_indices": [
+          1,
+          3,
+          4,
+          6,
+          10,
+          17,
+          22,
+          28,
+          36,
+          37,
+          38
+        ],
+        "eps_scale_of_modality_std": 0.5,
+        "max_relative_l2": 0.2,
+        "steps": 1,
+        "generation_batch": 2,
+        "parameter_scope": "classifier",
+        "reference": "source-training inputs with victim hard pseudo labels",
+        "learner_replay": true,
+        "regularizer_state_visible_to_attacker": false,
+        "generated_inputs": true,
+        "diagnostics_aggregation": "sequence_weighted",
+        "generation_batch_sizes": [
+          2,
+          2,
+          2,
+          2,
+          2,
+          1
+        ],
+        "diagnostics_mean": {
+          "epsilon_eog": 1.5052098288751123e-05,
+          "epsilon_eeg": 1.0231891544456381e-05,
+          "linf_eog": 6.376074452418834e-06,
+          "linf_eeg": 4.620301875878464e-06,
+          "relative_l2_eog": 0.19999996775930579,
+          "relative_l2_eeg": 0.20000000568953427,
+          "objective_initial": 37.64722303910689,
+          "objective_final": 28.572512539950285,
+          "gradient_conflict_final": 0.006839203267273578,
+          "virtual_old_loss_final": 0.05202247541059147,
+          "virtual_new_loss_final": 0.1831616149707274,
+          "target_shift": 2.909090909090909,
+          "target_shift_conflict": -0.3727555667812174,
+          "target_hit_rate": 0.20000000230290674,
+          "pseudo_label_preservation": 0.08636363798921759,
+          "guiding_confidence": 0.8825019598007202
+        },
+        "diagnostics_batch_macro_mean": {
+          "epsilon_eog": 1.4718560426748203e-05,
+          "epsilon_eeg": 1.0009702085274816e-05,
+          "linf_eog": 6.213060260051861e-06,
+          "linf_eeg": 4.487465048441663e-06,
+          "relative_l2_eog": 0.1999999632438024,
+          "relative_l2_eeg": 0.20000000794728598,
+          "objective_initial": 36.78949483235677,
+          "objective_final": 29.060537656148274,
+          "gradient_conflict_final": 0.005718473112210631,
+          "virtual_old_loss_final": 0.05164272524416447,
+          "virtual_new_loss_final": 0.17416109951833883,
+          "target_shift": 3.0,
+          "target_shift_conflict": -0.37715574726462364,
+          "target_hit_rate": 0.18750000217308602,
+          "pseudo_label_preservation": 0.09166666865348816,
+          "guiding_confidence": 0.883741706609726
+        },
+        "replay_memory_visible_to_attacker": false,
+        "proxy_repeat": 1,
+        "injected_proxy_sequences": 11,
+        "training_sequences_after_injection": 54,
+        "memory_admission_candidates": 54
+      },
+      "attack_label_guiding_cpc_losses": [
+        70.15553029378255
+      ]
+    },
+    {
+      "task": 2,
+      "subject": 89,
+      "current_before": {
+        "acc": 0.763,
+        "mf1": 0.6992817136860817,
+        "n_epochs": 1000
+      },
+      "current_after": {
+        "acc": 0.75,
+        "mf1": 0.6871221028219148,
+        "n_epochs": 1000
+      },
+      "old_generalization_after": {
+        "acc": 0.7038922155688623,
+        "mf1": 0.6848906479722849,
+        "n_epochs": 16700
+      },
+      "pseudo_labels": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.751,
+        "mf1_diagnostic_only": 0.6904841142931718,
+        "mean_confidence_diagnostic_only": 0.9245925032198429,
+        "pseudo_class_counts": [
+          279,
+          84,
+          344,
+          178,
+          115
+        ],
+        "n_epochs": 1000
+      },
+      "pseudo_labels_on_clean_current": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.751,
+        "mf1_diagnostic_only": 0.6904841142931718,
+        "mean_confidence_diagnostic_only": 0.9245925032198429,
+        "pseudo_class_counts": [
+          279,
+          84,
+          344,
+          178,
+          115
+        ],
+        "n_epochs": 1000
+      },
+      "guiding_cpc_losses": [
+        57.694786071777344
+      ],
+      "training": {
+        "epochs": [
+          {
+            "epoch": 1,
+            "current_loss": 0.2902566897017615,
+            "replay_loss": 0.4947280160018376,
+            "total_loss": 0.39249234965869356,
+            "replay_sequences": 50,
+            "poisoned_replay_sequences": 29,
+            "poisoned_replay_fraction": 0.58
+          }
+        ],
+        "last_current_loss": 0.2902566897017615,
+        "last_replay_loss": 0.4947280160018376,
+        "last_total_loss": 0.39249234965869356,
+        "replay_sequences": 50,
+        "poisoned_replay_sequences": 29
+      },
+      "memory_update": {
+        "candidates": 50,
+        "inserted": 0,
+        "replaced": 7,
+        "discarded": 43,
+        "total_seen": 104,
+        "size": 16
+      },
+      "memory": {
+        "capacity": 16,
+        "size": 16,
+        "total_seen": 104,
+        "unique_paths": 15,
+        "poisoned_records": 4,
+        "poisoned_fraction": 0.25,
+        "repeated_upload_records": 1,
+        "repeated_upload_fraction": 0.0625,
+        "total_replay_draws": 50,
+        "poisoned_replay_draws": 29,
+        "poisoned_replay_fraction": 0.58
+      },
+      "attack": null,
+      "attack_label_guiding_cpc_losses": []
+    }
+  ],
+  "retention_snapshots": {
+    "1": {
+      "64": {
+        "acc": 0.6976744186046512,
+        "mf1": 0.7343532062757355,
+        "n_epochs": 860
+      }
+    },
+    "2": {
+      "64": {
+        "acc": 0.7058139534883721,
+        "mf1": 0.7407319664994195,
+        "n_epochs": 860
+      },
+      "89": {
+        "acc": 0.75,
+        "mf1": 0.6871221028219148,
+        "n_epochs": 1000
+      }
+    }
+  },
+  "final": {
+    "old_generalization": {
+      "acc": 0.7038922155688623,
+      "mf1": 0.6848906479722849,
+      "n_epochs": 16700
+    },
+    "source_train": {
+      "acc": 0.7461650485436894,
+      "mf1": 0.7209117125582795,
+      "n_epochs": 20600
+    },
+    "validation": {
+      "acc": 0.638212927756654,
+      "mf1": 0.6021124946196995,
+      "n_epochs": 5260
+    },
+    "seen_subjects": {
+      "64": {
+        "acc": 0.7058139534883721,
+        "mf1": 0.7407319664994195,
+        "n_epochs": 860
+      },
+      "89": {
+        "acc": 0.75,
+        "mf1": 0.6871221028219148,
+        "n_epochs": 1000
+      }
+    },
+    "initial_model_seen_subjects": {
+      "64": {
+        "acc": 0.7290697674418605,
+        "mf1": 0.7631163096154122,
+        "n_epochs": 860
+      },
+      "89": {
+        "acc": 0.801,
+        "mf1": 0.7326458009878241,
+        "n_epochs": 1000
+      }
+    },
+    "memory": {
+      "capacity": 16,
+      "size": 16,
+      "total_seen": 104,
+      "unique_paths": 15,
+      "poisoned_records": 4,
+      "poisoned_fraction": 0.25,
+      "repeated_upload_records": 1,
+      "repeated_upload_fraction": 0.0625,
+      "total_replay_draws": 50,
+      "poisoned_replay_draws": 29,
+      "poisoned_replay_fraction": 0.58
+    },
+    "memory_records": [
+      {
+        "data_path": "/home/undefined/Disk/datasets/brainuicl/processed/isruc_group1_npy_float32/64/data/33.npy",
+        "pseudo_labels": [
+          2,
+          2,
+          2,
+          2,
+          1,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        "task": 1,
+        "subject": 64,
+        "sequence_index": 33,
+        "poisoned": false,
+        "repeated_upload": false,
+        "replay_count": 4
+      },
+      {
+        "data_path": "experiments/replay_cl_eeg_runs/smoke2_attack/poisoned_inputs/task_1_subject_64/1.npy",
+        "pseudo_labels": [
+          2,
+          2,
+          4,
+          4,
+          4,
+          4,
+          0,
+          1,
+          4,
+          4,
+          0,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "task": 1,
+        "subject": 64,
+        "sequence_index": 1,
+        "poisoned": true,
+        "repeated_upload": false,
+        "replay_count": 4
+      },
+      {
+        "data_path": "/home/undefined/Disk/datasets/brainuicl/processed/isruc_group1_npy_float32/89/data/17.npy",
+        "pseudo_labels": [
+          1,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          1,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        "task": 2,
+        "subject": 89,
+        "sequence_index": 17,
+        "poisoned": false,
+        "repeated_upload": false,
+        "replay_count": 0
+      },
+      {
+        "data_path": "/home/undefined/Disk/datasets/brainuicl/processed/isruc_group1_npy_float32/89/data/9.npy",
+        "pseudo_labels": [
+          1,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          1,
+          1,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        "task": 2,
+        "subject": 89,
+        "sequence_index": 9,
+        "poisoned": false,
+        "repeated_upload": false,
+        "replay_count": 0
+      },
+      {
+        "data_path": "/home/undefined/Disk/datasets/brainuicl/processed/isruc_group1_npy_float32/64/data/23.npy",
+        "pseudo_labels": [
+          1,
+          1,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "task": 1,
+        "subject": 64,
+        "sequence_index": 23,
+        "poisoned": false,
+        "repeated_upload": false,
+        "replay_count": 2
+      },
+      {
+        "data_path": "experiments/replay_cl_eeg_runs/smoke2_attack/poisoned_inputs/task_1_subject_64/22.npy",
+        "pseudo_labels": [
+          0,
+          3,
+          2,
+          0,
+          2,
+          2,
+          0,
+          1,
+          2,
+          4,
+          4,
+          4,
+          4,
+          1,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        "task": 1,
+        "subject": 64,
+        "sequence_index": 22,
+        "poisoned": true,
+        "repeated_upload": false,
+        "replay_count": 2
+      },
+      {
+        "data_path": "/home/undefined/Disk/datasets/brainuicl/processed/isruc_group1_npy_float32/64/data/40.npy",
+        "pseudo_labels": [
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          1,
+          2,
+          0,
+          1,
+          2,
+          2,
+          2,
+          2,
+          1,
+          1,
+          1
+        ],
+        "task": 1,
+        "subject": 64,
+        "sequence_index": 40,
+        "poisoned": false,
+        "repeated_upload": false,
+        "replay_count": 2
+      },
+      {
+        "data_path": "/home/undefined/Disk/datasets/brainuicl/processed/isruc_group1_npy_float32/89/data/24.npy",
+        "pseudo_labels": [
+          2,
+          1,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4
+        ],
+        "task": 2,
+        "subject": 89,
+        "sequence_index": 24,
+        "poisoned": false,
+        "repeated_upload": false,
+        "replay_count": 0
+      },
+      {
+        "data_path": "/home/undefined/Disk/datasets/brainuicl/processed/isruc_group1_npy_float32/89/data/25.npy",
+        "pseudo_labels": [
+          1,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          1,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          1,
+          4
+        ],
+        "task": 2,
+        "subject": 89,
+        "sequence_index": 25,
+        "poisoned": false,
+        "repeated_upload": false,
+        "replay_count": 0
+      },
+      {
+        "data_path": "/home/undefined/Disk/datasets/brainuicl/processed/isruc_group1_npy_float32/89/data/34.npy",
+        "pseudo_labels": [
+          2,
+          1,
+          2,
+          2,
+          1,
+          1,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        "task": 2,
+        "subject": 89,
+        "sequence_index": 34,
+        "poisoned": false,
+        "repeated_upload": false,
+        "replay_count": 0
+      },
+      {
+        "data_path": "/home/undefined/Disk/datasets/brainuicl/processed/isruc_group1_npy_float32/89/data/26.npy",
+        "pseudo_labels": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          1,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          1
+        ],
+        "task": 2,
+        "subject": 89,
+        "sequence_index": 26,
+        "poisoned": false,
+        "repeated_upload": false,
+        "replay_count": 0
+      },
+      {
+        "data_path": "/home/undefined/Disk/datasets/brainuicl/processed/isruc_group1_npy_float32/64/data/41.npy",
+        "pseudo_labels": [
+          0,
+          1,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          2,
+          2,
+          2,
+          1,
+          0,
+          1,
+          1,
+          0,
+          0,
+          1,
+          2,
+          2
+        ],
+        "task": 1,
+        "subject": 64,
+        "sequence_index": 41,
+        "poisoned": false,
+        "repeated_upload": false,
+        "replay_count": 2
+      },
+      {
+        "data_path": "/home/undefined/Disk/datasets/brainuicl/processed/isruc_group1_npy_float32/64/data/35.npy",
+        "pseudo_labels": [
+          2,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          2,
+          2,
+          2,
+          1,
+          0,
+          2,
+          1,
+          2
+        ],
+        "task": 1,
+        "subject": 64,
+        "sequence_index": 35,
+        "poisoned": false,
+        "repeated_upload": false,
+        "replay_count": 5
+      },
+      {
+        "data_path": "/home/undefined/Disk/datasets/brainuicl/processed/isruc_group1_npy_float32/64/data/27.npy",
+        "pseudo_labels": [
+          2,
+          2,
+          2,
+          4,
+          1,
+          2,
+          1,
+          2,
+          2,
+          4,
+          4,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2
+        ],
+        "task": 1,
+        "subject": 64,
+        "sequence_index": 27,
+        "poisoned": false,
+        "repeated_upload": false,
+        "replay_count": 3
+      },
+      {
+        "data_path": "experiments/replay_cl_eeg_runs/smoke2_attack/poisoned_inputs/task_1_subject_64/37.npy",
+        "pseudo_labels": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          0,
+          0,
+          2,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          2,
+          2,
+          2,
+          2
+        ],
+        "task": 1,
+        "subject": 64,
+        "sequence_index": 37,
+        "poisoned": true,
+        "repeated_upload": false,
+        "replay_count": 2
+      },
+      {
+        "data_path": "experiments/replay_cl_eeg_runs/smoke2_attack/poisoned_inputs/task_1_subject_64/37.npy",
+        "pseudo_labels": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          1,
+          0,
+          0,
+          2,
+          0,
+          0,
+          0,
+          1,
+          0,
+          0,
+          2,
+          2,
+          2,
+          2
+        ],
+        "task": 1,
+        "subject": 64,
+        "sequence_index": 37,
+        "poisoned": true,
+        "repeated_upload": true,
+        "replay_count": 4
+      }
+    ]
+  },
+  "summary": {
+    "final_old_acc": 0.7038922155688623,
+    "final_old_mf1": 0.6848906479722849,
+    "old_aaa": 0.7009580838323354,
+    "old_aaf1": 0.6839010755723883,
+    "old_fr": 0.0020458613928905907,
+    "mean_current_before_acc": 0.7460348837209303,
+    "mean_current_after_acc": 0.7238372093023255,
+    "mean_current_acc_gain": -0.02219767441860465,
+    "mean_current_before_mf1": 0.731199011650747,
+    "mean_current_after_mf1": 0.7107376545488251,
+    "mean_current_mf1_gain": -0.020461357101921818,
+    "final_seen_acc": 0.727906976744186,
+    "final_seen_mf1": 0.7139270346606672,
+    "bwt_acc": 0.004069767441860439,
+    "bwt_mf1": 0.0031893801118419995,
+    "mean_pseudo_acc_diagnostic_only": 0.5690185185185185,
+    "mean_pseudo_mf1_diagnostic_only": 0.5407143447424804,
+    "pseudo_label_coverage": 1.0,
+    "final_memory_size": 16,
+    "final_memory_poisoned_fraction": 0.25,
+    "replay_poisoned_fraction": 0.58,
+    "total_replay_draws": 50
+  }
+}

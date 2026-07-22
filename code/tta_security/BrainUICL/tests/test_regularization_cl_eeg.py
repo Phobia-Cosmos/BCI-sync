@@ -3,6 +3,8 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 
 import numpy as np
 import torch
@@ -16,11 +18,18 @@ from model.regularization_cl import (
     named_trainable_parameters,
 )
 from experiments.regularization_cl_attacks import (
+    _project,
+    _proxy_dual_harm_terms,
     brainwash_one_step_batch,
+    materialize_batched_proxy_dual_harm_subject,
     materialize_poisoned_subject,
     pacol_gradient_matching_batch,
+    proxy_dual_harm_batch,
 )
-from experiments.regularization_cl_eeg import resolve_attack_tasks
+from experiments.regularization_cl_eeg import (
+    delete_generated_inputs,
+    resolve_attack_tasks,
+)
 from experiments.rttdp_brainuicl_full import external_proxy_upload_paths
 
 
@@ -33,7 +42,71 @@ def tiny_blocks():
     return first, second, third
 
 
+class TinyFeatureExtractor(nn.Module):
+    def forward(self, eeg, eog):
+        return torch.cat((eeg.mean(dim=2), eog.mean(dim=2)), dim=1)
+
+
+def tiny_proxy_blocks():
+    return TinyFeatureExtractor(), nn.Identity(), nn.Linear(2, 2)
+
+
+def tiny_proxy_args(**overrides):
+    values = {
+        "attack_param_scope": "classifier",
+        "attack_curvature_scale": 1.0,
+        "attack_new_proxy_weight": 1.0,
+        "attack_eps_scale": 0.5,
+        "attack_random_start": False,
+        "attack_max_relative_l2": 0.2,
+        "attack_steps": 2,
+        "attack_inner_lr": 1e-2,
+        "attack_min_confidence": 0.0,
+        "attack_target_weight": 1.0,
+        "attack_conflict_weight": 1.0,
+        "attack_gradient_norm_weight": 0.1,
+        "attack_virtual_old_weight": 1.0,
+        "attack_virtual_new_weight": 1.0,
+        "attack_confidence_weight": 0.0,
+        "attack_l2_weight": 0.0,
+        "attack_fraction": 1.0,
+        "attack_generation_batch": 4,
+        "attack_reference_batch": 1,
+        "attack_mode": "proxy_dual_harm",
+        "seed": 7,
+        "device": torch.device("cpu"),
+        "model_param": SimpleNamespace(
+            EogNum=1,
+            EegNum=1,
+            EpochLength=2,
+            NumClasses=2,
+            SeqLength=2,
+        ),
+    }
+    values.update(overrides)
+    return SimpleNamespace(**values)
+
+
 class RegularizationCLEEGTest(unittest.TestCase):
+    def test_delete_generated_inputs_stays_inside_attack_root(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            generated_root = root / "poisoned_inputs"
+            generated_root.mkdir()
+            generated = generated_root / "0.npy"
+            generated.write_bytes(b"generated")
+            original = root / "clean.npy"
+            original.write_bytes(b"clean")
+
+            self.assertEqual(
+                delete_generated_inputs([generated], generated_root),
+                1,
+            )
+            self.assertFalse(generated.exists())
+            self.assertTrue(original.exists())
+            with self.assertRaises(ValueError):
+                delete_generated_inputs([original], generated_root)
+
     def test_external_proxy_upload_preserves_clean_label_paths(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
@@ -81,11 +154,123 @@ class RegularizationCLEEGTest(unittest.TestCase):
         for function in (
             pacol_gradient_matching_batch,
             brainwash_one_step_batch,
+            proxy_dual_harm_batch,
             materialize_poisoned_subject,
+            materialize_batched_proxy_dual_harm_subject,
         ):
             parameter_names = set(inspect.signature(function).parameters)
             self.assertNotIn("labels", parameter_names)
             self.assertNotIn("true_labels", parameter_names)
+
+    def test_projection_enforces_linf_and_per_sequence_relative_l2(self):
+        base = torch.tensor(
+            [
+                [[[[1.0, -1.0, 2.0, -2.0]]]],
+                [[[[0.5, -0.5, 1.0, -1.0]]]],
+            ]
+        ).reshape(2, 1, 1, 4)
+        delta = torch.full_like(base, 10.0)
+        projected = _project(
+            delta,
+            base,
+            torch.tensor(0.25),
+            torch.tensor(-10.0),
+            torch.tensor(10.0),
+            max_relative_l2=0.1,
+        )
+        self.assertLessEqual(float(projected.abs().max()), 0.25 + 1e-7)
+        relative_l2 = torch.linalg.vector_norm(projected.flatten(1), dim=1) / (
+            torch.linalg.vector_norm(base.flatten(1), dim=1) + 1e-12
+        )
+        self.assertTrue(bool((relative_l2 <= 0.1 + 1e-7).all()))
+
+    def test_proxy_dual_harm_recomputes_final_diagnostics_on_returned_input(self):
+        torch.manual_seed(4)
+        student = tiny_proxy_blocks()
+        guide = tiny_proxy_blocks()
+        guide[2].load_state_dict(student[2].state_dict())
+        args = tiny_proxy_args()
+        eog = torch.tensor(
+            [[[[0.1, 0.4]], [[0.3, -0.2]]]], dtype=torch.float32
+        )
+        eeg = torch.tensor(
+            [[[[0.5, -0.1]], [[-0.3, 0.2]]]], dtype=torch.float32
+        )
+        reference_eog = eog.flip(1)
+        reference_eeg = eeg.flip(1)
+
+        with patch(
+            "experiments.regularization_cl_attacks._proxy_dual_harm_terms",
+            wraps=_proxy_dual_harm_terms,
+        ) as terms:
+            eog_adv, eeg_adv, diagnostics = proxy_dual_harm_batch(
+                student,
+                guide,
+                eog,
+                eeg,
+                reference_eog,
+                reference_eeg,
+                args,
+            )
+
+        self.assertEqual(terms.call_count, args.attack_steps + 1)
+        final_call = terms.call_args.kwargs
+        self.assertTrue(torch.equal(final_call["eog_adv"], eog_adv))
+        self.assertTrue(torch.equal(final_call["eeg_adv"], eeg_adv))
+        self.assertTrue(all(np.isfinite(value) for value in diagnostics.values()))
+        self.assertLessEqual(diagnostics["relative_l2_eog"], 0.2 + 1e-6)
+        self.assertLessEqual(diagnostics["relative_l2_eeg"], 0.2 + 1e-6)
+
+    def test_batched_materialization_weights_partial_batch_and_aligns_paths(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            current_paths = []
+            for index in range(5):
+                path = root / f"clean-{index}.npy"
+                np.save(path, np.full((2, 3, 2), index, dtype=np.float32))
+                current_paths.append(path)
+            args = tiny_proxy_args(attack_steps=1)
+
+            def fake_attack(
+                _student,
+                _guide,
+                eog,
+                eeg,
+                _reference_eog,
+                _reference_eeg,
+                _args,
+                *,
+                strategy,
+            ):
+                del strategy
+                return eog, eeg, {"score": float(eog.shape[0])}
+
+            with patch(
+                "experiments.regularization_cl_attacks.proxy_dual_harm_batch",
+                side_effect=fake_attack,
+            ):
+                mixed_paths, diagnostics = materialize_batched_proxy_dual_harm_subject(
+                    student_blocks=(),
+                    label_blocks=(),
+                    strategy=None,
+                    current_data_paths=current_paths,
+                    reference_data_paths=current_paths,
+                    output_dir=root / "generated",
+                    task_index=1,
+                    subject=64,
+                    args=args,
+                )
+
+            self.assertEqual(diagnostics["generation_batch_sizes"], [4, 1])
+            self.assertAlmostEqual(diagnostics["diagnostics_mean"]["score"], 3.4)
+            self.assertAlmostEqual(
+                diagnostics["diagnostics_batch_macro_mean"]["score"],
+                2.5,
+            )
+            self.assertEqual([path.name for path in mixed_paths], [f"{i}.npy" for i in range(5)])
+            for index, path in enumerate(mixed_paths):
+                self.assertTrue(path.is_file())
+                self.assertTrue(np.array_equal(np.load(path), np.load(current_paths[index])))
 
     def test_attack_task_resolution_supports_last(self):
         self.assertEqual(resolve_attack_tasks("2,last", 6), {2, 6})

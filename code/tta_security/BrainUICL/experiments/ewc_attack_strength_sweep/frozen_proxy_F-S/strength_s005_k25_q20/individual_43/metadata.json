@@ -1,0 +1,81 @@
+{
+  "task": 43,
+  "subject": 99,
+  "stream": "strength_s005_k25_q20",
+  "frequency": "frequent",
+  "shifted": true,
+  "strength_level": "s005",
+  "relative_l2_budget": 0.005,
+  "linf_std_scale": 0.02,
+  "sequence_fraction_within_attacked_task": 0.2,
+  "attack_tasks": [
+    1,
+    3,
+    5,
+    7,
+    9,
+    11,
+    13,
+    15,
+    17,
+    19,
+    21,
+    23,
+    25,
+    27,
+    29,
+    31,
+    33,
+    35,
+    37,
+    39,
+    41,
+    43,
+    45,
+    47,
+    49
+  ],
+  "attacked": true,
+  "uploaded": 40,
+  "noisy_sequences": 8,
+  "noise_fraction": 0.2,
+  "noise_indices": [
+    7,
+    16,
+    17,
+    23,
+    29,
+    30,
+    33,
+    39
+  ],
+  "signs": {
+    "7": 1,
+    "16": 1,
+    "17": 1,
+    "23": 1,
+    "29": 1,
+    "30": 1,
+    "33": 1,
+    "39": 1
+  },
+  "sign_positive": 8,
+  "sign_negative": 0,
+  "eog_relative_l2": {
+    "mean": 0.004999999999682323,
+    "max": 0.005000000000526946
+  },
+  "eeg_relative_l2": {
+    "mean": 0.005000000000016076,
+    "max": 0.005000000000530146
+  },
+  "eog_linf_over_std": {
+    "mean": 0.017740476372447064,
+    "max": 0.019540172441877935
+  },
+  "eeg_linf_over_std": {
+    "mean": 0.01716323937522702,
+    "max": 0.01860910952622927
+  },
+  "source_directions": "full49_seed4321/directions"
+}
