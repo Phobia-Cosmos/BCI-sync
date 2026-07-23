@@ -1,0 +1,26 @@
+{
+  "puridiver_memory_ce": {
+    "final_old_acc": 0.6324550898203593,
+    "final_old_mf1": 0.6003363756505087,
+    "old_aaa": 0.6495401197604791,
+    "old_aaf1": 0.6221175851864534,
+    "old_fr": 0.0996504986787146,
+    "mean_current_before_acc": 0.586484442485844,
+    "mean_current_after_acc": 0.6018367873156885,
+    "mean_current_acc_gain": 0.015352344829844548,
+    "mean_current_before_mf1": 0.5021410742893163,
+    "mean_current_after_mf1": 0.5193179249334599,
+    "mean_current_mf1_gain": 0.017176850644143576,
+    "final_seen_acc": 0.5796347032327599,
+    "final_seen_mf1": 0.49533608052954625,
+    "bwt_acc": -0.02220208408292862,
+    "bwt_mf1": -0.023981844403913606,
+    "mean_pseudo_acc_diagnostic_only": 0.43635281864853037,
+    "mean_pseudo_mf1_diagnostic_only": 0.38863872232498436,
+    "pseudo_label_coverage": 1.0,
+    "final_memory_size": 1000,
+    "final_memory_poisoned_fraction": 0.733,
+    "replay_poisoned_fraction": 0.7744992295839753,
+    "total_replay_draws": 51920
+  }
+}

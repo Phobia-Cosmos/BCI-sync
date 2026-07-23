@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Plain experience replay on the aligned unlabeled ISRUC CL protocol.
+"""Aligned replay methods on the unlabeled ISRUC continual-learning protocol.
 
 This runner deliberately reuses the source-pretrained BrainUICL network as a
 backbone only.  The continual-learning algorithm is plain reservoir ER:
@@ -10,16 +10,17 @@ backbone only.  The continual-learning algorithm is plain reservoir ER:
 * previous sequences are sampled 1:1 from a fixed reservoir with their stored
   admission-time pseudo labels.
 
-The clean, benign-repeat, and proxy-dual-harm modes match the regularization
-runner's upload protocol so replay persistence can be tested directly.
+The runner also supports SPR-style filtered replay and two PuriDivER-style
+variants.  Fixed uploads can be reused across methods so that the defense
+comparison does not regenerate a victim-adaptive attack for each method.
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Sequence
 
@@ -38,6 +39,17 @@ if str(Path(__file__).resolve().parent) not in sys.path:
 from model.regularization_cl import (  # noqa: E402
     freeze_batch_norm_running_stats,
     named_trainable_parameters,
+)
+from aligned_replay_defenses import (  # noqa: E402
+    PuriDivERSequenceMemory,
+    ReplayRecord,
+    ReservoirReplayMemory,
+    apply_spr_filter,
+    build_cru_state,
+    build_memory_records,
+    collect_epoch_outputs,
+    load_replay_batch,
+    puridiver_branch_loss,
 )
 from regularization_cl_attacks import (  # noqa: E402
     materialize_batched_proxy_dual_harm_subject,
@@ -67,6 +79,18 @@ from utils.util import fix_randomness  # noqa: E402
 
 
 ATTACK_MODES = ("none", "benign_repeat", "proxy_dual_harm")
+REPLAY_METHODS = (
+    "plain_er",
+    "spr_er",
+    "puridiver_memory_ce",
+    "puridiver_cru",
+)
+METHOD_DESCRIPTIONS = {
+    "plain_er": "fixed-capacity reservoir experience replay",
+    "spr_er": "reservoir experience replay with SPR epoch-level admission masks",
+    "puridiver_memory_ce": "PuriDivER-style purity/diversity sequence memory with CE replay",
+    "puridiver_cru": "PuriDivER-style purity/diversity memory with clean/relabel/unlabeled replay loss",
+}
 
 
 class UnlabeledSequenceDataset(Dataset):
@@ -87,107 +111,6 @@ class UnlabeledSequenceDataset(Dataset):
         return values[:, :2, :], values[:, 2:, :], dummy
 
 
-@dataclass
-class ReplayRecord:
-    data_path: Path
-    pseudo_labels: np.ndarray
-    task: int
-    subject: int
-    sequence_index: int
-    poisoned: bool
-    repeated_upload: bool
-    replay_count: int = 0
-
-    def serializable(self) -> dict:
-        return {
-            "data_path": str(self.data_path),
-            "pseudo_labels": self.pseudo_labels.astype(int).tolist(),
-            "task": self.task,
-            "subject": self.subject,
-            "sequence_index": self.sequence_index,
-            "poisoned": self.poisoned,
-            "repeated_upload": self.repeated_upload,
-            "replay_count": self.replay_count,
-        }
-
-
-class ReservoirReplayMemory:
-    """Fixed-capacity sequence reservoir with independent deterministic RNG."""
-
-    def __init__(self, capacity: int, seed: int):
-        if capacity < 1:
-            raise ValueError("Replay capacity must be positive")
-        self.capacity = int(capacity)
-        self.records: list[ReplayRecord] = []
-        self.total_seen = 0
-        self.rng = np.random.default_rng(seed)
-        self.total_replay_draws = 0
-        self.poisoned_replay_draws = 0
-
-    def __len__(self) -> int:
-        return len(self.records)
-
-    def add(self, incoming: Sequence[ReplayRecord]) -> dict:
-        inserted = 0
-        replaced = 0
-        discarded = 0
-        for record in incoming:
-            self.total_seen += 1
-            if len(self.records) < self.capacity:
-                self.records.append(record)
-                inserted += 1
-                continue
-            location = int(self.rng.integers(0, self.total_seen))
-            if location < self.capacity:
-                self.records[location] = record
-                replaced += 1
-            else:
-                discarded += 1
-        return {
-            "candidates": len(incoming),
-            "inserted": inserted,
-            "replaced": replaced,
-            "discarded": discarded,
-            "total_seen": self.total_seen,
-            "size": len(self.records),
-        }
-
-    def sample(self, count: int) -> list[ReplayRecord]:
-        if not self.records or count <= 0:
-            return []
-        replace = len(self.records) < count
-        indices = self.rng.choice(len(self.records), count, replace=replace)
-        selected = [self.records[int(index)] for index in indices]
-        for record in selected:
-            record.replay_count += 1
-        poisoned = sum(int(record.poisoned) for record in selected)
-        self.total_replay_draws += len(selected)
-        self.poisoned_replay_draws += poisoned
-        return selected
-
-    def stats(self) -> dict:
-        poisoned = sum(int(record.poisoned) for record in self.records)
-        repeated = sum(int(record.repeated_upload) for record in self.records)
-        return {
-            "capacity": self.capacity,
-            "size": len(self.records),
-            "total_seen": self.total_seen,
-            "unique_paths": len({str(record.data_path) for record in self.records}),
-            "poisoned_records": poisoned,
-            "poisoned_fraction": poisoned / max(len(self.records), 1),
-            "repeated_upload_records": repeated,
-            "repeated_upload_fraction": repeated / max(len(self.records), 1),
-            "total_replay_draws": self.total_replay_draws,
-            "poisoned_replay_draws": self.poisoned_replay_draws,
-            "poisoned_replay_fraction": (
-                self.poisoned_replay_draws / max(self.total_replay_draws, 1)
-            ),
-        }
-
-    def serializable_records(self) -> list[dict]:
-        return [record.serializable() for record in self.records]
-
-
 def make_unlabeled_loader(
     data_paths: Sequence[Path],
     args,
@@ -200,20 +123,6 @@ def make_unlabeled_loader(
         shuffle=shuffle,
         num_workers=args.num_worker,
     )
-
-
-def load_replay_batch(
-    records: Sequence[ReplayRecord],
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-    arrays = [
-        torch.from_numpy(np.load(record.data_path).astype(np.float32))
-        for record in records
-    ]
-    values = torch.stack(arrays)
-    labels = torch.stack(
-        [torch.from_numpy(record.pseudo_labels.astype(np.int64)) for record in records]
-    )
-    return values[:, :, :2, :], values[:, :, 2:, :], labels
 
 
 @torch.no_grad()
@@ -243,7 +152,7 @@ def train_er_task(
     student_blocks,
     guiding_blocks,
     current_loader: DataLoader,
-    memory: ReservoirReplayMemory,
+    memory,
     args,
     task_index: int,
     subject: int,
@@ -256,6 +165,7 @@ def train_er_task(
         weight_decay=args.weight_decay,
     )
     epoch_rows: list[dict] = []
+    is_cru = args.method == "puridiver_cru"
 
     for epoch in range(1, args.incremental_epoch + 1):
         set_train(student_blocks, True)
@@ -267,18 +177,39 @@ def train_er_task(
         total_losses: list[float] = []
         replay_sequences = 0
         poisoned_replay_sequences = 0
+        cru_rows: list[dict] = []
 
-        for eog, eeg, _dummy in current_loader:
+        for batch_index, (eog, eeg, _dummy) in enumerate(current_loader):
             eog = eog.to(args.device)
             eeg = eeg.to(args.device)
             with torch.no_grad():
-                current_labels = flat_logits(
-                    forward_blocks(guiding_blocks, eog, eeg, args)
+                current_labels = forward_blocks(
+                    guiding_blocks, eog, eeg, args
                 ).argmax(dim=1)
-            current_logits = flat_logits(
-                forward_blocks(student_blocks, eog, eeg, args)
-            )
-            current_loss = F.cross_entropy(current_logits, current_labels)
+            current_logits = forward_blocks(student_blocks, eog, eeg, args)
+            if is_cru:
+                current_state = build_cru_state(
+                    current_logits.detach(),
+                    current_labels.detach(),
+                    seed=args.seed + 1_000_000 * task_index + 10_000 * epoch + batch_index,
+                    thresholds=(
+                        args.puridiver_clean_threshold,
+                        args.puridiver_uncertainty_threshold,
+                    ),
+                )
+                current_loss, current_cru = puridiver_branch_loss(
+                    student_blocks,
+                    eog,
+                    eeg,
+                    current_labels,
+                    current_state,
+                    args,
+                )
+                cru_rows.append({"current": current_cru})
+            else:
+                current_loss = F.cross_entropy(
+                    flat_logits(current_logits), current_labels.reshape(-1)
+                )
 
             replay_records = memory.sample(eog.shape[0])
             if replay_records:
@@ -287,11 +218,38 @@ def train_er_task(
                 )
                 replay_eog = replay_eog.to(args.device)
                 replay_eeg = replay_eeg.to(args.device)
-                replay_labels = replay_labels.reshape(-1).to(args.device)
-                replay_logits = flat_logits(
-                    forward_blocks(student_blocks, replay_eog, replay_eeg, args)
+                replay_labels = replay_labels.to(args.device)
+                replay_logits = forward_blocks(
+                    student_blocks, replay_eog, replay_eeg, args
                 )
-                replay_loss = F.cross_entropy(replay_logits, replay_labels)
+                if is_cru:
+                    replay_state = build_cru_state(
+                        replay_logits.detach(),
+                        replay_labels.detach(),
+                        seed=args.seed
+                        + 2_000_000 * task_index
+                        + 10_000 * epoch
+                        + batch_index,
+                        thresholds=(
+                            args.puridiver_clean_threshold,
+                            args.puridiver_uncertainty_threshold,
+                        ),
+                    )
+                    replay_loss, replay_cru = puridiver_branch_loss(
+                        student_blocks,
+                        replay_eog,
+                        replay_eeg,
+                        replay_labels,
+                        replay_state,
+                        args,
+                    )
+                    cru_rows[-1]["replay"] = replay_cru
+                else:
+                    replay_loss = F.cross_entropy(
+                        flat_logits(replay_logits),
+                        replay_labels.reshape(-1),
+                        ignore_index=-100,
+                    )
                 loss = 0.5 * (current_loss + replay_loss)
                 replay_sequences += len(replay_records)
                 poisoned_replay_sequences += sum(
@@ -324,6 +282,23 @@ def train_er_task(
                 poisoned_replay_sequences / max(replay_sequences, 1)
             ),
         }
+        if cru_rows:
+            for branch in ("current", "replay"):
+                values = [
+                    row[branch]
+                    for row in cru_rows
+                    if branch in row
+                ]
+                if values:
+                    row[f"{branch}_clean_count"] = int(
+                        sum(item["clean_count"] for item in values)
+                    )
+                    row[f"{branch}_relabel_count"] = int(
+                        sum(item["relabel_count"] for item in values)
+                    )
+                    row[f"{branch}_unlabeled_count"] = int(
+                        sum(item["unlabeled_count"] for item in values)
+                    )
         epoch_rows.append(row)
         print(
             f"[student:er] task={task_index} subject={subject} "
@@ -345,34 +320,6 @@ def train_er_task(
     }
 
 
-def build_memory_records(
-    data_paths: Sequence[Path],
-    pseudo_labels: Sequence[np.ndarray],
-    *,
-    task_index: int,
-    subject: int,
-    original_count: int,
-    poisoned_paths: set[str],
-) -> list[ReplayRecord]:
-    if len(data_paths) != len(pseudo_labels):
-        raise ValueError("Replay admission data/label count mismatch")
-    records: list[ReplayRecord] = []
-    for upload_index, (path, labels) in enumerate(zip(data_paths, pseudo_labels)):
-        sequence_index = int(path.stem)
-        records.append(
-            ReplayRecord(
-                data_path=Path(path),
-                pseudo_labels=np.asarray(labels, dtype=np.int64),
-                task=int(task_index),
-                subject=int(subject),
-                sequence_index=sequence_index,
-                poisoned=str(Path(path)) in poisoned_paths,
-                repeated_upload=upload_index >= original_count,
-            )
-        )
-    return records
-
-
 def save_json(path: Path, payload: dict) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -392,6 +339,118 @@ def serializable_args(args) -> dict:
     return output
 
 
+def make_memory(args):
+    seed = args.seed + 700_001
+    if args.method in {"plain_er", "spr_er"}:
+        return ReservoirReplayMemory(args.memory_capacity, seed)
+    return PuriDivERSequenceMemory(args.memory_capacity, seed)
+
+
+def _fixed_attack_row(args, task_index: int) -> dict:
+    if args.fixed_upload_root is None:
+        raise ValueError("fixed upload root is required for a shared attack")
+    metrics_path = args.fixed_upload_root / "metrics.json"
+    if not metrics_path.is_file():
+        raise FileNotFoundError(f"Fixed-upload metrics are missing: {metrics_path}")
+    payload = json.loads(metrics_path.read_text(encoding="utf-8"))
+    for row in payload.get("tasks", []):
+        if int(row.get("task", -1)) == int(task_index):
+            attack = row.get("attack") or {}
+            if attack.get("mode") != "proxy_dual_harm":
+                break
+            return attack
+    raise ValueError(f"No proxy-dual-harm source row for task {task_index}")
+
+
+def _paths_sha256(paths: Sequence[Path]) -> str:
+    digest = hashlib.sha256()
+    for path in paths:
+        digest.update(path.name.encode("utf-8"))
+        with path.open("rb") as handle:
+            for chunk in iter(lambda: handle.read(1 << 20), b""):
+                digest.update(chunk)
+    return digest.hexdigest()
+
+
+def load_fixed_attack_uploads(
+    args,
+    task_index: int,
+    subject: int,
+    clean_data_paths: Sequence[Path],
+) -> tuple[list[Path], dict]:
+    """Load immutable poisoned files generated by a separate source run."""
+
+    if args.fixed_upload_root is None:
+        raise ValueError("--fixed-upload-root is required for fixed shared uploads")
+    directory = (
+        args.fixed_upload_root
+        / "poisoned_inputs"
+        / f"task_{int(task_index)}_subject_{int(subject)}"
+    )
+    if not directory.is_dir():
+        raise FileNotFoundError(f"Fixed-upload directory is missing: {directory}")
+    poisoned_paths: list[Path] = []
+    for clean_path in clean_data_paths:
+        poisoned_path = directory / clean_path.name
+        if not poisoned_path.is_file():
+            raise FileNotFoundError(
+                f"Fixed-upload sequence is missing for task {task_index}: {poisoned_path}"
+            )
+        poisoned_paths.append(poisoned_path)
+    source_attack = _fixed_attack_row(args, task_index)
+    diagnostics = dict(source_attack)
+    diagnostics.update(
+        {
+            "fixed_shared_upload": True,
+            "generated_inputs": False,
+            "source_generation_run": str(args.fixed_upload_root),
+            "source_generation_diagnostics_mean": source_attack.get(
+                "diagnostics_mean", {}
+            ),
+            "fixed_upload_sha256": _paths_sha256(poisoned_paths),
+            "poison_indices": list(range(len(clean_data_paths))),
+            "poisoned_sequences": len(clean_data_paths),
+            "total_sequences": len(clean_data_paths),
+            "poison_fraction": 1.0,
+        }
+    )
+    return poisoned_paths, diagnostics
+
+
+def admit_memory(
+    memory,
+    records: list[ReplayRecord],
+    data_paths: Sequence[Path],
+    student_blocks,
+    args,
+) -> tuple[dict, dict | None, list[ReplayRecord]]:
+    """Apply the selected label-free admission policy after task training."""
+
+    if args.method == "spr_er":
+        _logits, epoch_embeddings, _sequence_embeddings = collect_epoch_outputs(
+            student_blocks, data_paths, args
+        )
+        retained, filter_stats = apply_spr_filter(
+            records,
+            epoch_embeddings,
+            args,
+            seed=args.seed + 3_000_000 + len(memory.records) + len(records),
+        )
+        update = memory.add(retained)
+        update["spr"] = filter_stats
+        return update, filter_stats, retained
+    if args.method in {"puridiver_memory_ce", "puridiver_cru"}:
+        update = memory.add(
+            records,
+            student_blocks,
+            args,
+            args.puridiver_diversity_coefficient,
+        )
+        return update, None, records
+    update = memory.add(records)
+    return update, None, records
+
+
 def run(args) -> dict:
     fix_randomness(args.seed)
     split = build_split(args)
@@ -404,7 +463,7 @@ def run(args) -> dict:
 
     student_blocks = load_pretrained(args)
     initial_blocks = load_pretrained(args)
-    memory = ReservoirReplayMemory(args.memory_capacity, args.seed + 700_001)
+    memory = make_memory(args)
     old_loader = make_loader(
         args.data_root,
         split["old_idx"],
@@ -434,17 +493,29 @@ def run(args) -> dict:
         evaluate(student_blocks, old_loader, args, max_batches=args.eval_max_batches)
     )
     performance = {
-        "method": "plain_er",
+        "method": args.method,
         "protocol": {
             "backbone": "source-pretrained BrainUICL architecture only",
-            "continual_learning": "fixed-capacity reservoir experience replay",
+            "continual_learning": METHOD_DESCRIPTIONS[args.method],
             "pseudo_labels": "task-local CPC guide hard argmax",
             "confidence_filter": False,
             "replay": True,
             "replay_ratio": args.replay_ratio,
             "memory_capacity_sequences": args.memory_capacity,
-            "memory_admission": "reservoir over every uploaded sequence occurrence",
-            "stored_targets": "admission-time hard pseudo labels",
+            "memory_admission": (
+                "reservoir over every uploaded sequence occurrence"
+                if args.method in {"plain_er", "spr_er"}
+                else "task-end purity/diversity sequence pruning"
+            ),
+            "stored_targets": "admission-time hard pseudo labels with optional epoch mask",
+            "replay_loss": (
+                "hard pseudo-label cross entropy"
+                if args.method != "puridiver_cru"
+                else "PuriDivER clean/relabel/unlabeled branch loss"
+            ),
+            "spr_filter": args.method == "spr_er",
+            "puridiver_memory": args.method in {"puridiver_memory_ce", "puridiver_cru"},
+            "puridiver_cru": args.method == "puridiver_cru",
             "regularization_cl_penalty": False,
             "brainuicl_cea": False,
             "brainuicl_dcb": False,
@@ -487,7 +558,7 @@ def run(args) -> dict:
     for task_index, subject in enumerate(split["new_order"], start=1):
         fix_randomness(args.seed + 1000 * task_index)
         print(
-            f"[plain_er] task={task_index}/{total_tasks} subject={subject}",
+            f"[{args.method}] task={task_index}/{total_tasks} subject={subject}",
             flush=True,
         )
         clean_data_paths, clean_label_paths = subject_paths(args.data_root, subject)
@@ -531,6 +602,20 @@ def run(args) -> dict:
                     },
                 }
                 poison_indices = attack_diagnostics["poison_indices"]
+            elif args.attack_mode == "proxy_dual_harm" and args.fixed_upload_root is not None:
+                poisoned_paths, attack_diagnostics = load_fixed_attack_uploads(
+                    args,
+                    task_index,
+                    subject,
+                    clean_data_paths,
+                )
+                training_data_paths = list(poisoned_paths)
+                poison_indices = attack_diagnostics["poison_indices"]
+                generated_paths = list(poisoned_paths)
+                attack_diagnostics["learner_replay"] = True
+                attack_diagnostics["regularizer_state_visible_to_attacker"] = False
+                attack_diagnostics["replay_memory_visible_to_attacker"] = False
+                attack_diagnostics["fixed_upload_manifest_validated"] = True
             elif args.attack_mode == "proxy_dual_harm":
                 clean_attack_loader = make_unlabeled_loader(
                     clean_data_paths, args, shuffle=True
@@ -615,7 +700,13 @@ def run(args) -> dict:
             original_count=len(clean_data_paths),
             poisoned_paths=poisoned_set,
         )
-        memory_update = memory.add(records)
+        memory_update, admission_diagnostics, retained_records = admit_memory(
+            memory,
+            records,
+            training_data_paths,
+            student_blocks,
+            args,
+        )
 
         diagnostic_loader = DataLoader(
             # Labels are opened only for the following offline diagnostic.
@@ -660,6 +751,7 @@ def run(args) -> dict:
             "guiding_cpc_losses": cpc_losses,
             "training": training,
             "memory_update": memory_update,
+            "admission_diagnostics": admission_diagnostics,
             "memory": memory.stats(),
             "attack": attack_diagnostics,
             "attack_label_guiding_cpc_losses": attack_label_cpc_losses,
@@ -671,7 +763,7 @@ def run(args) -> dict:
             )
         save_json(args.output_root / "metrics.json", performance)
         print(
-            f"[plain_er] subject={subject} current "
+            f"[{args.method}] subject={subject} current "
             f"ACC {before['acc']:.4f}->{after['acc']:.4f}; "
             f"old ACC={old['acc']:.4f}; memory={len(memory)} "
             f"poison_memory={memory.stats()['poisoned_fraction']:.4f}",
@@ -726,12 +818,13 @@ def run(args) -> dict:
     )
     performance["summary"] = summary
     save_json(args.output_root / "metrics.json", performance)
-    save_json(args.output_root / "summary.json", {"plain_er": summary})
+    save_json(args.output_root / "summary.json", {args.method: summary})
     return performance
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--method", choices=REPLAY_METHODS, default="plain_er")
     parser.add_argument(
         "--data-root",
         type=Path,
@@ -749,6 +842,12 @@ def parse_args():
         "--output-root",
         type=Path,
         default=REPO_ROOT / "experiments" / "replay_cl_eeg_runs" / "latest",
+    )
+    parser.add_argument(
+        "--fixed-upload-root",
+        type=Path,
+        default=None,
+        help="attack_shared run root containing poisoned_inputs and metrics.json",
     )
     parser.add_argument("--seed", type=int, default=4321)
     parser.add_argument("--gpu", type=int, default=0)
@@ -789,10 +888,21 @@ def parse_args():
     parser.add_argument("--attack-confidence-weight", type=float, default=2.0)
     parser.add_argument("--attack-l2-weight", type=float, default=0.01)
     parser.add_argument("--attack-proxy-repeat", type=int, default=3)
+    parser.add_argument("--spr-ensembles", type=int, default=5)
+    parser.add_argument("--spr-bmm-iters", type=int, default=10)
+    parser.add_argument("--puridiver-clean-threshold", type=float, default=0.5)
+    parser.add_argument("--puridiver-uncertainty-threshold", type=float, default=0.5)
+    parser.add_argument("--puridiver-diversity-coefficient", type=float, default=0.4)
+    parser.add_argument("--puridiver-strong-noise", type=float, default=0.01)
+    parser.add_argument("--puridiver-strong-scale", type=float, default=0.08)
+    parser.add_argument("--puridiver-strong-mask-fraction", type=float, default=0.0)
+    parser.add_argument("--puridiver-consistency-weight", type=float, default=1.0)
     parser.add_argument("--eval-max-batches", type=int, default=0)
     parser.add_argument("--retention-milestones", type=str, default="10,25,49")
     args = parser.parse_args()
 
+    if args.fixed_upload_root is not None:
+        args.fixed_upload_root = args.fixed_upload_root.resolve()
     if args.memory_capacity < 1:
         parser.error("--memory-capacity must be positive")
     if args.replay_ratio != 1.0:
@@ -801,6 +911,18 @@ def parse_args():
         parser.error("--attack-fraction must be in [0, 1]")
     if args.attack_proxy_repeat < 0:
         parser.error("--attack-proxy-repeat must be non-negative")
+    if args.spr_ensembles < 1 or args.spr_bmm_iters < 1:
+        parser.error("SPR ensemble and BMM iterations must be positive")
+    if not 0.0 <= args.puridiver_clean_threshold <= 1.0:
+        parser.error("--puridiver-clean-threshold must be in [0, 1]")
+    if not 0.0 <= args.puridiver_uncertainty_threshold <= 1.0:
+        parser.error("--puridiver-uncertainty-threshold must be in [0, 1]")
+    if not 0.0 <= args.puridiver_diversity_coefficient <= 1.0:
+        parser.error("--puridiver-diversity-coefficient must be in [0, 1]")
+    if args.puridiver_strong_noise < 0 or args.puridiver_strong_scale < 0:
+        parser.error("PuriDivER augmentation strengths must be non-negative")
+    if not 0.0 <= args.puridiver_strong_mask_fraction <= 1.0:
+        parser.error("--puridiver-strong-mask-fraction must be in [0, 1]")
     if args.attack_mode == "none" and args.attack_tasks.strip():
         parser.error("--attack-tasks requires a non-none attack mode")
     if args.attack_mode != "none" and not args.attack_tasks.strip():
