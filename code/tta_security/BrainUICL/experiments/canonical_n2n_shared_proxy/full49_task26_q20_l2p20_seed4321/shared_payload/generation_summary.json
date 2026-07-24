@@ -1,0 +1,91 @@
+{
+  "manifest": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/full49_task26_q20_l2p20_seed4321/shared_payload/manifest.json",
+  "manifest_sha256": "df428c029044e56cc68105825164c3ad98a6c08a8f84c209426872e5b551c32d",
+  "affected_task": 26,
+  "affected_subject": 10,
+  "proxy_sequences": 9,
+  "uploaded_sequences": 2148,
+  "generation": {
+    "mode": "proxy_dual_harm",
+    "task": 26,
+    "subject": 10,
+    "poisoned_sequences": 9,
+    "total_sequences": 41,
+    "poison_fraction": 0.21951219512195122,
+    "poison_indices": [
+      4,
+      12,
+      13,
+      23,
+      26,
+      27,
+      31,
+      35,
+      39
+    ],
+    "eps_scale_of_modality_std": 0.5,
+    "max_relative_l2": 0.2,
+    "steps": 3,
+    "generation_batch": 4,
+    "parameter_scope": "classifier",
+    "reference": "source-training inputs with victim hard pseudo labels",
+    "learner_replay": false,
+    "regularizer_state_visible_to_attacker": false,
+    "generated_inputs": true,
+    "diagnostics_aggregation": "sequence_weighted",
+    "generation_batch_sizes": [
+      4,
+      4,
+      1
+    ],
+    "diagnostics_mean": {
+      "epsilon_eog": 1.1696797944043485e-06,
+      "epsilon_eeg": 1.0977918236676487e-06,
+      "linf_eog": 8.60890408047352e-07,
+      "linf_eeg": 8.082699120374551e-07,
+      "relative_l2_eog": 0.20000000960297054,
+      "relative_l2_eeg": 0.20000000463591683,
+      "objective_initial": 21.873638576931423,
+      "objective_final": 6.853749699062771,
+      "gradient_conflict_final": -0.16648737258381313,
+      "virtual_old_loss_final": 0.04970991859833399,
+      "virtual_new_loss_final": 0.751732760005527,
+      "target_shift": 3.7777777777777777,
+      "target_shift_conflict": -0.395089586575826,
+      "target_hit_rate": 0.3444444537162781,
+      "pseudo_label_preservation": 0.3444444470935398,
+      "guiding_confidence": 0.7897186146842109
+    },
+    "diagnostics_batch_macro_mean": {
+      "epsilon_eog": 1.0474960655907732e-06,
+      "epsilon_eeg": 9.984487405745313e-07,
+      "linf_eog": 7.340113749402614e-07,
+      "linf_eeg": 7.109806574590039e-07,
+      "relative_l2_eog": 0.20000000794728598,
+      "relative_l2_eeg": 0.20000000794728598,
+      "objective_initial": 22.819844563802082,
+      "objective_final": 4.727853139241536,
+      "gradient_conflict_final": -0.3571642165382703,
+      "virtual_old_loss_final": 0.05246967822313309,
+      "virtual_new_loss_final": 0.5811473528544108,
+      "target_shift": 3.3333333333333335,
+      "target_shift_conflict": -0.5349509119987488,
+      "target_hit_rate": 0.4333333373069763,
+      "pseudo_label_preservation": 0.3333333383003871,
+      "guiding_confidence": 0.7717423637708029
+    }
+  },
+  "validation": {
+    "manifest": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/full49_task26_q20_l2p20_seed4321/shared_payload/manifest.json",
+    "manifest_sha256": "df428c029044e56cc68105825164c3ad98a6c08a8f84c209426872e5b551c32d",
+    "tasks": 49,
+    "uploaded_sequences": 2148,
+    "proxy_sequences": 9,
+    "proxy_tasks": [
+      26
+    ],
+    "n_to_n": true,
+    "all_slots_validated": true
+  },
+  "schema": "brainuicl-canonical-n2n-v1"
+}

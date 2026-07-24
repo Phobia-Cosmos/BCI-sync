@@ -40,6 +40,8 @@ from model.icml2026_cl_defenses import (  # noqa: E402
     T2TDetector,
     diagonal_t2t_score,
 )
+from n2n_shared_proxy import resolve_task as resolve_n2n_task  # noqa: E402
+from unlabeled_eeg import UnlabeledSequenceDataset  # noqa: E402
 from regularization_cl_attacks import (  # noqa: E402
     brainwash_one_step_batch,
     materialize_batched_proxy_dual_harm_subject,
@@ -78,6 +80,15 @@ ATTACK_MODES = (
     "proxy_dual_harm",
 )
 DEFENSE_MODES = ("none", "t2t", "robust_feature")
+TASK_PHASE_OFFSETS = {"setup": 0, "guide": 1, "student": 2}
+
+
+def task_phase_seed(seed: int, task_index: int, phase: str) -> int:
+    try:
+        offset = TASK_PHASE_OFFSETS[phase]
+    except KeyError as error:
+        raise ValueError(f"Unknown task phase: {phase}") from error
+    return int(seed) + 1000 * int(task_index) + offset
 
 
 def parse_int_set(value: str) -> set[int]:
@@ -106,6 +117,34 @@ def make_subject_loader(args, subject: int, shuffle: bool) -> DataLoader:
         shuffle=shuffle,
         num_workers=args.num_worker,
     )
+
+
+def make_unlabeled_loader(args, data_paths: list[Path], shuffle: bool) -> DataLoader:
+    return DataLoader(
+        UnlabeledSequenceDataset(data_paths, args.model_param.SeqLength),
+        batch_size=args.batch,
+        shuffle=shuffle,
+        num_workers=args.num_worker,
+    )
+
+
+def resolve_n2n_subject_paths(
+    args,
+    task_index: int,
+    subject: int,
+    clean_paths: tuple[list[Path], list[Path]],
+) -> tuple[tuple[list[Path], list[Path]], dict]:
+    """Replace only manifest-selected signals and preserve clean annotations."""
+
+    resolved = resolve_n2n_task(
+        args.n2n_manifest,
+        task=task_index,
+        subject=subject,
+        clean_data_paths=clean_paths[0],
+        verify=args.n2n_verify,
+    )
+    training_paths = (list(resolved.data_paths), list(clean_paths[1]))
+    return training_paths, dict(resolved.diagnostics)
 
 
 def metric_view(result: dict) -> dict[str, float | int]:
@@ -751,6 +790,11 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
             "external_proxy_noise": (
                 str(args.noise_upload_root) if args.noise_upload_root is not None else None
             ),
+            "canonical_n2n_manifest": (
+                None if args.n2n_manifest is None else str(args.n2n_manifest)
+            ),
+            "upload_cardinality": "N-to-N" if args.n2n_manifest is not None else None,
+            "target_training_loader": "signal-only without annotation paths",
             "proxy_reference_inputs_used_by_learner": False,
             "true_target_labels_used_for_training": False,
             "icml2026_defense": args.defense_mode,
@@ -780,7 +824,7 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
         "retention_snapshots": {},
         "final": {},
     }
-    if args.noise_upload_root is None:
+    if args.noise_upload_root is None and args.n2n_manifest is None:
         performance["protocol"].update(
             {
                 "attack": args.attack_mode,
@@ -798,7 +842,7 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
         # Importance estimation adds method-specific data passes. Resetting at
         # each task prevents those passes from changing the next task's loader,
         # dropout, and CPC sampling sequence across otherwise identical runs.
-        fix_randomness(args.seed + 1000 * task_index)
+        fix_randomness(task_phase_seed(args.seed, task_index, "setup"))
         print(
             f"[{method}] task={task_index}/{total_tasks} subject={subject}",
             flush=True,
@@ -813,7 +857,22 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
         noise_diagnostics = None
         attack_label_cpc_losses: list[float] = []
         generated_poisoned_paths: list[Path] = []
-        if args.noise_upload_root is not None:
+        if args.n2n_manifest is not None:
+            training_paths, noise_diagnostics = resolve_n2n_subject_paths(
+                args,
+                task_index,
+                subject,
+                clean_paths,
+            )
+            loader_train = make_unlabeled_loader(args, training_paths[0], True)
+            loader_pseudo_eval = make_unlabeled_loader(args, training_paths[0], False)
+            loader_diagnostic = DataLoader(
+                SequenceDataset(training_paths),
+                batch_size=args.batch,
+                shuffle=False,
+                num_workers=args.num_worker,
+            )
+        elif args.noise_upload_root is not None:
             training_paths, noise_diagnostics = external_proxy_upload_paths(
                 args.noise_upload_root,
                 clean_paths,
@@ -822,13 +881,9 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
             )
             noise_diagnostics = dict(noise_diagnostics)
             noise_diagnostics["source"] = str(args.noise_upload_root)
-            loader_train = DataLoader(
-                SequenceDataset(training_paths),
-                batch_size=args.batch,
-                shuffle=True,
-                num_workers=args.num_worker,
-            )
-            loader_pseudo_eval = DataLoader(
+            loader_train = make_unlabeled_loader(args, training_paths[0], True)
+            loader_pseudo_eval = make_unlabeled_loader(args, training_paths[0], False)
+            loader_diagnostic = DataLoader(
                 SequenceDataset(training_paths),
                 batch_size=args.batch,
                 shuffle=False,
@@ -854,7 +909,9 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
                     },
                 }
             else:
-                clean_label_loader = make_subject_loader(args, subject, shuffle=True)
+                clean_label_loader = make_unlabeled_loader(
+                    args, list(clean_paths[0]), shuffle=True
+                )
                 label_blocks, attack_label_cpc_losses = adapt_guiding_model(
                     student_blocks,
                     clean_label_loader,
@@ -925,25 +982,24 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
                 )
                 attack_diagnostics["proxy_repeat"] = args.attack_proxy_repeat
             training_paths = (training_data_paths, training_label_paths)
-            # Attack generation has extra model/data passes. Restore the task
-            # seed so the formal guide/student run remains method-comparable.
-            fix_randomness(args.seed + 1000 * task_index)
-            loader_train = DataLoader(
-                SequenceDataset(training_paths),
-                batch_size=args.batch,
-                shuffle=True,
-                num_workers=args.num_worker,
-            )
-            loader_pseudo_eval = DataLoader(
+            loader_train = make_unlabeled_loader(args, training_data_paths, True)
+            loader_pseudo_eval = make_unlabeled_loader(args, training_data_paths, False)
+            loader_diagnostic = DataLoader(
                 SequenceDataset(training_paths),
                 batch_size=args.batch,
                 shuffle=False,
                 num_workers=args.num_worker,
             )
         else:
-            loader_train = make_subject_loader(args, subject, shuffle=True)
-            loader_pseudo_eval = loader_eval
+            loader_train = make_unlabeled_loader(args, list(clean_paths[0]), True)
+            loader_pseudo_eval = make_unlabeled_loader(
+                args, list(clean_paths[0]), False
+            )
+            loader_diagnostic = loader_eval
 
+        # Keep condition-specific manifest checks or generation passes from
+        # changing the formal guide's loader order and stochastic layers.
+        fix_randomness(task_phase_seed(args.seed, task_index, "guide"))
         guiding_blocks, cpc_losses = adapt_guiding_model(
             student_blocks,
             loader_train,
@@ -953,7 +1009,7 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
         )
         pseudo_diagnostics = pseudo_label_diagnostics(
             guiding_blocks,
-            loader_pseudo_eval,
+            loader_diagnostic,
             args,
         )
         clean_pseudo_diagnostics = (
@@ -984,6 +1040,9 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
                 feature_sample_count,
             )
 
+        # Even a non-shuffled DataLoader iterator consumes torch RNG state.
+        # Isolate optimization from the extra clean-input diagnostic in proxy runs.
+        fix_randomness(task_phase_seed(args.seed, task_index, "student"))
         train_diagnostics, current_importance, task_fisher = train_student_task(
             student_blocks,
             guiding_blocks,
@@ -1142,7 +1201,7 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
             "importance": current_importance,
             "defense": defense_diagnostics,
         }
-        if args.noise_upload_root is None:
+        if args.noise_upload_root is None and args.n2n_manifest is None:
             task_row["attack"] = attack_diagnostics
             task_row["attack_label_guiding_cpc_losses"] = attack_label_cpc_losses
         performance["tasks"].append(task_row)
@@ -1402,6 +1461,21 @@ def parse_args():
         default=None,
         help="Read a fixed per-task proxy-noise stream while keeping clean labels.",
     )
+    parser.add_argument(
+        "--n2n-manifest",
+        type=Path,
+        default=None,
+        help=(
+            "Canonical partial N-to-N signal-replacement manifest. Selected "
+            "EEG/EOG paths change while clean annotation paths stay evaluator-only."
+        ),
+    )
+    parser.add_argument(
+        "--n2n-verify",
+        choices=("none", "selected", "full"),
+        default="selected",
+        help="Payload verification performed when resolving each manifest task.",
+    )
     parser.add_argument("--no-save-checkpoints", action="store_true")
     parser.add_argument(
         "--delete-poisoned-inputs-after-task",
@@ -1467,6 +1541,16 @@ def main():
         raise ValueError("--attack-tasks requires a non-'none' --attack-mode")
     if args.attack_mode != "none" and not args.attack_tasks:
         raise ValueError("A non-'none' --attack-mode requires --attack-tasks")
+    if args.n2n_manifest is not None:
+        args.n2n_manifest = args.n2n_manifest.resolve()
+        if args.attack_mode != "none" or args.attack_tasks:
+            raise ValueError("Canonical N-to-N input cannot be combined with attack modes")
+        if args.noise_upload_root is not None:
+            raise ValueError("Use only one of --n2n-manifest and --noise-upload-root")
+        if not args.n2n_manifest.is_file():
+            raise FileNotFoundError(
+                f"Canonical N-to-N manifest does not exist: {args.n2n_manifest}"
+            )
     if args.noise_upload_root is not None:
         if args.attack_mode != "none" or args.attack_tasks:
             raise ValueError("External proxy noise cannot be combined with attack modes")

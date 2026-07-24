@@ -1,0 +1,297 @@
+{
+  "protocol": "canonical partial N-to-N shared proxy full49",
+  "manifest": {
+    "path": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/full49_task26_q20_l2p20_seed4321/shared_payload/manifest.json",
+    "sha256": "df428c029044e56cc68105825164c3ad98a6c08a8f84c209426872e5b551c32d",
+    "affected_task": 26,
+    "affected_subject": 10,
+    "proxy_sequences": 9,
+    "uploaded_sequences": 2148,
+    "affected_task_sequences": 41,
+    "nominal_proxy_fraction": 0.2,
+    "actual_proxy_fraction": 0.21951219512195122,
+    "seed": 4321
+  },
+  "methods": [
+    {
+      "method": "finetune",
+      "family": "regularization",
+      "label": "Finetune",
+      "clean": {
+        "old_acc": 0.6014371257485029,
+        "old_mf1": 0.5859763915282052,
+        "new_acc": 0.5433870266198912,
+        "new_mf1": 0.46496210466830423,
+        "bwt_acc": -0.10093975760897222,
+        "bwt_mf1": -0.09941830177771332,
+        "metrics": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/full49_task26_q20_l2p20_seed4321/runs/regularization/finetune/clean/finetune/metrics.json"
+      },
+      "shared_proxy": {
+        "old_acc": 0.5989820359281437,
+        "old_mf1": 0.584758846223581,
+        "new_acc": 0.5411353127061052,
+        "new_mf1": 0.4637396398254734,
+        "bwt_acc": -0.10270634961474229,
+        "bwt_mf1": -0.10059073259352697,
+        "metrics": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/full49_task26_q20_l2p20_seed4321/runs/regularization/finetune/shared_proxy/finetune/metrics.json"
+      },
+      "delta": {
+        "old_acc": -0.0024550898203592464,
+        "old_mf1": -0.0012175453046242568,
+        "new_acc": -0.002251713913786091,
+        "new_mf1": -0.0012224648428308393,
+        "bwt_acc": -0.0017665920057700624,
+        "bwt_mf1": -0.001172430815813641
+      },
+      "paired_prefix_validation": {
+        "identical_before_affected_task": true,
+        "tasks_compared": 25
+      }
+    },
+    {
+      "method": "ewc",
+      "family": "regularization",
+      "label": "EWC",
+      "clean": {
+        "old_acc": 0.6898802395209581,
+        "old_mf1": 0.664250450508783,
+        "new_acc": 0.6250560915774034,
+        "new_mf1": 0.5346883582926678,
+        "bwt_acc": -0.027949717444256405,
+        "bwt_mf1": -0.03349311065799029,
+        "metrics": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/full49_task26_q20_l2p20_seed4321/runs/regularization/ewc/clean/ewc/metrics.json"
+      },
+      "shared_proxy": {
+        "old_acc": 0.6896407185628742,
+        "old_mf1": 0.6637844235383328,
+        "new_acc": 0.6247544214402235,
+        "new_mf1": 0.5345016415517242,
+        "bwt_acc": -0.0283827996204921,
+        "bwt_mf1": -0.03368323360414509,
+        "metrics": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/full49_task26_q20_l2p20_seed4321/runs/regularization/ewc/shared_proxy/ewc/metrics.json"
+      },
+      "delta": {
+        "old_acc": -0.00023952095808388307,
+        "old_mf1": -0.00046602697045017294,
+        "new_acc": -0.0003016701371798547,
+        "new_mf1": -0.00018671674094361546,
+        "bwt_acc": -0.000433082176235694,
+        "bwt_mf1": -0.00019012294615480124
+      },
+      "paired_prefix_validation": {
+        "identical_before_affected_task": true,
+        "tasks_compared": 25
+      }
+    },
+    {
+      "method": "online_ewc",
+      "family": "regularization",
+      "label": "Online EWC",
+      "clean": {
+        "old_acc": 0.6965269461077844,
+        "old_mf1": 0.6714181726799688,
+        "new_acc": 0.63427850537206,
+        "new_mf1": 0.5389154914041149,
+        "bwt_acc": -0.01703097909102976,
+        "bwt_mf1": -0.023027393953579892,
+        "metrics": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/full49_task26_q20_l2p20_seed4321/runs/regularization/online_ewc/clean/online_ewc/metrics.json"
+      },
+      "shared_proxy": {
+        "old_acc": 0.6963473053892215,
+        "old_mf1": 0.6708373675136938,
+        "new_acc": 0.6345504774494247,
+        "new_mf1": 0.5393255741603326,
+        "bwt_acc": -0.016600304891386367,
+        "bwt_mf1": -0.022417286509191003,
+        "metrics": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/full49_task26_q20_l2p20_seed4321/runs/regularization/online_ewc/shared_proxy/online_ewc/metrics.json"
+      },
+      "delta": {
+        "old_acc": -0.0001796407185629123,
+        "old_mf1": -0.0005808051662750113,
+        "new_acc": 0.00027197207736473494,
+        "new_mf1": 0.00041008275621767787,
+        "bwt_acc": 0.00043067419964339104,
+        "bwt_mf1": 0.0006101074443888889
+      },
+      "paired_prefix_validation": {
+        "identical_before_affected_task": true,
+        "tasks_compared": 25
+      }
+    },
+    {
+      "method": "si",
+      "family": "regularization",
+      "label": "SI",
+      "clean": {
+        "old_acc": 0.6012574850299401,
+        "old_mf1": 0.5856838647234185,
+        "new_acc": 0.5421259917624751,
+        "new_mf1": 0.46430960751298117,
+        "bwt_acc": -0.10262908692818094,
+        "bwt_mf1": -0.1008734325560906,
+        "metrics": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/full49_task26_q20_l2p20_seed4321/runs/regularization/si/clean/si/metrics.json"
+      },
+      "shared_proxy": {
+        "old_acc": 0.5953293413173653,
+        "old_mf1": 0.5815765873800122,
+        "new_acc": 0.5375737812249763,
+        "new_mf1": 0.4606259217292752,
+        "bwt_acc": -0.10660887216404694,
+        "bwt_mf1": -0.10411450538332528,
+        "metrics": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/full49_task26_q20_l2p20_seed4321/runs/regularization/si/shared_proxy/si/metrics.json"
+      },
+      "delta": {
+        "old_acc": -0.005928143712574885,
+        "old_mf1": -0.004107277343406324,
+        "new_acc": -0.004552210537498769,
+        "new_mf1": -0.003683685783705981,
+        "bwt_acc": -0.003979785235865993,
+        "bwt_mf1": -0.003241072827234681
+      },
+      "paired_prefix_validation": {
+        "identical_before_affected_task": true,
+        "tasks_compared": 25
+      }
+    },
+    {
+      "method": "mas",
+      "family": "regularization",
+      "label": "MAS",
+      "clean": {
+        "old_acc": 0.6047305389221557,
+        "old_mf1": 0.5902226027494714,
+        "new_acc": 0.5476678544508524,
+        "new_mf1": 0.4686790045220086,
+        "bwt_acc": -0.09725003017481766,
+        "bwt_mf1": -0.09637671791139871,
+        "metrics": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/full49_task26_q20_l2p20_seed4321/runs/regularization/mas/clean/mas/metrics.json"
+      },
+      "shared_proxy": {
+        "old_acc": 0.6038323353293413,
+        "old_mf1": 0.5889835013970857,
+        "new_acc": 0.5452624902230384,
+        "new_mf1": 0.4667125858589614,
+        "bwt_acc": -0.09957224441431352,
+        "bwt_mf1": -0.09849586457853887,
+        "metrics": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/full49_task26_q20_l2p20_seed4321/runs/regularization/mas/shared_proxy/mas/metrics.json"
+      },
+      "delta": {
+        "old_acc": -0.0008982035928143395,
+        "old_mf1": -0.0012391013523856964,
+        "new_acc": -0.002405364227814011,
+        "new_mf1": -0.001966418663047198,
+        "bwt_acc": -0.0023222142394958567,
+        "bwt_mf1": -0.002119146667140165
+      },
+      "paired_prefix_validation": {
+        "identical_before_affected_task": true,
+        "tasks_compared": 25
+      }
+    },
+    {
+      "method": "plain_er",
+      "family": "replay",
+      "label": "Plain ER",
+      "clean": {
+        "old_acc": 0.6718562874251497,
+        "old_mf1": 0.6475125584096658,
+        "new_acc": 0.6269019139006823,
+        "new_mf1": 0.546013618887634,
+        "bwt_acc": -0.03015087017377015,
+        "bwt_mf1": -0.03395798794970047,
+        "metrics": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/full49_task26_q20_l2p20_seed4321/runs/replay/clean/metrics.json"
+      },
+      "shared_proxy": {
+        "old_acc": 0.6711976047904191,
+        "old_mf1": 0.6471265507476133,
+        "new_acc": 0.6262802416005088,
+        "new_mf1": 0.5459260885915512,
+        "bwt_acc": -0.030327823386381705,
+        "bwt_mf1": -0.033678462830163444,
+        "metrics": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/full49_task26_q20_l2p20_seed4321/runs/replay/shared_proxy/metrics.json"
+      },
+      "delta": {
+        "old_acc": -0.0006586826347305674,
+        "old_mf1": -0.00038600766205254544,
+        "new_acc": -0.0006216723001735147,
+        "new_mf1": -8.753029608277174e-05,
+        "bwt_acc": -0.0001769532126115539,
+        "bwt_mf1": 0.0002795251195370288
+      },
+      "paired_prefix_validation": {
+        "identical_before_affected_task": true,
+        "tasks_compared": 25
+      }
+    },
+    {
+      "method": "full_spr_eeg_adapted",
+      "family": "full_spr",
+      "label": "Full SPR-EEG adapted",
+      "clean": {
+        "old_acc": 0.682934131736527,
+        "old_mf1": 0.6578253023898843,
+        "new_acc": 0.6225904691178522,
+        "new_mf1": 0.5361513532299182,
+        "bwt_acc": -0.021311849325093207,
+        "bwt_mf1": -0.027400450456558846,
+        "metrics": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/full49_task26_q20_l2p20_seed4321/runs/full_spr/clean/metrics.json"
+      },
+      "shared_proxy": {
+        "old_acc": 0.687125748502994,
+        "old_mf1": 0.6664236054628139,
+        "new_acc": 0.6270904666614354,
+        "new_mf1": 0.5429168786162698,
+        "bwt_acc": -0.014600145271903165,
+        "bwt_mf1": -0.018935925059278484,
+        "metrics": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/full49_task26_q20_l2p20_seed4321/runs/full_spr/shared_proxy/metrics.json"
+      },
+      "delta": {
+        "old_acc": 0.004191616766467066,
+        "old_mf1": 0.008598303072929525,
+        "new_acc": 0.004499997543583212,
+        "new_mf1": 0.006765525386351556,
+        "bwt_acc": 0.0067117040531900415,
+        "bwt_mf1": 0.008464525397280362
+      },
+      "paired_prefix_validation": {
+        "identical_before_affected_task": true,
+        "tasks_compared": 25
+      }
+    },
+    {
+      "method": "full_puridiver_eeg_adapted",
+      "family": "full_puridiver",
+      "label": "Full PuriDivER-EEG adapted",
+      "clean": {
+        "old_acc": 0.6165269461077845,
+        "old_mf1": 0.5903654650816337,
+        "new_acc": 0.5338168199888523,
+        "new_mf1": 0.4705339381389751,
+        "bwt_acc": -0.07555315381916038,
+        "bwt_mf1": -0.07564456175239166,
+        "metrics": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/full49_task26_q20_l2p20_seed4321/runs/full_puridiver/clean/metrics.json"
+      },
+      "shared_proxy": {
+        "old_acc": 0.6071856287425149,
+        "old_mf1": 0.5804346752512775,
+        "new_acc": 0.5299433906671482,
+        "new_mf1": 0.4682490729006798,
+        "bwt_acc": -0.07044923783807594,
+        "bwt_mf1": -0.07198586221784561,
+        "metrics": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/full49_task26_q20_l2p20_seed4321/runs/full_puridiver/shared_proxy/metrics.json"
+      },
+      "delta": {
+        "old_acc": -0.009341317365269552,
+        "old_mf1": -0.009930789830356224,
+        "new_acc": -0.0038734293217040916,
+        "new_mf1": -0.002284865238295297,
+        "bwt_acc": 0.0051039159810844364,
+        "bwt_mf1": 0.0036586995345460477
+      },
+      "paired_prefix_validation": {
+        "identical_before_affected_task": true,
+        "tasks_compared": 25
+      }
+    }
+  ]
+}

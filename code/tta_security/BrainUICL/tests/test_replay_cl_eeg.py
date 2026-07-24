@@ -3,6 +3,7 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
 
@@ -12,7 +13,9 @@ from experiments.replay_cl_eeg import (
     UnlabeledSequenceDataset,
     build_memory_records,
     load_replay_batch,
+    resolve_n2n_replay_uploads,
 )
+from experiments.n2n_shared_proxy import make_task_entry, write_manifest
 
 
 def record(index: int, poisoned: bool = False) -> ReplayRecord:
@@ -28,6 +31,60 @@ def record(index: int, poisoned: bool = False) -> ReplayRecord:
 
 
 class ReservoirReplayMemoryTests(unittest.TestCase):
+    def test_canonical_n2n_marks_only_selected_signal_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            clean_paths = []
+            for index in range(3):
+                path = root / "clean" / f"{index}.npy"
+                path.parent.mkdir(exist_ok=True)
+                np.save(path, np.full((2, 3, 4), index + 1, dtype=np.float32))
+                clean_paths.append(path)
+            proxy_path = root / "payload" / "different-name.npy"
+            proxy_path.parent.mkdir()
+            np.save(proxy_path, np.load(clean_paths[2]) + np.float32(0.01))
+            manifest = root / "manifest.json"
+            write_manifest(
+                manifest,
+                tasks=[
+                    make_task_entry(
+                        task=1,
+                        subject=64,
+                        clean_paths=clean_paths,
+                        proxy_paths={2: proxy_path},
+                    )
+                ],
+                split={"new_order": [64]},
+                constraints={"repeat": 0, "upload_multiplier": 1},
+                provenance={"surrogate": "unit-test"},
+            )
+            args = SimpleNamespace(n2n_manifest=manifest, n2n_verify="selected")
+
+            paths, tracked, indices, diagnostics = resolve_n2n_replay_uploads(
+                args, 1, 64, clean_paths
+            )
+
+            self.assertEqual(indices, (2,))
+            self.assertEqual(tracked, {str(proxy_path.resolve())})
+            self.assertEqual(paths[:2], [path.resolve() for path in clean_paths[:2]])
+            self.assertEqual(paths[2], proxy_path.resolve())
+            self.assertTrue(diagnostics["n_to_n"])
+
+    def test_explicit_sequence_indices_do_not_depend_on_proxy_basename(self):
+        paths = [Path("proxy-a.npy"), Path("proxy-b.npy")]
+        labels = [np.zeros(20, dtype=np.int64) for _ in paths]
+        records = build_memory_records(
+            paths,
+            labels,
+            task_index=1,
+            subject=64,
+            original_count=2,
+            poisoned_paths={"proxy-b.npy"},
+            sequence_indices=[7, 11],
+        )
+        self.assertEqual([item.sequence_index for item in records], [7, 11])
+        self.assertEqual([item.poisoned for item in records], [False, True])
+
     def test_reservoir_is_fixed_capacity_and_tracks_poisoned_replay(self):
         memory = ReservoirReplayMemory(capacity=3, seed=7)
         update = memory.add([record(index, poisoned=index % 2 == 0) for index in range(10)])

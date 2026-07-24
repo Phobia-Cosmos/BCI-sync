@@ -877,6 +877,7 @@ def build_memory_records(
     subject: int,
     original_count: int,
     poisoned_paths: set[str],
+    sequence_indices: Sequence[int] | None = None,
     epoch_masks: Sequence[np.ndarray | None] | None = None,
     clean_probabilities: Sequence[np.ndarray | None] | None = None,
 ) -> list[ReplayRecord]:
@@ -889,23 +890,30 @@ def build_memory_records(
         raise ValueError("Replay admission data/mask count mismatch")
     if clean_probabilities is not None and len(clean_probabilities) != count:
         raise ValueError("Replay admission data/probability count mismatch")
+    if sequence_indices is not None and len(sequence_indices) != count:
+        raise ValueError("Replay admission data/sequence-index count mismatch")
 
     records: list[ReplayRecord] = []
     for upload_index, (path, labels) in enumerate(zip(data_paths, pseudo_labels)):
         path = Path(path)
+        sequence_index = (
+            int(path.stem)
+            if sequence_indices is None
+            else int(sequence_indices[upload_index])
+        )
         records.append(
             ReplayRecord(
                 data_path=path,
                 pseudo_labels=np.asarray(labels, dtype=np.int64),
                 task=int(task_index),
                 subject=int(subject),
-                sequence_index=int(path.stem),
+                sequence_index=sequence_index,
                 poisoned=str(path) in poisoned_paths,
                 repeated_upload=upload_index >= original_count,
                 upload_index=upload_index,
                 uid=(
                     f"task-{int(task_index)}:subject-{int(subject)}:"
-                    f"upload-{upload_index}:sequence-{int(path.stem)}"
+                    f"upload-{upload_index}:sequence-{sequence_index}"
                 ),
                 epoch_mask=(None if epoch_masks is None else epoch_masks[upload_index]),
                 clean_probabilities=(

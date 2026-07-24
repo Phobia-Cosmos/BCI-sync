@@ -1,0 +1,12 @@
+{
+  "manifest": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/full49_task26_q20_l2p20_seed4321/shared_payload/manifest.json",
+  "manifest_sha256": "df428c029044e56cc68105825164c3ad98a6c08a8f84c209426872e5b551c32d",
+  "tasks": 49,
+  "uploaded_sequences": 2148,
+  "proxy_sequences": 9,
+  "proxy_tasks": [
+    26
+  ],
+  "n_to_n": true,
+  "all_slots_validated": true
+}

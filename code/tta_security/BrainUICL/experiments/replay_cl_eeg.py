@@ -27,7 +27,7 @@ from typing import Sequence
 import numpy as np
 import torch
 import torch.nn.functional as F
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -40,6 +40,8 @@ from model.regularization_cl import (  # noqa: E402
     freeze_batch_norm_running_stats,
     named_trainable_parameters,
 )
+from n2n_shared_proxy import resolve_task as resolve_n2n_task  # noqa: E402
+from unlabeled_eeg import UnlabeledSequenceDataset  # noqa: E402
 from aligned_replay_defenses import (  # noqa: E402
     PuriDivERSequenceMemory,
     ReplayRecord,
@@ -91,24 +93,6 @@ METHOD_DESCRIPTIONS = {
     "puridiver_memory_ce": "PuriDivER-style purity/diversity sequence memory with CE replay",
     "puridiver_cru": "PuriDivER-style purity/diversity memory with clean/relabel/unlabeled replay loss",
 }
-
-
-class UnlabeledSequenceDataset(Dataset):
-    """Load target signals without opening target annotation files."""
-
-    def __init__(self, data_paths: Sequence[Path], sequence_length: int):
-        self.data_paths = [Path(path) for path in data_paths]
-        self.sequence_length = int(sequence_length)
-
-    def __len__(self) -> int:
-        return len(self.data_paths)
-
-    def __getitem__(self, index: int):
-        values = torch.from_numpy(
-            np.load(self.data_paths[index]).astype(np.float32)
-        )
-        dummy = torch.zeros(self.sequence_length, dtype=torch.long)
-        return values[:, :2, :], values[:, 2:, :], dummy
 
 
 def make_unlabeled_loader(
@@ -417,6 +401,26 @@ def load_fixed_attack_uploads(
     return poisoned_paths, diagnostics
 
 
+def resolve_n2n_replay_uploads(
+    args,
+    task_index: int,
+    subject: int,
+    clean_data_paths: Sequence[Path],
+) -> tuple[list[Path], set[str], tuple[int, ...], dict]:
+    """Resolve partial signal replacement without opening target annotations."""
+
+    resolved = resolve_n2n_task(
+        args.n2n_manifest,
+        task=task_index,
+        subject=subject,
+        clean_data_paths=clean_data_paths,
+        verify=args.n2n_verify,
+    )
+    data_paths = list(resolved.data_paths)
+    proxy_paths = {str(data_paths[index]) for index in resolved.proxy_indices}
+    return data_paths, proxy_paths, resolved.proxy_indices, dict(resolved.diagnostics)
+
+
 def admit_memory(
     memory,
     records: list[ReplayRecord],
@@ -523,6 +527,11 @@ def run(args) -> dict:
             "true_target_labels_used_for_training": False,
             "attack": args.attack_mode,
             "attack_tasks": sorted(args.attack_tasks),
+            "canonical_n2n_manifest": (
+                None if args.n2n_manifest is None else str(args.n2n_manifest)
+            ),
+            "upload_cardinality": "N-to-N" if args.n2n_manifest is not None else None,
+            "target_training_loader": "signal-only without annotation paths",
         },
         "config": serializable_args(args),
         "initial": {
@@ -578,10 +587,29 @@ def run(args) -> dict:
             )
         )
         attack_diagnostics = None
+        proxy_upload_diagnostics = None
         attack_label_cpc_losses: list[float] = []
         generated_paths: list[Path] = []
         training_data_paths = list(clean_data_paths)
         training_label_paths = list(clean_label_paths)
+        tracked_proxy_paths: set[str] = set()
+        record_sequence_indices: list[int] | None = None
+
+        if args.n2n_manifest is not None:
+            (
+                training_data_paths,
+                tracked_proxy_paths,
+                proxy_indices,
+                proxy_upload_diagnostics,
+            ) = resolve_n2n_replay_uploads(
+                args,
+                task_index,
+                subject,
+                clean_data_paths,
+            )
+            if len(training_data_paths) != len(training_label_paths):
+                raise RuntimeError("Canonical N-to-N resolution changed upload cardinality")
+            record_sequence_indices = [int(path.stem) for path in clean_data_paths]
 
         if task_index in args.attack_tasks:
             if args.attack_mode == "benign_repeat":
@@ -691,7 +719,7 @@ def run(args) -> dict:
         admission_labels = infer_pseudo_labels(
             guiding_blocks, training_data_paths, args
         )
-        poisoned_set = {str(path) for path in generated_paths}
+        poisoned_set = tracked_proxy_paths or {str(path) for path in generated_paths}
         records = build_memory_records(
             training_data_paths,
             admission_labels,
@@ -699,6 +727,7 @@ def run(args) -> dict:
             subject=subject,
             original_count=len(clean_data_paths),
             poisoned_paths=poisoned_set,
+            sequence_indices=record_sequence_indices,
         )
         memory_update, admission_diagnostics, retained_records = admit_memory(
             memory,
@@ -754,6 +783,7 @@ def run(args) -> dict:
             "admission_diagnostics": admission_diagnostics,
             "memory": memory.stats(),
             "attack": attack_diagnostics,
+            "proxy_upload": proxy_upload_diagnostics,
             "attack_label_guiding_cpc_losses": attack_label_cpc_losses,
         }
         performance["tasks"].append(task_row)
@@ -849,6 +879,17 @@ def parse_args():
         default=None,
         help="attack_shared run root containing poisoned_inputs and metrics.json",
     )
+    parser.add_argument(
+        "--n2n-manifest",
+        type=Path,
+        default=None,
+        help="Canonical partial N-to-N signal-replacement manifest.",
+    )
+    parser.add_argument(
+        "--n2n-verify",
+        choices=("none", "selected", "full"),
+        default="selected",
+    )
     parser.add_argument("--seed", type=int, default=4321)
     parser.add_argument("--gpu", type=int, default=0)
     parser.add_argument("--batch", type=int, default=16)
@@ -903,6 +944,14 @@ def parse_args():
 
     if args.fixed_upload_root is not None:
         args.fixed_upload_root = args.fixed_upload_root.resolve()
+    if args.n2n_manifest is not None:
+        args.n2n_manifest = args.n2n_manifest.resolve()
+        if not args.n2n_manifest.is_file():
+            parser.error(f"Canonical N-to-N manifest does not exist: {args.n2n_manifest}")
+        if args.fixed_upload_root is not None:
+            parser.error("Use only one of --n2n-manifest and --fixed-upload-root")
+        if args.attack_mode != "none" or args.attack_tasks.strip():
+            parser.error("Canonical N-to-N input cannot be combined with attack modes")
     if args.memory_capacity < 1:
         parser.error("--memory-capacity must be positive")
     if args.replay_ratio != 1.0:

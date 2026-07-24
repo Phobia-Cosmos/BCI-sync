@@ -1,0 +1,107 @@
+{
+  "protocol": {
+    "name": "focused multi-user frozen shared proxy N-to-N",
+    "seed": 4321,
+    "affected_tasks": [
+      26,
+      31,
+      37,
+      43,
+      49
+    ],
+    "affected_subjects": [
+      10,
+      70,
+      83,
+      99,
+      13
+    ],
+    "proxy_sequences": 108,
+    "affected_task_sequences": 212,
+    "uploaded_sequences": 2148,
+    "nominal_proxy_fraction": 0.5,
+    "actual_proxy_fraction": 0.5094339622641509,
+    "stream_proxy_fraction": 0.05027932960893855,
+    "max_relative_l2": 0.2,
+    "max_linf_over_std": 0.5,
+    "repeat": 0,
+    "optimization_steps": [
+      5
+    ],
+    "manifest": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/focused_ewc_plain_er_k5_q50_l2p20_steps5_seed4321/shared_payload/manifest.json",
+    "manifest_sha256": "a043e9559a679e7e0c4902d5f70f6bbfe42f99766b51444b9b1c31c9ec7752cc",
+    "clean_root": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/full49_task26_q20_l2p20_seed4321"
+  },
+  "methods": [
+    {
+      "label": "EWC",
+      "family": "regularization",
+      "method": "ewc",
+      "clean_metrics": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/full49_task26_q20_l2p20_seed4321/runs/regularization/ewc/clean/ewc/metrics.json",
+      "shared_metrics": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/focused_ewc_plain_er_k5_q50_l2p20_steps5_seed4321/runs/regularization/ewc/shared_proxy/ewc/metrics.json",
+      "clean": {
+        "old_acc": 0.6898802395209581,
+        "old_mf1": 0.664250450508783,
+        "new_acc": 0.6250560915774034,
+        "new_mf1": 0.5346883582926678,
+        "bwt_acc": -0.027949717444256405,
+        "bwt_mf1": -0.03349311065799029
+      },
+      "shared_proxy": {
+        "old_acc": 0.6860479041916168,
+        "old_mf1": 0.6591578452083663,
+        "new_acc": 0.6236727776028606,
+        "new_mf1": 0.5320827828022879,
+        "bwt_acc": -0.026874901579765038,
+        "bwt_mf1": -0.03327538567896553
+      },
+      "delta": {
+        "old_acc": -0.003832335329341352,
+        "old_mf1": -0.005092605300416664,
+        "new_acc": -0.0013833139745428324,
+        "new_mf1": -0.0026055754903798745,
+        "bwt_acc": 0.0010748158644913672,
+        "bwt_mf1": 0.00021772497902475957
+      },
+      "paired_prefix_validation": {
+        "identical_before_affected_task": true,
+        "tasks_compared": 25
+      }
+    },
+    {
+      "label": "Plain ER",
+      "family": "replay",
+      "method": "plain_er",
+      "clean_metrics": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/full49_task26_q20_l2p20_seed4321/runs/replay/clean/metrics.json",
+      "shared_metrics": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/focused_ewc_plain_er_k5_q50_l2p20_steps5_seed4321/runs/replay/shared_proxy/metrics.json",
+      "clean": {
+        "old_acc": 0.6718562874251497,
+        "old_mf1": 0.6475125584096658,
+        "new_acc": 0.6269019139006823,
+        "new_mf1": 0.546013618887634,
+        "bwt_acc": -0.03015087017377015,
+        "bwt_mf1": -0.03395798794970047
+      },
+      "shared_proxy": {
+        "old_acc": 0.6773652694610779,
+        "old_mf1": 0.6494689222966115,
+        "new_acc": 0.6314849349494316,
+        "new_mf1": 0.5497025154389432,
+        "bwt_acc": -0.024041084941519783,
+        "bwt_mf1": -0.02844818824226238
+      },
+      "delta": {
+        "old_acc": 0.0055089820359282005,
+        "old_mf1": 0.0019563638869456446,
+        "new_acc": 0.004583021048749303,
+        "new_mf1": 0.0036888965513092176,
+        "bwt_acc": 0.006109785232250368,
+        "bwt_mf1": 0.0055097997074380935
+      },
+      "paired_prefix_validation": {
+        "identical_before_affected_task": true,
+        "tasks_compared": 25
+      }
+    }
+  ]
+}

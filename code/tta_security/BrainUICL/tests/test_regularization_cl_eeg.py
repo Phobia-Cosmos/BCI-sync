@@ -29,7 +29,10 @@ from experiments.regularization_cl_attacks import (
 from experiments.regularization_cl_eeg import (
     delete_generated_inputs,
     resolve_attack_tasks,
+    resolve_n2n_subject_paths,
+    task_phase_seed,
 )
+from experiments.n2n_shared_proxy import make_task_entry, write_manifest
 from experiments.rttdp_brainuicl_full import external_proxy_upload_paths
 
 
@@ -88,6 +91,53 @@ def tiny_proxy_args(**overrides):
 
 
 class RegularizationCLEEGTest(unittest.TestCase):
+    def test_task_phase_seeds_are_deterministic_and_isolated(self):
+        self.assertEqual(task_phase_seed(4321, 26, "setup"), 30321)
+        self.assertEqual(task_phase_seed(4321, 26, "guide"), 30322)
+        self.assertEqual(task_phase_seed(4321, 26, "student"), 30323)
+        with self.assertRaisesRegex(ValueError, "Unknown task phase"):
+            task_phase_seed(4321, 26, "diagnostic")
+
+    def test_canonical_n2n_runner_preserves_clean_label_paths(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            clean_data = []
+            clean_labels = []
+            for index in range(3):
+                data_path = root / "clean" / f"{index}.npy"
+                data_path.parent.mkdir(exist_ok=True)
+                np.save(data_path, np.full((2, 3, 4), index + 1, dtype=np.float32))
+                clean_data.append(data_path)
+                clean_labels.append(root / "labels" / f"{index}.npy")
+            proxy_path = root / "payload" / "renamed-proxy.npy"
+            proxy_path.parent.mkdir()
+            np.save(proxy_path, np.load(clean_data[1]) + np.float32(0.01))
+            manifest = root / "manifest.json"
+            write_manifest(
+                manifest,
+                tasks=[
+                    make_task_entry(
+                        task=1,
+                        subject=64,
+                        clean_paths=clean_data,
+                        proxy_paths={1: proxy_path},
+                    )
+                ],
+                split={"new_order": [64]},
+                constraints={"repeat": 0, "upload_multiplier": 1},
+                provenance={"surrogate": "unit-test"},
+            )
+            args = SimpleNamespace(n2n_manifest=manifest, n2n_verify="selected")
+
+            training_paths, diagnostics = resolve_n2n_subject_paths(
+                args, 1, 64, (clean_data, clean_labels)
+            )
+
+            self.assertEqual(training_paths[0][1], proxy_path.resolve())
+            self.assertEqual(training_paths[1], clean_labels)
+            self.assertEqual(diagnostics["proxy_indices"], [1])
+            self.assertEqual(len(training_paths[0]), len(clean_data))
+
     def test_delete_generated_inputs_stays_inside_attack_root(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
