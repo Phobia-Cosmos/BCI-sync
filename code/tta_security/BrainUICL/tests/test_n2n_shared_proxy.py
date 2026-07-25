@@ -15,10 +15,43 @@ from experiments.n2n_shared_proxy import (
     write_manifest,
 )
 from experiments.generate_n2n_shared_proxy_manifest import parse_affected_tasks
+from experiments.generate_n2n_shared_proxy_manifest import enforce_payload_budget
+from experiments.derive_nested_n2n_sweep import nested_slot_indices
 from experiments.summarize_canonical_n2n_matrix import validate_paired_prefix
 
 
 class CanonicalN2NManifestTests(unittest.TestCase):
+    def test_float32_budget_enforcement_leaves_serialization_margin(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            rng = np.random.default_rng(7)
+            clean = rng.normal(size=(2, 3, 64)).astype(np.float32)
+            clean_path = root / "clean.npy"
+            proxy_path = root / "proxy.npy"
+            np.save(clean_path, clean)
+            np.save(proxy_path, clean + np.float32(0.51 * clean.std()))
+
+            measured = enforce_payload_budget(
+                clean_path,
+                proxy_path,
+                max_relative_l2=0.20,
+                max_linf_over_std=0.50,
+            )
+
+            for name in ("linf_over_std", "eog_linf_over_std", "eeg_linf_over_std"):
+                self.assertLessEqual(measured[name], 0.50 + 1e-6)
+            for name in ("relative_l2", "eog_relative_l2", "eeg_relative_l2"):
+                self.assertLessEqual(measured[name], 0.20 + 1e-6)
+
+    def test_dose_sweep_slot_masks_are_deterministically_nested(self):
+        kwargs = {"seed": 4321, "task": 25, "subject": 2}
+        q20 = nested_slot_indices(47, 0.20, **kwargs)
+        q50 = nested_slot_indices(47, 0.50, **kwargs)
+        q100 = nested_slot_indices(47, 1.00, **kwargs)
+        self.assertEqual((len(q20), len(q50), len(q100)), (10, 24, 47))
+        self.assertTrue(q20 < q50 < q100)
+        self.assertEqual(q20, nested_slot_indices(47, 0.20, **kwargs))
+
     def test_multi_user_task_parser_is_sorted_unique_and_backward_compatible(self):
         self.assertEqual(parse_affected_tasks("31,26,31,49", 10), (26, 31, 49))
         self.assertEqual(parse_affected_tasks("", 26), (26,))

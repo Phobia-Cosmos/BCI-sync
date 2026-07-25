@@ -1,0 +1,29 @@
+{
+  "stage": "k01_q20",
+  "task_count": 1,
+  "nominal_sequence_fraction": 0.2,
+  "affected_tasks": [
+    25
+  ],
+  "affected_subjects": [
+    2
+  ],
+  "manifest": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/dose_sweep_ewc_plain_er_nested_seed4321/stages/k01_q20/manifest.json",
+  "manifest_sha256": "4480de0fcb82d4c178cc5d9e90859bdce97d18ab5d94882b67ec181aff1ae9df",
+  "proxy_sequences": 10,
+  "uploaded_sequences": 2148,
+  "stream_proxy_fraction": 0.004655493482309125,
+  "validation": {
+    "manifest": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/dose_sweep_ewc_plain_er_nested_seed4321/stages/k01_q20/manifest.json",
+    "manifest_sha256": "4480de0fcb82d4c178cc5d9e90859bdce97d18ab5d94882b67ec181aff1ae9df",
+    "tasks": 49,
+    "uploaded_sequences": 2148,
+    "proxy_sequences": 10,
+    "proxy_tasks": [
+      25
+    ],
+    "n_to_n": true,
+    "all_slots_validated": true
+  },
+  "schema": "brainuicl-canonical-n2n-v1"
+}

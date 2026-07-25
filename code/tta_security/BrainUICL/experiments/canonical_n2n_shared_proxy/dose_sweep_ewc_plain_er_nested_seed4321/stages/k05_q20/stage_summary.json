@@ -1,0 +1,41 @@
+{
+  "stage": "k05_q20",
+  "task_count": 5,
+  "nominal_sequence_fraction": 0.2,
+  "affected_tasks": [
+    1,
+    13,
+    25,
+    37,
+    49
+  ],
+  "affected_subjects": [
+    64,
+    61,
+    2,
+    83,
+    13
+  ],
+  "manifest": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/dose_sweep_ewc_plain_er_nested_seed4321/stages/k05_q20/manifest.json",
+  "manifest_sha256": "836b9bc4f1e091457fb0ccd1abd82955133f4c1e8baa9320511c661aaf238dec",
+  "proxy_sequences": 46,
+  "uploaded_sequences": 2148,
+  "stream_proxy_fraction": 0.021415270018621976,
+  "validation": {
+    "manifest": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/dose_sweep_ewc_plain_er_nested_seed4321/stages/k05_q20/manifest.json",
+    "manifest_sha256": "836b9bc4f1e091457fb0ccd1abd82955133f4c1e8baa9320511c661aaf238dec",
+    "tasks": 49,
+    "uploaded_sequences": 2148,
+    "proxy_sequences": 46,
+    "proxy_tasks": [
+      1,
+      13,
+      25,
+      37,
+      49
+    ],
+    "n_to_n": true,
+    "all_slots_validated": true
+  },
+  "schema": "brainuicl-canonical-n2n-v1"
+}

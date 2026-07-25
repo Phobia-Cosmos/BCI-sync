@@ -136,7 +136,9 @@ def enforce_payload_budget(
         if delta_max > 0 and max_linf_over_std > 0:
             scale = min(scale, max_linf_over_std * clean_std / delta_max)
     if scale < 1.0:
-        proxy = clean + delta * np.float32(max(scale * (1.0 - 1e-6), 0.0))
+        # Leave room for float32 subtraction/serialization before manifest
+        # validation recomputes the ratio in float64.
+        proxy = clean + delta * np.float32(max(scale * (1.0 - 1e-4), 0.0))
         np.save(proxy_path, proxy.astype(np.float32, copy=False))
     return signal_delta_metadata(clean_path, proxy_path)
 

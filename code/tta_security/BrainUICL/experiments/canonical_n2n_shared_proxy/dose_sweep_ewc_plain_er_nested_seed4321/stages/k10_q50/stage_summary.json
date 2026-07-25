@@ -1,0 +1,56 @@
+{
+  "stage": "k10_q50",
+  "task_count": 10,
+  "nominal_sequence_fraction": 0.5,
+  "affected_tasks": [
+    1,
+    5,
+    7,
+    13,
+    19,
+    25,
+    31,
+    37,
+    43,
+    49
+  ],
+  "affected_subjects": [
+    64,
+    60,
+    52,
+    61,
+    55,
+    2,
+    70,
+    83,
+    99,
+    13
+  ],
+  "manifest": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/dose_sweep_ewc_plain_er_nested_seed4321/stages/k10_q50/manifest.json",
+  "manifest_sha256": "0fa43190247aab945f952d32266d9ef5eff6de59111562357be8e546b0243952",
+  "proxy_sequences": 219,
+  "uploaded_sequences": 2148,
+  "stream_proxy_fraction": 0.10195530726256984,
+  "validation": {
+    "manifest": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/dose_sweep_ewc_plain_er_nested_seed4321/stages/k10_q50/manifest.json",
+    "manifest_sha256": "0fa43190247aab945f952d32266d9ef5eff6de59111562357be8e546b0243952",
+    "tasks": 49,
+    "uploaded_sequences": 2148,
+    "proxy_sequences": 219,
+    "proxy_tasks": [
+      1,
+      5,
+      7,
+      13,
+      19,
+      25,
+      31,
+      37,
+      43,
+      49
+    ],
+    "n_to_n": true,
+    "all_slots_validated": true
+  },
+  "schema": "brainuicl-canonical-n2n-v1"
+}
