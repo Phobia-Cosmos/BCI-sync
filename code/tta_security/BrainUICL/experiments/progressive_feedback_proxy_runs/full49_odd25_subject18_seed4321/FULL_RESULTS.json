@@ -1,0 +1,294 @@
+{
+  "schema": "brainuicl-progressive-score-feedback-v1",
+  "protocol": {
+    "seed": 4321,
+    "tasks": 49,
+    "proxy_tasks": [
+      1,
+      3,
+      5,
+      7,
+      9,
+      11,
+      13,
+      15,
+      17,
+      19,
+      21,
+      23,
+      25,
+      27,
+      29,
+      31,
+      33,
+      35,
+      37,
+      39,
+      41,
+      43,
+      45,
+      47,
+      49
+    ],
+    "clean_feedback_tasks": [
+      2,
+      4,
+      6,
+      8,
+      10,
+      12,
+      14,
+      16,
+      18,
+      20,
+      22,
+      24,
+      26,
+      28,
+      30,
+      32,
+      34,
+      36,
+      38,
+      40,
+      42,
+      44,
+      46,
+      48
+    ],
+    "base_subject": 18,
+    "base_sequences": 48,
+    "extra_tasks": 0,
+    "victim_parameters_visible": false,
+    "uploaded_sequences": 2148,
+    "proxy_sequences": 1072,
+    "clean_feedback_sequences": 1076,
+    "labeled_buffer_sequences": 2106,
+    "source_labeled_sequences": 1030,
+    "feedback_buffer_sequences": 2148
+  },
+  "methods": {
+    "ewc": {
+      "label": "EWC",
+      "clean_metrics": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/full49_task26_q20_l2p20_seed4321/runs/regularization/ewc/clean/ewc/metrics.json",
+      "clean": {
+        "old_acc": 0.6898802395209581,
+        "old_mf1": 0.664250450508783,
+        "new_acc": 0.6250560915774034,
+        "new_mf1": 0.5346883582926678,
+        "bwt_acc": -0.027949717444256405,
+        "bwt_mf1": -0.03349311065799029
+      },
+      "static": {
+        "metrics": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/progressive_feedback_proxy_runs/full49_odd25_subject18_seed4321/runs/ewc_static/ewc/metrics.json",
+        "final": {
+          "old_acc": 0.6450299401197604,
+          "old_mf1": 0.6005363426138303,
+          "new_acc": 0.5994891039305018,
+          "new_mf1": 0.5091233968059352,
+          "bwt_acc": -0.007639043748475557,
+          "bwt_mf1": -0.013887987666392631
+        },
+        "delta_clean": {
+          "old_acc": -0.04485029940119767,
+          "old_mf1": -0.06371410789495269,
+          "new_acc": -0.025566987646901573,
+          "new_mf1": -0.025564961486732596,
+          "bwt_acc": 0.020310673695780847,
+          "bwt_mf1": 0.019605122991597654
+        },
+        "validation": {
+          "task_count": 49,
+          "proxy_tasks": 25,
+          "clean_feedback_tasks": 24,
+          "proxy_sequences": 1072,
+          "uploaded_sequences": 2148,
+          "clean_feedback_sequences": 1076,
+          "labeled_buffer_sequences": 2106,
+          "feedback_buffer_sequences": 2148,
+          "max_step_relative_l2": 0.0,
+          "max_cumulative_relative_l2": 0.0,
+          "mean_response_kl_before": null,
+          "mean_response_kl_after": null,
+          "kl_improved_events": 0,
+          "kl_events": 0
+        }
+      },
+      "feedback": {
+        "metrics": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/progressive_feedback_proxy_runs/full49_odd25_subject18_seed4321/runs/ewc_feedback/ewc/metrics.json",
+        "final": {
+          "old_acc": 0.6220958083832335,
+          "old_mf1": 0.5747150102311801,
+          "new_acc": 0.5915108812126809,
+          "new_mf1": 0.5044037238183222,
+          "bwt_acc": -0.009888938688296406,
+          "bwt_mf1": -0.012775318634067724
+        },
+        "delta_clean": {
+          "old_acc": -0.06778443113772459,
+          "old_mf1": -0.08953544027760285,
+          "new_acc": -0.033545210364722466,
+          "new_mf1": -0.030284634474345595,
+          "bwt_acc": 0.01806077875596,
+          "bwt_mf1": 0.020717792023922564
+        },
+        "validation": {
+          "task_count": 49,
+          "proxy_tasks": 25,
+          "clean_feedback_tasks": 24,
+          "proxy_sequences": 1072,
+          "uploaded_sequences": 2148,
+          "clean_feedback_sequences": 1076,
+          "labeled_buffer_sequences": 2106,
+          "feedback_buffer_sequences": 2148,
+          "max_step_relative_l2": 0.01000000536441803,
+          "max_cumulative_relative_l2": 0.07453414052724838,
+          "mean_response_kl_before": 3.471612703875778,
+          "mean_response_kl_after": 3.176669134375182,
+          "kl_improved_events": 33,
+          "kl_events": 49
+        }
+      },
+      "feedback_minus_static": {
+        "old_acc": -0.02293413173652692,
+        "old_mf1": -0.025821332382650164,
+        "new_acc": -0.007978222717820893,
+        "new_mf1": -0.0047196729876129995,
+        "bwt_acc": -0.0022498949398208493,
+        "bwt_mf1": 0.0011126690323249068
+      }
+    },
+    "plain_er": {
+      "label": "Plain ER",
+      "clean_metrics": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/canonical_n2n_shared_proxy/full49_task26_q20_l2p20_seed4321/runs/replay/clean/metrics.json",
+      "clean": {
+        "old_acc": 0.6718562874251497,
+        "old_mf1": 0.6475125584096658,
+        "new_acc": 0.6269019139006823,
+        "new_mf1": 0.546013618887634,
+        "bwt_acc": -0.03015087017377015,
+        "bwt_mf1": -0.03395798794970047
+      },
+      "static": {
+        "metrics": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/progressive_feedback_proxy_runs/full49_odd25_subject18_seed4321/runs/plain_er_static/metrics.json",
+        "final": {
+          "old_acc": 0.7052095808383233,
+          "old_mf1": 0.6735083933935136,
+          "new_acc": 0.6422824744127873,
+          "new_mf1": 0.5646245137810367,
+          "bwt_acc": 0.0037289652728918297,
+          "bwt_mf1": 0.004465433990862929
+        },
+        "delta_clean": {
+          "old_acc": 0.03335329341317361,
+          "old_mf1": 0.025995834983847832,
+          "new_acc": 0.015380560512105013,
+          "new_mf1": 0.01861089489340273,
+          "bwt_acc": 0.03387983544666198,
+          "bwt_mf1": 0.038423421940563404
+        },
+        "validation": {
+          "task_count": 49,
+          "proxy_tasks": 25,
+          "clean_feedback_tasks": 24,
+          "proxy_sequences": 1072,
+          "uploaded_sequences": 2148,
+          "clean_feedback_sequences": 1076,
+          "labeled_buffer_sequences": 2106,
+          "feedback_buffer_sequences": 2148,
+          "max_step_relative_l2": 0.0,
+          "max_cumulative_relative_l2": 0.0,
+          "mean_response_kl_before": null,
+          "mean_response_kl_after": null,
+          "kl_improved_events": 0,
+          "kl_events": 0
+        },
+        "memory_proxy_fraction": 0.501,
+        "replay_proxy_fraction": 0.5065083135391923
+      },
+      "feedback": {
+        "metrics": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/progressive_feedback_proxy_runs/full49_odd25_subject18_seed4321/runs/plain_er_feedback/metrics.json",
+        "final": {
+          "old_acc": 0.7001796407185629,
+          "old_mf1": 0.6664654987227937,
+          "new_acc": 0.644350316024148,
+          "new_mf1": 0.5663932445359814,
+          "bwt_acc": 0.00953617274609754,
+          "bwt_mf1": 0.011329709321294557
+        },
+        "delta_clean": {
+          "old_acc": 0.028323353293413178,
+          "old_mf1": 0.018952940313127886,
+          "new_acc": 0.017448402123465767,
+          "new_mf1": 0.020379625648347388,
+          "bwt_acc": 0.03968704291986769,
+          "bwt_mf1": 0.045287697270995034
+        },
+        "validation": {
+          "task_count": 49,
+          "proxy_tasks": 25,
+          "clean_feedback_tasks": 24,
+          "proxy_sequences": 1072,
+          "uploaded_sequences": 2148,
+          "clean_feedback_sequences": 1076,
+          "labeled_buffer_sequences": 2106,
+          "feedback_buffer_sequences": 2148,
+          "max_step_relative_l2": 0.010000008158385754,
+          "max_cumulative_relative_l2": 0.0748785212635994,
+          "mean_response_kl_before": 5.918616046380328,
+          "mean_response_kl_after": 5.494452025979725,
+          "kl_improved_events": 37,
+          "kl_events": 49
+        },
+        "memory_proxy_fraction": 0.501,
+        "replay_proxy_fraction": 0.5065083135391923
+      },
+      "feedback_minus_static": {
+        "old_acc": -0.005029940119760434,
+        "old_mf1": -0.007042894670719946,
+        "new_acc": 0.0020678416113607545,
+        "new_mf1": 0.0017687307549446585,
+        "bwt_acc": 0.005807207473205711,
+        "bwt_mf1": 0.006864275330431629
+      }
+    }
+  },
+  "prior": {
+    "k25_q50": {
+      "ewc": {
+        "old_acc": -0.02383233532934137,
+        "old_mf1": -0.038271139969908385,
+        "new_acc": -0.038922494814716546,
+        "new_mf1": -0.047186367719566746,
+        "bwt_acc": 0.00030638311088035733,
+        "bwt_mf1": 0.0005795173154549693
+      },
+      "plain_er": {
+        "old_acc": -0.028023952095808324,
+        "old_mf1": -0.039672836039076675,
+        "new_acc": -0.035452823648230325,
+        "new_mf1": -0.038107479419909995,
+        "bwt_acc": 0.0025309194902217585,
+        "bwt_mf1": 0.005818289817150671
+      }
+    },
+    "k25_q100": {
+      "ewc": {
+        "old_acc": -0.010598802395209606,
+        "old_mf1": -0.01852230585150838,
+        "new_acc": -0.019800304411229375,
+        "new_mf1": -0.025233549930539056,
+        "bwt_acc": 0.02131077058651228,
+        "bwt_mf1": 0.0235915293142819
+      },
+      "plain_er": {
+        "old_acc": 0.02023952095808379,
+        "old_mf1": 0.024535752055813376,
+        "new_acc": 0.0009738006741768501,
+        "new_mf1": 0.0034116026096836505,
+        "bwt_acc": 0.029720080374060997,
+        "bwt_mf1": 0.03588115526516359
+      }
+    }
+  }
+}

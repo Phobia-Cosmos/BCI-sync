@@ -1,0 +1,72 @@
+{
+  "protocol": {
+    "mode": "feedback",
+    "victim_parameters_visible": false,
+    "public_feedback": "post-task five-class probabilities on owned uploads",
+    "source_pretrain_hard_labels_visible": true,
+    "clean_feedback_tasks": [],
+    "proxy_tasks": [
+      1
+    ],
+    "base_subject": 18,
+    "base_sequences": 48,
+    "task_count_changed": false,
+    "subject_order_changed": false,
+    "step_relative_l2": 0.1,
+    "cumulative_relative_l2": 0.2,
+    "history_weight": 1.0
+  },
+  "tasks": [
+    {
+      "kind": "progressive_proxy",
+      "task": 1,
+      "subject": 64,
+      "proxy_sequences": 43,
+      "base_subject": 18,
+      "guiding_cpc_losses": [
+        83.39087168375652
+      ],
+      "generation": {
+        "epsilon_eog": 5.79550849977295e-07,
+        "epsilon_eeg": 6.929933723161715e-07,
+        "linf_eog": 1.7337333702016622e-07,
+        "linf_eeg": 1.8662512009844553e-07,
+        "relative_l2_eog": 0.09999999900658925,
+        "relative_l2_eeg": 0.10000000273187955,
+        "objective_initial": 194.62828826904297,
+        "objective_final": 99.26314735412598,
+        "gradient_conflict_final": -0.21957694739103317,
+        "history_alignment_final": 0.0,
+        "virtual_old_loss_final": 0.951026709129413,
+        "virtual_new_loss_final": 0.4764862582087517,
+        "target_shift": 3.5,
+        "target_shift_conflict": -0.2002605808277925,
+        "target_hit_rate": 0.24583333544433117,
+        "pseudo_label_preservation": 0.7385416775941849,
+        "guiding_confidence": 0.7442730565865835
+      },
+      "mean_step_relative_l2": 0.10000000149011612,
+      "max_step_relative_l2": 0.10000001639127731,
+      "mean_cumulative_relative_l2": 0.10000000149011612,
+      "max_cumulative_relative_l2": 0.10000001639127731,
+      "input_direction_cosine": null,
+      "history_gradient_cosine": null,
+      "feedback_visible": true,
+      "feedback_kind": "proxy",
+      "feedback_sequences": 43,
+      "labeled_buffer_sequences": 1030,
+      "feedback_buffer_sequences": 43,
+      "response_kl_before": 0.4784911572933197,
+      "response_kl_after": 0.2181998132304712,
+      "mean_distillation_loss": 4.916327476501465,
+      "mean_feedback_loss": 4.421633243560791,
+      "mean_supervised_loss": 0.9893888235092163
+    }
+  ],
+  "buffers": {
+    "labeled_sequences": 1030,
+    "feedback_sequences": 43,
+    "clean_feedback_sequences": 0,
+    "proxy_feedback_sequences": 43
+  }
+}

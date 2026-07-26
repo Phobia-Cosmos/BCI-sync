@@ -56,6 +56,12 @@ from aligned_replay_defenses import (  # noqa: E402
 from regularization_cl_attacks import (  # noqa: E402
     materialize_batched_proxy_dual_harm_subject,
 )
+from progressive_feedback_proxy import (  # noqa: E402
+    ProgressiveFeedbackProxy,
+    add_progressive_proxy_args,
+    public_probabilities,
+    validate_progressive_proxy_args,
+)
 from regularization_cl_eeg import (  # noqa: E402
     adapt_guiding_model,
     build_split,
@@ -468,6 +474,16 @@ def run(args) -> dict:
     student_blocks = load_pretrained(args)
     initial_blocks = load_pretrained(args)
     memory = make_memory(args)
+    progressive_proxy = (
+        ProgressiveFeedbackProxy(
+            args,
+            split,
+            args.output_root,
+            retain_payloads_for_replay=True,
+        )
+        if args.progressive_proxy_mode != "none"
+        else None
+    )
     old_loader = make_loader(
         args.data_root,
         split["old_idx"],
@@ -532,6 +548,11 @@ def run(args) -> dict:
             ),
             "upload_cardinality": "N-to-N" if args.n2n_manifest is not None else None,
             "target_training_loader": "signal-only without annotation paths",
+            "progressive_feedback_proxy": (
+                progressive_proxy.protocol()
+                if progressive_proxy is not None
+                else None
+            ),
         },
         "config": serializable_args(args),
         "initial": {
@@ -595,7 +616,22 @@ def run(args) -> dict:
         tracked_proxy_paths: set[str] = set()
         record_sequence_indices: list[int] | None = None
 
-        if args.n2n_manifest is not None:
+        if progressive_proxy is not None:
+            (
+                training_data_paths,
+                tracked_proxy_paths,
+                proxy_upload_diagnostics,
+            ) = progressive_proxy.prepare_task(
+                task_index,
+                subject,
+                clean_data_paths,
+            )
+            training_label_paths = progressive_proxy.diagnostic_label_paths(
+                task_index,
+                clean_label_paths,
+            )
+            record_sequence_indices = list(range(len(training_data_paths)))
+        elif args.n2n_manifest is not None:
             (
                 training_data_paths,
                 tracked_proxy_paths,
@@ -725,7 +761,11 @@ def run(args) -> dict:
             admission_labels,
             task_index=task_index,
             subject=subject,
-            original_count=len(clean_data_paths),
+            original_count=(
+                len(training_data_paths)
+                if progressive_proxy is not None
+                else len(clean_data_paths)
+            ),
             poisoned_paths=poisoned_set,
             sequence_indices=record_sequence_indices,
         )
@@ -736,6 +776,23 @@ def run(args) -> dict:
             student_blocks,
             args,
         )
+
+        progressive_task_row = None
+        if progressive_proxy is not None and (
+            progressive_proxy.is_proxy_task(task_index)
+            or progressive_proxy.is_clean_feedback_task(task_index)
+        ):
+            response_probabilities = public_probabilities(
+                student_blocks,
+                training_data_paths,
+                args,
+            )
+            progressive_task_row = progressive_proxy.observe_task(
+                task_index,
+                subject,
+                training_data_paths,
+                response_probabilities,
+            )
 
         diagnostic_loader = DataLoader(
             # Labels are opened only for the following offline diagnostic.
@@ -785,6 +842,7 @@ def run(args) -> dict:
             "attack": attack_diagnostics,
             "proxy_upload": proxy_upload_diagnostics,
             "attack_label_guiding_cpc_losses": attack_label_cpc_losses,
+            "progressive_proxy": progressive_task_row,
         }
         performance["tasks"].append(task_row)
         if task_index in args.retention_milestones or task_index == total_tasks:
@@ -833,6 +891,8 @@ def run(args) -> dict:
         "memory": memory.stats(),
         "memory_records": memory.serializable_records(),
     }
+    if progressive_proxy is not None:
+        performance["final"]["progressive_proxy"] = progressive_proxy.summary()
     summary = summarize_run(performance)
     summary.update(
         {
@@ -849,6 +909,8 @@ def run(args) -> dict:
     performance["summary"] = summary
     save_json(args.output_root / "metrics.json", performance)
     save_json(args.output_root / "summary.json", {args.method: summary})
+    if progressive_proxy is not None:
+        progressive_proxy.cleanup()
     return performance
 
 
@@ -940,6 +1002,7 @@ def parse_args():
     parser.add_argument("--puridiver-consistency-weight", type=float, default=1.0)
     parser.add_argument("--eval-max-batches", type=int, default=0)
     parser.add_argument("--retention-milestones", type=str, default="10,25,49")
+    add_progressive_proxy_args(parser)
     args = parser.parse_args()
 
     if args.fixed_upload_root is not None:
@@ -985,6 +1048,16 @@ def parse_args():
         else "cpu"
     )
     args.retention_milestones = parse_int_set(args.retention_milestones)
+    validate_progressive_proxy_args(args, 49 if args.max_subjects <= 0 else args.max_subjects)
+    if args.progressive_proxy_mode != "none" and (
+        args.attack_mode != "none"
+        or args.attack_tasks.strip()
+        or args.n2n_manifest is not None
+        or args.fixed_upload_root is not None
+    ):
+        parser.error(
+            "Progressive feedback proxy cannot be combined with another input mode"
+        )
     return args
 
 

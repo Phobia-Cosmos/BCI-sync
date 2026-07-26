@@ -616,6 +616,7 @@ def _proxy_dual_harm_terms(
     classifier_parameters: Sequence[tuple[str, nn.Parameter]],
     harmful_gradients: Sequence[torch.Tensor | None],
     harmful_norm: torch.Tensor,
+    history_gradients: Sequence[torch.Tensor | None] | None,
     curvature_weights: Sequence[torch.Tensor],
     eps_eog: torch.Tensor,
     eps_eeg: torch.Tensor,
@@ -645,6 +646,15 @@ def _proxy_dual_harm_terms(
         update_gradients,
         harmful_gradients,
         curvature_weights,
+    )
+    history_alignment = (
+        _weighted_gradient_cosine(
+            update_gradients,
+            history_gradients,
+            curvature_weights,
+        )
+        if history_gradients is not None
+        else inner_loss.new_zeros(())
     )
     update_norm = _gradient_norm(update_gradients)
     updated_parameters = {
@@ -682,6 +692,7 @@ def _proxy_dual_harm_terms(
     objective = (
         args.attack_target_weight * target_loss
         + args.attack_conflict_weight * gradient_conflict
+        - getattr(args, "progressive_history_weight", 0.0) * history_alignment
         - args.attack_gradient_norm_weight
         * update_norm
         / harmful_norm.clamp_min(1e-12)
@@ -693,6 +704,7 @@ def _proxy_dual_harm_terms(
     return {
         "objective": objective,
         "gradient_conflict": gradient_conflict,
+        "history_alignment": history_alignment,
         "virtual_old_loss": virtual_old_loss,
         "virtual_new_loss": virtual_new_loss,
         "guiding_logits": guiding_logits,
@@ -710,6 +722,8 @@ def proxy_dual_harm_batch(
     args,
     *,
     strategy=None,
+    reference_targets: torch.Tensor | None = None,
+    history_gradients: Sequence[torch.Tensor | None] | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, dict[str, float]]:
     """State-aware white-box input poisoning for regularization CL.
 
@@ -749,7 +763,13 @@ def proxy_dual_harm_batch(
         source_logits = flat_logits(
             forward_blocks(student_blocks, reference_eog, reference_eeg, args)
         )
-        source_labels = source_logits.argmax(dim=1)
+        source_labels = (
+            source_logits.argmax(dim=1)
+            if reference_targets is None
+            else reference_targets.reshape(-1).long().to(source_logits.device)
+        )
+        if source_labels.shape[0] != source_logits.shape[0]:
+            raise ValueError("Reference target count does not match reference epochs")
         reference_features = _encoded_features(
             student_blocks,
             reference_eog,
@@ -810,7 +830,21 @@ def proxy_dual_harm_batch(
             harmful_gradients,
             curvature_weights,
         )
-        candidate_rows.append((float(conflict.detach().cpu()), shift, target_labels))
+        history_alignment = (
+            _weighted_gradient_cosine(
+                target_gradients,
+                history_gradients,
+                curvature_weights,
+            )
+            if history_gradients is not None
+            else conflict.new_zeros(())
+        )
+        score = conflict - getattr(
+            args, "progressive_history_weight", 0.0
+        ) * history_alignment
+        candidate_rows.append(
+            (float(score.detach().cpu()), shift, target_labels)
+        )
     target_conflict, target_shift, target_labels = min(
         candidate_rows,
         key=lambda row: row[0],
@@ -872,6 +906,7 @@ def proxy_dual_harm_batch(
             classifier_parameters=classifier_parameters,
             harmful_gradients=harmful_gradients,
             harmful_norm=harmful_norm,
+            history_gradients=history_gradients,
             curvature_weights=curvature_weights,
             eps_eog=eps_eog,
             eps_eeg=eps_eeg,
@@ -920,6 +955,7 @@ def proxy_dual_harm_batch(
         classifier_parameters=classifier_parameters,
         harmful_gradients=harmful_gradients,
         harmful_norm=harmful_norm,
+        history_gradients=history_gradients,
         curvature_weights=curvature_weights,
         eps_eog=eps_eog,
         eps_eeg=eps_eeg,
@@ -948,6 +984,9 @@ def proxy_dual_harm_batch(
             "gradient_conflict_final": float(
                 final_terms["gradient_conflict"].detach().cpu()
             ),
+            "history_alignment_final": float(
+                final_terms["history_alignment"].detach().cpu()
+            ),
             "virtual_old_loss_final": float(
                 final_terms["virtual_old_loss"].detach().cpu()
             ),
@@ -968,6 +1007,77 @@ def proxy_dual_harm_batch(
     for block, mode in zip(label_blocks, label_modes):
         block.train(mode)
     return eog_adv, eeg_adv, diagnostics
+
+
+def pseudo_update_gradients(
+    student_blocks,
+    label_blocks,
+    eog: torch.Tensor,
+    eeg: torch.Tensor,
+    args,
+) -> list[torch.Tensor | None]:
+    """Return the local classifier update gradient induced by one upload batch."""
+    student_modes = [block.training for block in student_blocks]
+    label_modes = [block.training for block in label_blocks]
+    set_train(student_blocks, False)
+    set_train(label_blocks, False)
+    attack_parameters = _attack_named_parameters(
+        student_blocks,
+        args.attack_param_scope,
+    )
+    parameter_tensors = [parameter for _name, parameter in attack_parameters]
+    with torch.no_grad():
+        pseudo = flat_logits(
+            forward_blocks(label_blocks, eog, eeg, args)
+        ).argmax(dim=1)
+    logits = flat_logits(forward_blocks(student_blocks, eog, eeg, args))
+    loss = F.cross_entropy(logits, pseudo)
+    gradients = [
+        None if gradient is None else gradient.detach()
+        for gradient in torch.autograd.grad(
+            loss,
+            parameter_tensors,
+            allow_unused=True,
+        )
+    ]
+    for block, mode in zip(student_blocks, student_modes):
+        block.train(mode)
+    for block, mode in zip(label_blocks, label_modes):
+        block.train(mode)
+    return gradients
+
+
+def supervised_update_gradients(
+    student_blocks,
+    eog: torch.Tensor,
+    eeg: torch.Tensor,
+    targets: torch.Tensor,
+    args,
+) -> list[torch.Tensor | None]:
+    """Return classifier gradients for locally owned hard-labeled source data."""
+    student_modes = [block.training for block in student_blocks]
+    set_train(student_blocks, False)
+    attack_parameters = _attack_named_parameters(
+        student_blocks,
+        args.attack_param_scope,
+    )
+    parameter_tensors = [parameter for _name, parameter in attack_parameters]
+    logits = flat_logits(forward_blocks(student_blocks, eog, eeg, args))
+    labels = targets.reshape(-1).long().to(logits.device)
+    if labels.shape[0] != logits.shape[0]:
+        raise ValueError("Source target count does not match source epochs")
+    loss = F.cross_entropy(logits, labels)
+    gradients = [
+        None if gradient is None else gradient.detach()
+        for gradient in torch.autograd.grad(
+            loss,
+            parameter_tensors,
+            allow_unused=True,
+        )
+    ]
+    for block, mode in zip(student_blocks, student_modes):
+        block.train(mode)
+    return gradients
 
 
 def materialize_poisoned_subject(

@@ -48,6 +48,12 @@ from regularization_cl_attacks import (  # noqa: E402
     materialize_poisoned_subject,
     pacol_gradient_matching_batch,
 )
+from progressive_feedback_proxy import (  # noqa: E402
+    ProgressiveFeedbackProxy,
+    add_progressive_proxy_args,
+    public_probabilities,
+    validate_progressive_proxy_args,
+)
 from rttdp_brainuicl_full import (  # noqa: E402
     CPCProbe,
     SequenceDataset,
@@ -686,6 +692,16 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
 
     student_blocks = load_pretrained(args)
     initial_blocks = load_pretrained(args)
+    progressive_proxy = (
+        ProgressiveFeedbackProxy(
+            args,
+            split,
+            method_dir,
+            retain_payloads_for_replay=False,
+        )
+        if args.progressive_proxy_mode != "none"
+        else None
+    )
     strategy = build_regularization_strategy(
         method,
         ewc_strength=args.ewc_strength,
@@ -809,6 +825,11 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
                 if robust_feature_defense is not None
                 else None
             ),
+            "progressive_feedback_proxy": (
+                progressive_proxy.protocol()
+                if progressive_proxy is not None
+                else None
+            ),
         },
         "config": vars_for_json(args),
         "initial": {
@@ -857,7 +878,32 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
         noise_diagnostics = None
         attack_label_cpc_losses: list[float] = []
         generated_poisoned_paths: list[Path] = []
-        if args.n2n_manifest is not None:
+        if progressive_proxy is not None:
+            progressive_data_paths, _tracked_paths, progressive_diagnostics = (
+                progressive_proxy.prepare_task(
+                    task_index,
+                    subject,
+                    clean_paths[0],
+                )
+            )
+            training_paths = (
+                progressive_data_paths,
+                progressive_proxy.diagnostic_label_paths(
+                    task_index,
+                    clean_paths[1],
+                ),
+            )
+            loader_train = make_unlabeled_loader(args, progressive_data_paths, True)
+            loader_pseudo_eval = make_unlabeled_loader(
+                args, progressive_data_paths, False
+            )
+            loader_diagnostic = DataLoader(
+                SequenceDataset(training_paths),
+                batch_size=args.batch,
+                shuffle=False,
+                num_workers=args.num_worker,
+            )
+        elif args.n2n_manifest is not None:
             training_paths, noise_diagnostics = resolve_n2n_subject_paths(
                 args,
                 task_index,
@@ -1056,6 +1102,23 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
             curvature_loader=loader_pseudo_eval,
         )
 
+        progressive_task_row = None
+        if progressive_proxy is not None and (
+            progressive_proxy.is_proxy_task(task_index)
+            or progressive_proxy.is_clean_feedback_task(task_index)
+        ):
+            response_probabilities = public_probabilities(
+                student_blocks,
+                training_paths[0],
+                args,
+            )
+            progressive_task_row = progressive_proxy.observe_task(
+                task_index,
+                subject,
+                training_paths[0],
+                response_probabilities,
+            )
+
         if robust_feature_defense is not None:
             defense_diagnostics = robust_feature_defense.finish_task()
             defense_diagnostics["training_last_defense_loss"] = train_diagnostics[
@@ -1200,6 +1263,7 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
             "training": train_diagnostics,
             "importance": current_importance,
             "defense": defense_diagnostics,
+            "progressive_proxy": progressive_task_row,
         }
         if args.noise_upload_root is None and args.n2n_manifest is None:
             task_row["attack"] = attack_diagnostics
@@ -1255,10 +1319,14 @@ def run_method(args, method: str, split: dict) -> tuple[dict, dict]:
             args,
         ),
     }
+    if progressive_proxy is not None:
+        performance["final"]["progressive_proxy"] = progressive_proxy.summary()
     summary = summarize_run(performance)
     performance["summary"] = summary
     save_progress(method_dir, performance)
     write_report(method_dir / "report.md", method, performance, summary)
+    if progressive_proxy is not None:
+        progressive_proxy.cleanup()
     return performance, summary
 
 
@@ -1488,6 +1556,7 @@ def parse_args():
     parser.add_argument("--eval-max-batches", type=int, default=0)
     parser.add_argument("--retention-milestones", type=str, default="10,25,49")
     parser.add_argument("--checkpoint-milestones", type=str, default="0,1,10,25,49")
+    add_progressive_proxy_args(parser)
     return parser.parse_args()
 
 
@@ -1533,6 +1602,7 @@ def main():
     args.output_root.mkdir(parents=True, exist_ok=True)
 
     split = build_split(args)
+    validate_progressive_proxy_args(args, len(split["new_order"]))
     args.attack_tasks = resolve_attack_tasks(
         args.attack_tasks,
         len(split["new_order"]),
@@ -1558,6 +1628,15 @@ def main():
             raise FileNotFoundError(
                 f"Proxy-noise upload root does not exist: {args.noise_upload_root}"
             )
+    if args.progressive_proxy_mode != "none" and (
+        args.attack_mode != "none"
+        or args.attack_tasks
+        or args.n2n_manifest is not None
+        or args.noise_upload_root is not None
+    ):
+        raise ValueError(
+            "Progressive feedback proxy cannot be combined with another input mode"
+        )
     if not 0.0 <= args.attack_fraction <= 1.0:
         raise ValueError("--attack-fraction must be in [0, 1]")
     if args.attack_steps < 1:

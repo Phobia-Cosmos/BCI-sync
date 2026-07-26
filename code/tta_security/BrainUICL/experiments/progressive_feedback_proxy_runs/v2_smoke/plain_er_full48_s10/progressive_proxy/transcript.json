@@ -1,0 +1,100 @@
+{
+  "protocol": {
+    "mode": "feedback",
+    "victim_parameters_visible": false,
+    "public_feedback": "post-task five-class probabilities on owned uploads",
+    "source_pretrain_hard_labels_visible": true,
+    "incremental_clean_hard_labels_visible": false,
+    "clean_feedback_tasks": [
+      2
+    ],
+    "proxy_tasks": [
+      1
+    ],
+    "base_subject": 18,
+    "base_sequences": 48,
+    "upload_full_pool": true,
+    "active_sequences": 48,
+    "passive_sequences": 0,
+    "task_count_changed": false,
+    "subject_order_changed": false,
+    "step_relative_l2": 0.1,
+    "cumulative_relative_l2": 0.2,
+    "history_weight": 1.0,
+    "source_labeled_sequences": 1030
+  },
+  "tasks": [
+    {
+      "kind": "progressive_proxy",
+      "task": 1,
+      "subject": 64,
+      "proxy_sequences": 48,
+      "base_subject": 18,
+      "guiding_cpc_losses": [
+        83.39087168375652
+      ],
+      "generation": {
+        "epsilon_eog": 5.79550849977295e-07,
+        "epsilon_eeg": 6.929933723161715e-07,
+        "linf_eog": 1.7285871460141303e-07,
+        "linf_eeg": 1.86736618464541e-07,
+        "relative_l2_eog": 0.09999999962747097,
+        "relative_l2_eeg": 0.10000000273187955,
+        "objective_initial": 832.7308959960938,
+        "objective_final": 458.8017044067383,
+        "gradient_conflict_final": -0.26469360540310544,
+        "history_alignment_final": 0.0,
+        "virtual_old_loss_final": 0.9637355084220568,
+        "virtual_new_loss_final": 0.47611914823452633,
+        "target_shift": 4.0,
+        "target_shift_conflict": -0.13170294743031263,
+        "target_hit_rate": 0.21145833749324083,
+        "pseudo_label_preservation": 0.7781250178813934,
+        "guiding_confidence": 0.7717342376708984
+      },
+      "mean_step_relative_l2": 0.10000000149011612,
+      "max_step_relative_l2": 0.10000001639127731,
+      "mean_cumulative_relative_l2": 0.10000000149011612,
+      "max_cumulative_relative_l2": 0.10000001639127731,
+      "input_direction_cosine": null,
+      "history_gradient_cosine": null,
+      "source_gradient_cosine": -0.19334308803081512,
+      "source_conflict_accepted": true,
+      "mean_active_step_relative_l2": 0.10000000149011612,
+      "mean_active_cumulative_relative_l2": 0.10000000149011612,
+      "mean_passive_step_relative_l2": null,
+      "mean_passive_cumulative_relative_l2": null,
+      "feedback_visible": true,
+      "feedback_kind": "proxy",
+      "feedback_sequences": 48,
+      "labeled_buffer_sequences": 1030,
+      "feedback_buffer_sequences": 48,
+      "response_kl_before": 0.5153063709537188,
+      "response_kl_after": 0.05265263468027115,
+      "mean_distillation_loss": 4.344656705856323,
+      "mean_feedback_loss": 3.676916241645813,
+      "mean_supervised_loss": 1.3354809284210205
+    },
+    {
+      "kind": "clean_feedback",
+      "task": 2,
+      "subject": 89,
+      "feedback_visible": true,
+      "feedback_kind": "clean",
+      "feedback_sequences": 50,
+      "labeled_buffer_sequences": 1030,
+      "feedback_buffer_sequences": 98,
+      "response_kl_before": 0.27546012903062195,
+      "response_kl_after": 0.09364831877442506,
+      "mean_distillation_loss": 2.497032642364502,
+      "mean_feedback_loss": 2.094118893146515,
+      "mean_supervised_loss": 0.8058275878429413
+    }
+  ],
+  "buffers": {
+    "labeled_sequences": 1030,
+    "feedback_sequences": 98,
+    "clean_feedback_sequences": 50,
+    "proxy_feedback_sequences": 48
+  }
+}

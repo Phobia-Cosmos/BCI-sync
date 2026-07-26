@@ -1,0 +1,523 @@
+{
+  "method": "ewc",
+  "protocol": {
+    "pseudo_labels": "all hard argmax labels from the guiding model",
+    "confidence_filter": false,
+    "replay": false,
+    "dcb": false,
+    "cea": false,
+    "student_batch_norm_running_stats": "frozen",
+    "external_proxy_noise": null,
+    "canonical_n2n_manifest": null,
+    "upload_cardinality": null,
+    "target_training_loader": "signal-only without annotation paths",
+    "proxy_reference_inputs_used_by_learner": false,
+    "true_target_labels_used_for_training": false,
+    "icml2026_defense": "none",
+    "t2t_parameter_scope": null,
+    "t2t_action": null,
+    "robust_feature_scope": null,
+    "progressive_feedback_proxy": {
+      "mode": "feedback",
+      "victim_parameters_visible": false,
+      "public_feedback": "post-task five-class probabilities on owned uploads",
+      "source_pretrain_hard_labels_visible": true,
+      "incremental_clean_hard_labels_visible": false,
+      "clean_feedback_tasks": [
+        2
+      ],
+      "proxy_tasks": [
+        1
+      ],
+      "base_subject": 18,
+      "base_sequences": 48,
+      "upload_full_pool": true,
+      "active_sequences": 48,
+      "passive_sequences": 0,
+      "task_count_changed": false,
+      "subject_order_changed": false,
+      "step_relative_l2": 0.1,
+      "cumulative_relative_l2": 0.2,
+      "history_weight": 1.0,
+      "source_labeled_sequences": 1030
+    },
+    "attack": "none",
+    "attack_tasks": [],
+    "attacker_reference_inputs_used_by_learner": false
+  },
+  "config": {
+    "data_root": "/home/undefined/Disk/datasets/brainuicl/processed/isruc_group1_npy_float32",
+    "input_checkpoint_root": "/home/undefined/Disk/ai-storage/BrainUICL/model_parameter",
+    "output_root": "experiments/progressive_feedback_proxy_runs/v2_smoke/ewc_full48_s10",
+    "methods": "ewc",
+    "seed": 4321,
+    "gpu": 0,
+    "batch": 16,
+    "num_worker": 0,
+    "max_subjects": 2,
+    "ssl_epoch": 1,
+    "incremental_epoch": 1,
+    "lr": 0.0001,
+    "ssl_lr": 1e-06,
+    "cl_lr": 1e-06,
+    "beta1": 0.5,
+    "beta2": 0.99,
+    "weight_decay": 0.0003,
+    "grad_clip": 5.0,
+    "freeze_bn_stats": true,
+    "defense_mode": "none",
+    "t2t_param_scope": "all",
+    "t2t_action": "rollback",
+    "t2t_threshold_multiplier": 2.5,
+    "t2t_window": 5,
+    "t2t_minimum_history": 1,
+    "t2t_pinv_rtol": 1e-06,
+    "t2t_eps": 1e-12,
+    "t2t_score_floor": 1e-12,
+    "robust_feature_sigma2": 1.0,
+    "robust_feature_budget_per_dimension": 0.026041666666666668,
+    "robust_feature_initial_risk": 0.0,
+    "robust_feature_eps": 1e-12,
+    "robust_feature_max_regularizer": 1000000.0,
+    "ewc_strength": 5000.0,
+    "online_ewc_strength": 6500.0,
+    "online_ewc_decay": 1.0,
+    "si_strength": 15.0,
+    "si_xi": 0.1,
+    "mas_strength": 1.0,
+    "mas_decay": 1.0,
+    "attack_mode": "none",
+    "attack_tasks": [],
+    "attack_fraction": 0.05,
+    "attack_eps_scale": 0.1,
+    "attack_steps": 5,
+    "attack_inner_lr": 0.0001,
+    "attack_cautious_weight": 1.0,
+    "attack_param_scope": "classifier",
+    "attack_reference_batch": 1,
+    "attack_random_start": false,
+    "attack_generation_batch": 1,
+    "attack_max_relative_l2": 0.0,
+    "attack_target_weight": 1.0,
+    "attack_conflict_weight": 1.0,
+    "attack_gradient_norm_weight": 0.1,
+    "attack_virtual_old_weight": 1.0,
+    "attack_virtual_new_weight": 1.0,
+    "attack_new_proxy_weight": 1.0,
+    "attack_curvature_scale": 1.0,
+    "attack_min_confidence": 0.0,
+    "attack_confidence_weight": 0.0,
+    "attack_l2_weight": 0.0,
+    "attack_proxy_repeat": 0,
+    "noise_upload_root": null,
+    "n2n_manifest": null,
+    "n2n_verify": "selected",
+    "no_save_checkpoints": true,
+    "delete_poisoned_inputs_after_task": false,
+    "eval_max_batches": 0,
+    "retention_milestones": [
+      10,
+      25,
+      49
+    ],
+    "checkpoint_milestones": [
+      0,
+      1,
+      10,
+      25,
+      49
+    ],
+    "progressive_proxy_mode": "feedback",
+    "progressive_proxy_tasks": "1",
+    "progressive_clean_feedback_tasks": "2",
+    "progressive_base_subject": 18,
+    "progressive_proxy_lr": 1e-06,
+    "progressive_feedback_steps": 2,
+    "progressive_feedback_batch": 4,
+    "progressive_guide_epochs": 1,
+    "progressive_generation_steps": 20,
+    "progressive_generation_batch": 4,
+    "progressive_reference_batch": 16,
+    "progressive_step_relative_l2": 0.1,
+    "progressive_step_linf_std": 0.5,
+    "progressive_cumulative_relative_l2": 0.2,
+    "progressive_cumulative_linf_std": 0.5,
+    "progressive_history_weight": 1.0,
+    "progressive_history_decay": 0.8,
+    "progressive_input_cone_residual": 0.5,
+    "progressive_source_weight": 0.5,
+    "progressive_feedback_weight": 1.0,
+    "progressive_feedback_decay": 0.95,
+    "progressive_feedback_capacity": 2500,
+    "progressive_upload_full_pool": true,
+    "progressive_active_fraction": 1.0,
+    "progressive_passive_step_scale": 1.0,
+    "progressive_passive_cumulative_relative_l2": -1.0,
+    "progressive_passive_cumulative_linf_std": -1.0,
+    "progressive_fill_step_budget": true,
+    "progressive_history_refresh_count": 16,
+    "progressive_target_weight": 200.0,
+    "progressive_conflict_weight": 20.0,
+    "progressive_gradient_norm_weight": 1.0,
+    "progressive_virtual_old_weight": 5.0,
+    "progressive_virtual_new_weight": 5.0,
+    "progressive_confidence_weight": 0.0,
+    "progressive_l2_weight": 0.0,
+    "progressive_max_source_gradient_cosine": 0.0,
+    "progressive_require_source_conflict": false,
+    "dataset": "ISRUC",
+    "model_param": "<utils.config.ModelConfig object at 0x7b00d518ac30>",
+    "device": "cuda:0"
+  },
+  "initial": {
+    "old_generalization": {
+      "acc": 0.7024550898203593,
+      "mf1": 0.6880332943309935,
+      "n_epochs": 16700
+    },
+    "source_train": {
+      "acc": 0.7500970873786408,
+      "mf1": 0.7321142684197317,
+      "n_epochs": 20600
+    },
+    "validation": {
+      "acc": 0.6414448669201521,
+      "mf1": 0.613332711486469,
+      "n_epochs": 5260
+    }
+  },
+  "stability": {
+    "acc": [
+      0.7024550898203593,
+      0.6998203592814372,
+      0.7053293413173652
+    ],
+    "mf1": [
+      0.6880332943309935,
+      0.6855186293938065,
+      0.6913237294602993
+    ]
+  },
+  "tasks": [
+    {
+      "task": 1,
+      "subject": 64,
+      "current_before": {
+        "acc": 0.7290697674418605,
+        "mf1": 0.7631163096154122,
+        "n_epochs": 860
+      },
+      "current_after": {
+        "acc": 0.7244186046511628,
+        "mf1": 0.7597676200330702,
+        "n_epochs": 860
+      },
+      "old_generalization_after": {
+        "acc": 0.6998203592814372,
+        "mf1": 0.6855186293938065,
+        "n_epochs": 16700
+      },
+      "pseudo_labels": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.3885416666666667,
+        "mf1_diagnostic_only": 0.14303496454806028,
+        "mean_confidence_diagnostic_only": 0.7910956562186281,
+        "pseudo_class_counts": [
+          2,
+          6,
+          856,
+          96,
+          0
+        ],
+        "n_epochs": 960
+      },
+      "pseudo_labels_on_clean_current": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.3885416666666667,
+        "mf1_diagnostic_only": 0.14303496454806028,
+        "mean_confidence_diagnostic_only": 0.7910956562186281,
+        "pseudo_class_counts": [
+          2,
+          6,
+          856,
+          96,
+          0
+        ],
+        "n_epochs": 960
+      },
+      "guiding_cpc_losses": [
+        88.00051371256511
+      ],
+      "noise": null,
+      "training": {
+        "epochs": [
+          {
+            "epoch": 1,
+            "pseudo_loss": 0.7299078305562338,
+            "regularization_loss": 0.0,
+            "defense_loss": 0.0,
+            "total_loss": 0.7299078305562338
+          }
+        ],
+        "last_pseudo_loss": 0.7299078305562338,
+        "last_regularization_loss": 0.0,
+        "last_defense_loss": 0.0
+      },
+      "importance": {
+        "mean": 0.28987305336693175,
+        "max": 392988.59375,
+        "nonzero_fraction": 0.8133676698574299
+      },
+      "defense": null,
+      "progressive_proxy": {
+        "kind": "progressive_proxy",
+        "task": 1,
+        "subject": 64,
+        "proxy_sequences": 48,
+        "base_subject": 18,
+        "guiding_cpc_losses": [
+          83.39087168375652
+        ],
+        "generation": {
+          "epsilon_eog": 5.79550849977295e-07,
+          "epsilon_eeg": 6.929933723161715e-07,
+          "linf_eog": 1.7285871460141303e-07,
+          "linf_eeg": 1.86736618464541e-07,
+          "relative_l2_eog": 0.09999999962747097,
+          "relative_l2_eeg": 0.10000000273187955,
+          "objective_initial": 832.7308959960938,
+          "objective_final": 458.8017044067383,
+          "gradient_conflict_final": -0.26469360540310544,
+          "history_alignment_final": 0.0,
+          "virtual_old_loss_final": 0.9637355084220568,
+          "virtual_new_loss_final": 0.47611914823452633,
+          "target_shift": 4.0,
+          "target_shift_conflict": -0.13170294743031263,
+          "target_hit_rate": 0.21145833749324083,
+          "pseudo_label_preservation": 0.7781250178813934,
+          "guiding_confidence": 0.7717342376708984
+        },
+        "mean_step_relative_l2": 0.10000000149011612,
+        "max_step_relative_l2": 0.10000001639127731,
+        "mean_cumulative_relative_l2": 0.10000000149011612,
+        "max_cumulative_relative_l2": 0.10000001639127731,
+        "input_direction_cosine": null,
+        "history_gradient_cosine": null,
+        "source_gradient_cosine": -0.19334308803081512,
+        "source_conflict_accepted": true,
+        "mean_active_step_relative_l2": 0.10000000149011612,
+        "mean_active_cumulative_relative_l2": 0.10000000149011612,
+        "mean_passive_step_relative_l2": null,
+        "mean_passive_cumulative_relative_l2": null,
+        "feedback_visible": true,
+        "feedback_kind": "proxy",
+        "feedback_sequences": 48,
+        "labeled_buffer_sequences": 1030,
+        "feedback_buffer_sequences": 48,
+        "response_kl_before": 0.5168588111797968,
+        "response_kl_after": 0.053461456981798015,
+        "mean_distillation_loss": 4.807568788528442,
+        "mean_feedback_loss": 4.076133728027344,
+        "mean_supervised_loss": 1.4628698825836182
+      },
+      "attack": null,
+      "attack_label_guiding_cpc_losses": []
+    },
+    {
+      "task": 2,
+      "subject": 89,
+      "current_before": {
+        "acc": 0.788,
+        "mf1": 0.7223912738370954,
+        "n_epochs": 1000
+      },
+      "current_after": {
+        "acc": 0.786,
+        "mf1": 0.720731229375797,
+        "n_epochs": 1000
+      },
+      "old_generalization_after": {
+        "acc": 0.7053293413173652,
+        "mf1": 0.6913237294602993,
+        "n_epochs": 16700
+      },
+      "pseudo_labels": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.761,
+        "mf1_diagnostic_only": 0.6993019788560586,
+        "mean_confidence_diagnostic_only": 0.9307777959704399,
+        "pseudo_class_counts": [
+          283,
+          81,
+          359,
+          164,
+          113
+        ],
+        "n_epochs": 1000
+      },
+      "pseudo_labels_on_clean_current": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.761,
+        "mf1_diagnostic_only": 0.6993019788560586,
+        "mean_confidence_diagnostic_only": 0.9307777959704399,
+        "pseudo_class_counts": [
+          283,
+          81,
+          359,
+          164,
+          113
+        ],
+        "n_epochs": 1000
+      },
+      "guiding_cpc_losses": [
+        76.93763661384583
+      ],
+      "noise": null,
+      "training": {
+        "epochs": [
+          {
+            "epoch": 1,
+            "pseudo_loss": 0.19285807758569717,
+            "regularization_loss": 0.00540573988109827,
+            "defense_loss": 0.0,
+            "total_loss": 0.19826381467282772
+          }
+        ],
+        "last_pseudo_loss": 0.19285807758569717,
+        "last_regularization_loss": 0.00540573988109827,
+        "last_defense_loss": 0.0
+      },
+      "importance": {
+        "mean": 0.6620172270469084,
+        "max": 740718.4375,
+        "nonzero_fraction": 0.8547821905668032
+      },
+      "defense": null,
+      "progressive_proxy": {
+        "kind": "clean_feedback",
+        "task": 2,
+        "subject": 89,
+        "feedback_visible": true,
+        "feedback_kind": "clean",
+        "feedback_sequences": 50,
+        "labeled_buffer_sequences": 1030,
+        "feedback_buffer_sequences": 98,
+        "response_kl_before": 0.11737618774462205,
+        "response_kl_after": 0.08644094626204325,
+        "mean_distillation_loss": 2.47288179397583,
+        "mean_feedback_loss": 2.0506848096847534,
+        "mean_supervised_loss": 0.8443939685821533
+      },
+      "attack": null,
+      "attack_label_guiding_cpc_losses": []
+    }
+  ],
+  "retention_snapshots": {
+    "2": {
+      "64": {
+        "acc": 0.7290697674418605,
+        "mf1": 0.7638100518441566,
+        "n_epochs": 860
+      },
+      "89": {
+        "acc": 0.786,
+        "mf1": 0.720731229375797,
+        "n_epochs": 1000
+      }
+    }
+  },
+  "final": {
+    "old_generalization": {
+      "acc": 0.7053293413173652,
+      "mf1": 0.6913237294602993,
+      "n_epochs": 16700
+    },
+    "source_train": {
+      "acc": 0.7497087378640777,
+      "mf1": 0.7303073607454911,
+      "n_epochs": 20600
+    },
+    "validation": {
+      "acc": 0.6414448669201521,
+      "mf1": 0.6115854061608851,
+      "n_epochs": 5260
+    },
+    "seen_subjects": {
+      "64": {
+        "acc": 0.7290697674418605,
+        "mf1": 0.7638100518441566,
+        "n_epochs": 860
+      },
+      "89": {
+        "acc": 0.786,
+        "mf1": 0.720731229375797,
+        "n_epochs": 1000
+      }
+    },
+    "initial_model_seen_subjects": {
+      "64": {
+        "acc": 0.7290697674418605,
+        "mf1": 0.7631163096154122,
+        "n_epochs": 860
+      },
+      "89": {
+        "acc": 0.801,
+        "mf1": 0.7326458009878241,
+        "n_epochs": 1000
+      }
+    },
+    "progressive_proxy": {
+      "protocol": {
+        "mode": "feedback",
+        "victim_parameters_visible": false,
+        "public_feedback": "post-task five-class probabilities on owned uploads",
+        "source_pretrain_hard_labels_visible": true,
+        "incremental_clean_hard_labels_visible": false,
+        "clean_feedback_tasks": [
+          2
+        ],
+        "proxy_tasks": [
+          1
+        ],
+        "base_subject": 18,
+        "base_sequences": 48,
+        "upload_full_pool": true,
+        "active_sequences": 48,
+        "passive_sequences": 0,
+        "task_count_changed": false,
+        "subject_order_changed": false,
+        "step_relative_l2": 0.1,
+        "cumulative_relative_l2": 0.2,
+        "history_weight": 1.0,
+        "source_labeled_sequences": 1030
+      },
+      "proxy_tasks_completed": 1,
+      "clean_feedback_tasks_completed": 1,
+      "proxy_sequences_uploaded": 48,
+      "final_mean_cumulative_relative_l2": 0.10000000149011612,
+      "feedback_buffer_sequences": 98,
+      "labeled_buffer_sequences": 1030,
+      "transcript": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/progressive_feedback_proxy_runs/v2_smoke/ewc_full48_s10/ewc/progressive_proxy/transcript.json"
+    }
+  },
+  "summary": {
+    "final_old_acc": 0.7053293413173652,
+    "final_old_mf1": 0.6913237294602993,
+    "old_aaa": 0.7025349301397207,
+    "old_aaf1": 0.6882918843950331,
+    "old_fr": 0.004091722785781181,
+    "mean_current_before_acc": 0.7585348837209303,
+    "mean_current_after_acc": 0.7552093023255815,
+    "mean_current_acc_gain": -0.003325581395348831,
+    "mean_current_before_mf1": 0.7427537917262539,
+    "mean_current_after_mf1": 0.7402494247044336,
+    "mean_current_mf1_gain": -0.0025043670218202196,
+    "final_seen_acc": 0.7575348837209303,
+    "final_seen_mf1": 0.7422706406099768,
+    "bwt_acc": 0.0023255813953488302,
+    "bwt_mf1": 0.0020212159055432166,
+    "mean_pseudo_acc_diagnostic_only": 0.5747708333333333,
+    "mean_pseudo_mf1_diagnostic_only": 0.42116847170205945,
+    "pseudo_label_coverage": 1.0
+  }
+}

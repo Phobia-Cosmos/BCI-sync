@@ -1,0 +1,735 @@
+{
+  "method": "ewc",
+  "protocol": {
+    "pseudo_labels": "all hard argmax labels from the guiding model",
+    "confidence_filter": false,
+    "replay": false,
+    "dcb": false,
+    "cea": false,
+    "student_batch_norm_running_stats": "frozen",
+    "external_proxy_noise": null,
+    "canonical_n2n_manifest": null,
+    "upload_cardinality": null,
+    "target_training_loader": "signal-only without annotation paths",
+    "proxy_reference_inputs_used_by_learner": false,
+    "true_target_labels_used_for_training": false,
+    "icml2026_defense": "none",
+    "t2t_parameter_scope": null,
+    "t2t_action": null,
+    "robust_feature_scope": null,
+    "progressive_feedback_proxy": {
+      "mode": "feedback",
+      "victim_parameters_visible": false,
+      "public_feedback": "post-task five-class probabilities on owned uploads",
+      "source_pretrain_hard_labels_visible": true,
+      "clean_feedback_tasks": [
+        2,
+        4
+      ],
+      "proxy_tasks": [
+        1,
+        3
+      ],
+      "base_subject": 18,
+      "base_sequences": 48,
+      "task_count_changed": false,
+      "subject_order_changed": false,
+      "step_relative_l2": 0.01,
+      "cumulative_relative_l2": 0.2,
+      "history_weight": 1.0
+    },
+    "attack": "none",
+    "attack_tasks": [],
+    "attacker_reference_inputs_used_by_learner": false
+  },
+  "config": {
+    "data_root": "/home/undefined/Disk/datasets/brainuicl/processed/isruc_group1_npy_float32",
+    "input_checkpoint_root": "/home/undefined/Disk/ai-storage/BrainUICL/model_parameter",
+    "output_root": "experiments/progressive_feedback_proxy_runs/smoke4_ewc_feedback_seed4321",
+    "methods": "ewc",
+    "seed": 4321,
+    "gpu": 0,
+    "batch": 16,
+    "num_worker": 0,
+    "max_subjects": 4,
+    "ssl_epoch": 1,
+    "incremental_epoch": 1,
+    "lr": 0.0001,
+    "ssl_lr": 1e-06,
+    "cl_lr": 1e-06,
+    "beta1": 0.5,
+    "beta2": 0.99,
+    "weight_decay": 0.0003,
+    "grad_clip": 5.0,
+    "freeze_bn_stats": true,
+    "defense_mode": "none",
+    "t2t_param_scope": "all",
+    "t2t_action": "rollback",
+    "t2t_threshold_multiplier": 2.5,
+    "t2t_window": 5,
+    "t2t_minimum_history": 1,
+    "t2t_pinv_rtol": 1e-06,
+    "t2t_eps": 1e-12,
+    "t2t_score_floor": 1e-12,
+    "robust_feature_sigma2": 1.0,
+    "robust_feature_budget_per_dimension": 0.026041666666666668,
+    "robust_feature_initial_risk": 0.0,
+    "robust_feature_eps": 1e-12,
+    "robust_feature_max_regularizer": 1000000.0,
+    "ewc_strength": 5000.0,
+    "online_ewc_strength": 6500.0,
+    "online_ewc_decay": 1.0,
+    "si_strength": 15.0,
+    "si_xi": 0.1,
+    "mas_strength": 1.0,
+    "mas_decay": 1.0,
+    "attack_mode": "none",
+    "attack_tasks": [],
+    "attack_fraction": 0.05,
+    "attack_eps_scale": 0.1,
+    "attack_steps": 5,
+    "attack_inner_lr": 0.0001,
+    "attack_cautious_weight": 1.0,
+    "attack_param_scope": "classifier",
+    "attack_reference_batch": 1,
+    "attack_random_start": false,
+    "attack_generation_batch": 1,
+    "attack_max_relative_l2": 0.0,
+    "attack_target_weight": 1.0,
+    "attack_conflict_weight": 1.0,
+    "attack_gradient_norm_weight": 0.1,
+    "attack_virtual_old_weight": 1.0,
+    "attack_virtual_new_weight": 1.0,
+    "attack_new_proxy_weight": 1.0,
+    "attack_curvature_scale": 1.0,
+    "attack_min_confidence": 0.0,
+    "attack_confidence_weight": 0.0,
+    "attack_l2_weight": 0.0,
+    "attack_proxy_repeat": 0,
+    "noise_upload_root": null,
+    "n2n_manifest": null,
+    "n2n_verify": "selected",
+    "no_save_checkpoints": true,
+    "delete_poisoned_inputs_after_task": false,
+    "eval_max_batches": 0,
+    "retention_milestones": [
+      10,
+      25,
+      49
+    ],
+    "checkpoint_milestones": [
+      0,
+      1,
+      10,
+      25,
+      49
+    ],
+    "progressive_proxy_mode": "feedback",
+    "progressive_proxy_tasks": "odd",
+    "progressive_clean_feedback_tasks": "even",
+    "progressive_base_subject": 18,
+    "progressive_proxy_lr": 1e-06,
+    "progressive_feedback_steps": 1,
+    "progressive_feedback_batch": 2,
+    "progressive_guide_epochs": 1,
+    "progressive_generation_steps": 1,
+    "progressive_generation_batch": 2,
+    "progressive_reference_batch": 1,
+    "progressive_step_relative_l2": 0.01,
+    "progressive_step_linf_std": 0.025,
+    "progressive_cumulative_relative_l2": 0.2,
+    "progressive_cumulative_linf_std": 0.5,
+    "progressive_history_weight": 1.0,
+    "progressive_history_decay": 0.8,
+    "progressive_input_cone_residual": 0.5,
+    "progressive_source_weight": 0.5,
+    "progressive_feedback_weight": 1.0,
+    "progressive_feedback_decay": 0.95,
+    "progressive_feedback_capacity": 2500,
+    "dataset": "ISRUC",
+    "model_param": "<utils.config.ModelConfig object at 0x7c3701f99250>",
+    "device": "cuda:0"
+  },
+  "initial": {
+    "old_generalization": {
+      "acc": 0.7024550898203593,
+      "mf1": 0.6880332943309935,
+      "n_epochs": 16700
+    },
+    "source_train": {
+      "acc": 0.7500970873786408,
+      "mf1": 0.7321142684197317,
+      "n_epochs": 20600
+    },
+    "validation": {
+      "acc": 0.6414448669201521,
+      "mf1": 0.613332711486469,
+      "n_epochs": 5260
+    }
+  },
+  "stability": {
+    "acc": [
+      0.7024550898203593,
+      0.7003592814371258,
+      0.7076646706586827,
+      0.7062874251497006,
+      0.7132934131736527
+    ],
+    "mf1": [
+      0.6880332943309935,
+      0.6864737525098231,
+      0.6937101710288491,
+      0.6926527886804007,
+      0.7000151045988146
+    ]
+  },
+  "tasks": [
+    {
+      "task": 1,
+      "subject": 64,
+      "current_before": {
+        "acc": 0.7290697674418605,
+        "mf1": 0.7631163096154122,
+        "n_epochs": 860
+      },
+      "current_after": {
+        "acc": 0.7244186046511628,
+        "mf1": 0.7594192151400622,
+        "n_epochs": 860
+      },
+      "old_generalization_after": {
+        "acc": 0.7003592814371258,
+        "mf1": 0.6864737525098231,
+        "n_epochs": 16700
+      },
+      "pseudo_labels": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.2069767441860465,
+        "mf1_diagnostic_only": 0.11265864281365616,
+        "mean_confidence_diagnostic_only": 0.7189819207718205,
+        "pseudo_class_counts": [
+          0,
+          0,
+          646,
+          214,
+          0
+        ],
+        "n_epochs": 860
+      },
+      "pseudo_labels_on_clean_current": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.2069767441860465,
+        "mf1_diagnostic_only": 0.11265864281365616,
+        "mean_confidence_diagnostic_only": 0.7189819207718205,
+        "pseudo_class_counts": [
+          0,
+          0,
+          646,
+          214,
+          0
+        ],
+        "n_epochs": 860
+      },
+      "guiding_cpc_losses": [
+        82.37217712402344
+      ],
+      "noise": null,
+      "training": {
+        "epochs": [
+          {
+            "epoch": 1,
+            "pseudo_loss": 0.6654549439748129,
+            "regularization_loss": 0.0,
+            "defense_loss": 0.0,
+            "total_loss": 0.6654549439748129
+          }
+        ],
+        "last_pseudo_loss": 0.6654549439748129,
+        "last_regularization_loss": 0.0,
+        "last_defense_loss": 0.0
+      },
+      "importance": {
+        "mean": 0.032277273254040194,
+        "max": 36407.5234375,
+        "nonzero_fraction": 0.8081322202689127
+      },
+      "defense": null,
+      "progressive_proxy": {
+        "kind": "progressive_proxy",
+        "task": 1,
+        "subject": 64,
+        "proxy_sequences": 43,
+        "base_subject": 18,
+        "guiding_cpc_losses": [
+          83.39087168375652
+        ],
+        "generation": {
+          "epsilon_eog": 2.8511073502102136e-08,
+          "epsilon_eeg": 3.448065166722358e-08,
+          "linf_eog": 1.2722689272474478e-08,
+          "linf_eeg": 1.499916398491526e-08,
+          "relative_l2_eog": 0.009999999427236617,
+          "relative_l2_eeg": 0.010000000901830694,
+          "objective_initial": 4.005565502991279,
+          "objective_final": 3.8548317005236945,
+          "gradient_conflict_final": 0.6524909387032191,
+          "history_alignment_final": 0.0,
+          "virtual_old_loss_final": 0.5157444974690103,
+          "virtual_new_loss_final": 0.4740265967945258,
+          "target_shift": 3.8333333333333335,
+          "target_shift_conflict": -0.33756833616644144,
+          "target_hit_rate": 0.028125000651925802,
+          "pseudo_label_preservation": 0.9687500049670538,
+          "guiding_confidence": 0.7224472065766653
+        },
+        "mean_step_relative_l2": 0.009999997913837433,
+        "max_step_relative_l2": 0.010000008158385754,
+        "mean_cumulative_relative_l2": 0.009999997913837433,
+        "max_cumulative_relative_l2": 0.010000008158385754,
+        "input_direction_cosine": null,
+        "history_gradient_cosine": null,
+        "feedback_visible": true,
+        "feedback_kind": "proxy",
+        "feedback_sequences": 43,
+        "labeled_buffer_sequences": 1030,
+        "feedback_buffer_sequences": 43,
+        "response_kl_before": 0.20245579968799243,
+        "response_kl_after": 0.10068253630941565,
+        "mean_distillation_loss": 3.107250213623047,
+        "mean_feedback_loss": 2.602210521697998,
+        "mean_supervised_loss": 1.0100796222686768
+      },
+      "attack": null,
+      "attack_label_guiding_cpc_losses": []
+    },
+    {
+      "task": 2,
+      "subject": 89,
+      "current_before": {
+        "acc": 0.791,
+        "mf1": 0.7253842434506639,
+        "n_epochs": 1000
+      },
+      "current_after": {
+        "acc": 0.784,
+        "mf1": 0.71902251708046,
+        "n_epochs": 1000
+      },
+      "old_generalization_after": {
+        "acc": 0.7076646706586827,
+        "mf1": 0.6937101710288491,
+        "n_epochs": 16700
+      },
+      "pseudo_labels": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.765,
+        "mf1_diagnostic_only": 0.70222342161091,
+        "mean_confidence_diagnostic_only": 0.9312931840121746,
+        "pseudo_class_counts": [
+          286,
+          78,
+          358,
+          165,
+          113
+        ],
+        "n_epochs": 1000
+      },
+      "pseudo_labels_on_clean_current": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.765,
+        "mf1_diagnostic_only": 0.70222342161091,
+        "mean_confidence_diagnostic_only": 0.9312931840121746,
+        "pseudo_class_counts": [
+          286,
+          78,
+          358,
+          165,
+          113
+        ],
+        "n_epochs": 1000
+      },
+      "guiding_cpc_losses": [
+        76.99129664897919
+      ],
+      "noise": null,
+      "training": {
+        "epochs": [
+          {
+            "epoch": 1,
+            "pseudo_loss": 0.19463500753045082,
+            "regularization_loss": 0.00155546041787602,
+            "defense_loss": 0.0,
+            "total_loss": 0.19619046710431576
+          }
+        ],
+        "last_pseudo_loss": 0.19463500753045082,
+        "last_regularization_loss": 0.00155546041787602,
+        "last_defense_loss": 0.0
+      },
+      "importance": {
+        "mean": 0.1524705792644629,
+        "max": 131273.34375,
+        "nonzero_fraction": 0.8545488599702495
+      },
+      "defense": null,
+      "progressive_proxy": {
+        "kind": "clean_feedback",
+        "task": 2,
+        "subject": 89,
+        "feedback_visible": true,
+        "feedback_kind": "clean",
+        "feedback_sequences": 50,
+        "labeled_buffer_sequences": 1080,
+        "feedback_buffer_sequences": 93,
+        "response_kl_before": 0.39344258498866114,
+        "response_kl_after": 0.44880919041112066,
+        "mean_distillation_loss": 1.1973336935043335,
+        "mean_feedback_loss": 0.6827356815338135,
+        "mean_supervised_loss": 1.02919602394104
+      },
+      "attack": null,
+      "attack_label_guiding_cpc_losses": []
+    },
+    {
+      "task": 3,
+      "subject": 1,
+      "current_before": {
+        "acc": 0.20348837209302326,
+        "mf1": 0.09892920378853882,
+        "n_epochs": 860
+      },
+      "current_after": {
+        "acc": 0.20930232558139536,
+        "mf1": 0.10949223862299753,
+        "n_epochs": 860
+      },
+      "old_generalization_after": {
+        "acc": 0.7062874251497006,
+        "mf1": 0.6926527886804007,
+        "n_epochs": 16700
+      },
+      "pseudo_labels": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.2616279069767442,
+        "mf1_diagnostic_only": 0.14334021683014972,
+        "mean_confidence_diagnostic_only": 0.6904850941411285,
+        "pseudo_class_counts": [
+          0,
+          0,
+          571,
+          289,
+          0
+        ],
+        "n_epochs": 860
+      },
+      "pseudo_labels_on_clean_current": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.2616279069767442,
+        "mf1_diagnostic_only": 0.14334021683014972,
+        "mean_confidence_diagnostic_only": 0.6904850941411285,
+        "pseudo_class_counts": [
+          0,
+          0,
+          571,
+          289,
+          0
+        ],
+        "n_epochs": 860
+      },
+      "guiding_cpc_losses": [
+        81.30802917480469
+      ],
+      "noise": null,
+      "training": {
+        "epochs": [
+          {
+            "epoch": 1,
+            "pseudo_loss": 0.7368396917978922,
+            "regularization_loss": 0.0041309645942722755,
+            "defense_loss": 0.0,
+            "total_loss": 0.7409706711769104
+          }
+        ],
+        "last_pseudo_loss": 0.7368396917978922,
+        "last_regularization_loss": 0.0041309645942722755,
+        "last_defense_loss": 0.0
+      },
+      "importance": {
+        "mean": 0.1993471987856071,
+        "max": 181363.421875,
+        "nonzero_fraction": 0.8546377550034773
+      },
+      "defense": null,
+      "progressive_proxy": {
+        "kind": "progressive_proxy",
+        "task": 3,
+        "subject": 1,
+        "proxy_sequences": 43,
+        "base_subject": 18,
+        "guiding_cpc_losses": [
+          87.60428110758464
+        ],
+        "generation": {
+          "epsilon_eog": 2.850198499437795e-08,
+          "epsilon_eeg": 3.4466226835524104e-08,
+          "linf_eog": 1.2720600276831343e-08,
+          "linf_eeg": 1.499366912109205e-08,
+          "relative_l2_eog": 0.009999998340693613,
+          "relative_l2_eeg": 0.010000002182399234,
+          "objective_initial": 2.5886648781597614,
+          "objective_final": 2.426326058804989,
+          "gradient_conflict_final": 0.6443956270813942,
+          "history_alignment_final": 0.712720550596714,
+          "virtual_old_loss_final": 0.914354401281192,
+          "virtual_new_loss_final": 0.4677482781310876,
+          "target_shift": 1.0,
+          "target_shift_conflict": -0.06513243292768796,
+          "target_hit_rate": 0.022916667085761826,
+          "pseudo_label_preservation": 0.965625007947286,
+          "guiding_confidence": 0.689429851869742
+        },
+        "mean_step_relative_l2": 0.002795085310935974,
+        "max_step_relative_l2": 0.0027950964868068695,
+        "mean_cumulative_relative_l2": 0.01256114523857832,
+        "max_cumulative_relative_l2": 0.012562880292534828,
+        "input_direction_cosine": 0.8944271909999162,
+        "history_gradient_cosine": 0.9548995494842529,
+        "feedback_visible": true,
+        "feedback_kind": "proxy",
+        "feedback_sequences": 43,
+        "labeled_buffer_sequences": 1080,
+        "feedback_buffer_sequences": 136,
+        "response_kl_before": 0.39478697966445575,
+        "response_kl_after": 0.28819410706108267,
+        "mean_distillation_loss": 5.4402241706848145,
+        "mean_feedback_loss": 4.67302131652832,
+        "mean_supervised_loss": 1.5344054698944092
+      },
+      "attack": null,
+      "attack_label_guiding_cpc_losses": []
+    },
+    {
+      "task": 4,
+      "subject": 27,
+      "current_before": {
+        "acc": 0.7363636363636363,
+        "mf1": 0.6658143886195834,
+        "n_epochs": 880
+      },
+      "current_after": {
+        "acc": 0.7534090909090909,
+        "mf1": 0.6834794225734979,
+        "n_epochs": 880
+      },
+      "old_generalization_after": {
+        "acc": 0.7132934131736527,
+        "mf1": 0.7000151045988146,
+        "n_epochs": 16700
+      },
+      "pseudo_labels": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.7852272727272728,
+        "mf1_diagnostic_only": 0.724940947326682,
+        "mean_confidence_diagnostic_only": 0.9589752812277187,
+        "pseudo_class_counts": [
+          277,
+          31,
+          350,
+          125,
+          97
+        ],
+        "n_epochs": 880
+      },
+      "pseudo_labels_on_clean_current": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.7852272727272728,
+        "mf1_diagnostic_only": 0.724940947326682,
+        "mean_confidence_diagnostic_only": 0.9589752812277187,
+        "pseudo_class_counts": [
+          277,
+          31,
+          350,
+          125,
+          97
+        ],
+        "n_epochs": 880
+      },
+      "guiding_cpc_losses": [
+        111.0394999186198
+      ],
+      "noise": null,
+      "training": {
+        "epochs": [
+          {
+            "epoch": 1,
+            "pseudo_loss": 0.23296947280565897,
+            "regularization_loss": 0.004956451943144202,
+            "defense_loss": 0.0,
+            "total_loss": 0.23792592187722525
+          }
+        ],
+        "last_pseudo_loss": 0.23296947280565897,
+        "last_regularization_loss": 0.004956451943144202,
+        "last_defense_loss": 0.0
+      },
+      "importance": {
+        "mean": 0.37201975207978183,
+        "max": 184657.484375,
+        "nonzero_fraction": 0.8549957499420446
+      },
+      "defense": null,
+      "progressive_proxy": {
+        "kind": "clean_feedback",
+        "task": 4,
+        "subject": 27,
+        "feedback_visible": true,
+        "feedback_kind": "clean",
+        "feedback_sequences": 44,
+        "labeled_buffer_sequences": 1124,
+        "feedback_buffer_sequences": 180,
+        "response_kl_before": 0.9238700874069433,
+        "response_kl_after": 0.9906878608065778,
+        "mean_distillation_loss": 1.8211182355880737,
+        "mean_feedback_loss": 0.4821566343307495,
+        "mean_supervised_loss": 2.6779232025146484
+      },
+      "attack": null,
+      "attack_label_guiding_cpc_losses": []
+    }
+  ],
+  "retention_snapshots": {
+    "4": {
+      "64": {
+        "acc": 0.7348837209302326,
+        "mf1": 0.7690482357954079,
+        "n_epochs": 860
+      },
+      "89": {
+        "acc": 0.784,
+        "mf1": 0.7206285331567945,
+        "n_epochs": 1000
+      },
+      "1": {
+        "acc": 0.20813953488372092,
+        "mf1": 0.10809196617336152,
+        "n_epochs": 860
+      },
+      "27": {
+        "acc": 0.7534090909090909,
+        "mf1": 0.6834794225734979,
+        "n_epochs": 880
+      }
+    }
+  },
+  "final": {
+    "old_generalization": {
+      "acc": 0.7132934131736527,
+      "mf1": 0.7000151045988146,
+      "n_epochs": 16700
+    },
+    "source_train": {
+      "acc": 0.7567961165048543,
+      "mf1": 0.7375621564083776,
+      "n_epochs": 20600
+    },
+    "validation": {
+      "acc": 0.6494296577946768,
+      "mf1": 0.6199034303052079,
+      "n_epochs": 5260
+    },
+    "seen_subjects": {
+      "64": {
+        "acc": 0.7348837209302326,
+        "mf1": 0.7690482357954079,
+        "n_epochs": 860
+      },
+      "89": {
+        "acc": 0.784,
+        "mf1": 0.7206285331567945,
+        "n_epochs": 1000
+      },
+      "1": {
+        "acc": 0.20813953488372092,
+        "mf1": 0.10809196617336152,
+        "n_epochs": 860
+      },
+      "27": {
+        "acc": 0.7534090909090909,
+        "mf1": 0.6834794225734979,
+        "n_epochs": 880
+      }
+    },
+    "initial_model_seen_subjects": {
+      "64": {
+        "acc": 0.7290697674418605,
+        "mf1": 0.7631163096154122,
+        "n_epochs": 860
+      },
+      "89": {
+        "acc": 0.801,
+        "mf1": 0.7326458009878241,
+        "n_epochs": 1000
+      },
+      "1": {
+        "acc": 0.2,
+        "mf1": 0.09178451178451179,
+        "n_epochs": 860
+      },
+      "27": {
+        "acc": 0.7170454545454545,
+        "mf1": 0.6478294628169081,
+        "n_epochs": 880
+      }
+    },
+    "progressive_proxy": {
+      "protocol": {
+        "mode": "feedback",
+        "victim_parameters_visible": false,
+        "public_feedback": "post-task five-class probabilities on owned uploads",
+        "source_pretrain_hard_labels_visible": true,
+        "clean_feedback_tasks": [
+          2,
+          4
+        ],
+        "proxy_tasks": [
+          1,
+          3
+        ],
+        "base_subject": 18,
+        "base_sequences": 48,
+        "task_count_changed": false,
+        "subject_order_changed": false,
+        "step_relative_l2": 0.01,
+        "cumulative_relative_l2": 0.2,
+        "history_weight": 1.0
+      },
+      "proxy_tasks_completed": 2,
+      "clean_feedback_tasks_completed": 2,
+      "proxy_sequences_uploaded": 86,
+      "final_mean_cumulative_relative_l2": 0.01256114523857832,
+      "feedback_buffer_sequences": 180,
+      "labeled_buffer_sequences": 1124,
+      "transcript": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/progressive_feedback_proxy_runs/smoke4_ewc_feedback_seed4321/ewc/progressive_proxy/transcript.json"
+    }
+  },
+  "summary": {
+    "final_old_acc": 0.7132934131736527,
+    "final_old_mf1": 0.7000151045988146,
+    "old_aaa": 0.7060119760479042,
+    "old_aaf1": 0.6921770222297762,
+    "old_fr": 0.015429204671383463,
+    "mean_current_before_acc": 0.61498044397463,
+    "mean_current_after_acc": 0.6177825052854122,
+    "mean_current_acc_gain": 0.0028020613107822556,
+    "mean_current_before_mf1": 0.5633110363685496,
+    "mean_current_after_mf1": 0.5678533483542544,
+    "mean_current_mf1_gain": 0.004542311985704834,
+    "final_seen_acc": 0.6201080866807611,
+    "final_seen_mf1": 0.5703120394247655,
+    "bwt_acc": 0.0023255813953488302,
+    "bwt_mf1": 0.0024586910705110578,
+    "mean_pseudo_acc_diagnostic_only": 0.5047079809725159,
+    "mean_pseudo_mf1_diagnostic_only": 0.42079080714534944,
+    "pseudo_label_coverage": 1.0
+  }
+}
