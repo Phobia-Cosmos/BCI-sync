@@ -1,0 +1,80 @@
+{
+  "protocol": {
+    "mode": "static",
+    "victim_parameters_visible": false,
+    "public_feedback": "post-task five-class probabilities on owned uploads",
+    "source_pretrain_hard_labels_visible": true,
+    "incremental_clean_hard_labels_visible": false,
+    "clean_feedback_tasks": [
+      1
+    ],
+    "proxy_tasks": [
+      2
+    ],
+    "base_subject": 18,
+    "base_sequences": 48,
+    "upload_full_pool": true,
+    "active_sequences": 48,
+    "passive_sequences": 0,
+    "task_count_changed": false,
+    "subject_order_changed": false,
+    "step_relative_l2": 0.01,
+    "cumulative_relative_l2": 0.2,
+    "history_weight": 1.0,
+    "source_labeled_sequences": 1030
+  },
+  "tasks": [
+    {
+      "kind": "clean_feedback",
+      "task": 1,
+      "subject": 64,
+      "feedback_visible": true,
+      "feedback_kind": "clean",
+      "feedback_sequences": 43,
+      "labeled_buffer_sequences": 1030,
+      "feedback_buffer_sequences": 43,
+      "response_kl_before": 0.0331969666718082,
+      "response_kl_after": null,
+      "mean_distillation_loss": 0.0,
+      "mean_feedback_loss": 0.0,
+      "mean_supervised_loss": 0.0
+    },
+    {
+      "kind": "static_proxy",
+      "task": 2,
+      "subject": 89,
+      "proxy_sequences": 48,
+      "base_subject": 18,
+      "guiding_cpc_losses": [],
+      "generation": null,
+      "mean_step_relative_l2": 0.0,
+      "max_step_relative_l2": 0.0,
+      "mean_cumulative_relative_l2": 0.0,
+      "max_cumulative_relative_l2": 0.0,
+      "input_direction_cosine": null,
+      "history_gradient_cosine": null,
+      "source_gradient_cosine": null,
+      "source_conflict_accepted": null,
+      "mean_active_step_relative_l2": 0.0,
+      "mean_active_cumulative_relative_l2": 0.0,
+      "mean_passive_step_relative_l2": 0.0,
+      "mean_passive_cumulative_relative_l2": 0.0,
+      "feedback_visible": true,
+      "feedback_kind": "proxy",
+      "feedback_sequences": 48,
+      "labeled_buffer_sequences": 1030,
+      "feedback_buffer_sequences": 91,
+      "response_kl_before": 0.04650774442901214,
+      "response_kl_after": null,
+      "mean_distillation_loss": 0.0,
+      "mean_feedback_loss": 0.0,
+      "mean_supervised_loss": 0.0
+    }
+  ],
+  "buffers": {
+    "labeled_sequences": 1030,
+    "feedback_sequences": 91,
+    "clean_feedback_sequences": 43,
+    "proxy_feedback_sequences": 48
+  }
+}

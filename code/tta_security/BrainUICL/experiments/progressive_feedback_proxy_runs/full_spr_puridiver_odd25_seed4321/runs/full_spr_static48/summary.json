@@ -1,0 +1,26 @@
+{
+  "full_spr_eeg_adapted": {
+    "final_old_acc": 0.6565269461077844,
+    "final_old_mf1": 0.6327694508339435,
+    "old_aaa": 0.6639556886227544,
+    "old_aaf1": 0.6414739294365187,
+    "old_fr": 0.06538232034779654,
+    "mean_current_before_acc": 0.5945416951191189,
+    "mean_current_after_acc": 0.6027383593226073,
+    "mean_current_acc_gain": 0.008196664203488377,
+    "mean_current_before_mf1": 0.5228976712206538,
+    "mean_current_after_mf1": 0.5339198410272813,
+    "mean_current_mf1_gain": 0.011022169806627378,
+    "final_seen_acc": 0.5866560771719309,
+    "final_seen_mf1": 0.5091552731710887,
+    "bwt_acc": -0.01608228215067649,
+    "bwt_mf1": -0.024764567856192504,
+    "mean_pseudo_acc_diagnostic_only": 0.576158297010438,
+    "mean_pseudo_mf1_diagnostic_only": 0.46205807769637897,
+    "pseudo_label_coverage": 1.0,
+    "final_memory_epochs": 1000,
+    "final_memory_proxy_epoch_fraction": 0.04,
+    "proxy_replay_fraction": 0.2699643493761141,
+    "total_flushes": 98
+  }
+}

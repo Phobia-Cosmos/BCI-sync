@@ -1,0 +1,648 @@
+{
+  "method": "full_puridiver_eeg_adapted",
+  "protocol": {
+    "backbone": "BrainUICL FeatureExtractor + TransformerEncoder + SleepMLP",
+    "initialization": "common source-supervised checkpoint",
+    "student_persistent": true,
+    "target_training_loader": "signal-only without annotation paths",
+    "pseudo_labels": "task-local CPC guide hard argmax for every epoch",
+    "confidence_filter": false,
+    "online_update": "current plus 1:1 epoch-weighted memory replay hard CE",
+    "memory_update_cadence": "immediately after every online mini-batch",
+    "memory_capacity_epochs": 100,
+    "memory_storage": "full sequence plus retained epoch mask",
+    "memory_pruning": "majority pseudo-class purity-diversity, recomputed after each deletion",
+    "robust_replay": "warmup then per-epoch loss-GMM and uncertainty-GMM C/R/U",
+    "cru_masks_persistent": false,
+    "source_memory": false,
+    "true_target_labels_used_for_training": false,
+    "canonical_n2n_manifest": null,
+    "manifest_validation": null,
+    "progressive_feedback_proxy": {
+      "mode": "static",
+      "victim_parameters_visible": false,
+      "public_feedback": "post-task five-class probabilities on owned uploads",
+      "source_pretrain_hard_labels_visible": true,
+      "incremental_clean_hard_labels_visible": false,
+      "clean_feedback_tasks": [
+        1
+      ],
+      "proxy_tasks": [
+        2
+      ],
+      "base_subject": 18,
+      "base_sequences": 48,
+      "upload_full_pool": true,
+      "active_sequences": 48,
+      "passive_sequences": 0,
+      "task_count_changed": false,
+      "subject_order_changed": false,
+      "step_relative_l2": 0.01,
+      "cumulative_relative_l2": 0.2,
+      "history_weight": 1.0,
+      "source_labeled_sequences": 1030
+    }
+  },
+  "config": {
+    "data_root": "/home/undefined/Disk/datasets/brainuicl/processed/isruc_group1_npy_float32",
+    "input_checkpoint_root": "/home/undefined/Disk/ai-storage/BrainUICL/model_parameter",
+    "output_root": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/progressive_feedback_proxy_runs/v2_smoke/full_puridiver_back2_static",
+    "seed": 4321,
+    "gpu": 0,
+    "batch": 8,
+    "online_batch_sequences": 8,
+    "replay_batch_sequences": 8,
+    "infer_batch": 16,
+    "eval_batch": 16,
+    "num_worker": 0,
+    "max_subjects": 2,
+    "ssl_epoch": 1,
+    "lr": 0.0001,
+    "ssl_lr": 1e-06,
+    "cl_lr": 1e-06,
+    "beta1": 0.5,
+    "beta2": 0.99,
+    "weight_decay": 0.0003,
+    "grad_clip": 5.0,
+    "memory_capacity_epochs": 100,
+    "max_diversity_coefficient": 0.5,
+    "replay_epochs": 1,
+    "warmup_epochs": 0,
+    "min_gmm_samples": 8,
+    "weak_noise": 0.01,
+    "weak_scale": 0.02,
+    "strong_noise": 0.05,
+    "strong_scale": 0.1,
+    "strong_mask_fraction": 0.1,
+    "strong_channel_drop": 0.05,
+    "consistency_weight": 1.0,
+    "freeze_student_bn_stats": true,
+    "reset_optimizer_per_subject": true,
+    "max_online_batches": 1,
+    "max_replay_batches": 1,
+    "eval_max_batches": 1,
+    "retention_milestones": [
+      1,
+      2
+    ],
+    "n2n_manifest": null,
+    "n2n_verify": "selected",
+    "skip_n2n_prevalidation": false,
+    "resume_state": null,
+    "state_path": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/progressive_feedback_proxy_runs/v2_smoke/full_puridiver_back2_static/latest_state.pt",
+    "no_save_state": true,
+    "stop_after_tasks": 0,
+    "progressive_proxy_mode": "static",
+    "progressive_proxy_tasks": "2",
+    "progressive_clean_feedback_tasks": "1",
+    "progressive_base_subject": 18,
+    "progressive_proxy_lr": 1e-06,
+    "progressive_feedback_steps": 4,
+    "progressive_feedback_batch": 4,
+    "progressive_guide_epochs": 2,
+    "progressive_generation_steps": 3,
+    "progressive_generation_batch": 4,
+    "progressive_reference_batch": 4,
+    "progressive_step_relative_l2": 0.01,
+    "progressive_step_linf_std": 0.025,
+    "progressive_cumulative_relative_l2": 0.2,
+    "progressive_cumulative_linf_std": 0.5,
+    "progressive_history_weight": 1.0,
+    "progressive_history_decay": 0.8,
+    "progressive_input_cone_residual": 0.5,
+    "progressive_source_weight": 0.5,
+    "progressive_feedback_weight": 1.0,
+    "progressive_feedback_decay": 0.95,
+    "progressive_feedback_capacity": 2500,
+    "progressive_upload_full_pool": true,
+    "progressive_active_fraction": 1.0,
+    "progressive_passive_step_scale": 1.0,
+    "progressive_passive_cumulative_relative_l2": -1.0,
+    "progressive_passive_cumulative_linf_std": -1.0,
+    "progressive_fill_step_budget": false,
+    "progressive_history_refresh_count": 0,
+    "progressive_target_weight": -1.0,
+    "progressive_conflict_weight": -1.0,
+    "progressive_gradient_norm_weight": -1.0,
+    "progressive_virtual_old_weight": -1.0,
+    "progressive_virtual_new_weight": -1.0,
+    "progressive_confidence_weight": -1.0,
+    "progressive_l2_weight": -1.0,
+    "progressive_max_source_gradient_cosine": 1.0,
+    "progressive_source_gate_samples": 0,
+    "progressive_require_source_conflict": false,
+    "freeze_bn_stats": true,
+    "attack_inner_lr": 0.0001,
+    "attack_target_weight": 1.0,
+    "attack_conflict_weight": 1.0,
+    "attack_gradient_norm_weight": 0.1,
+    "attack_virtual_old_weight": 1.0,
+    "attack_virtual_new_weight": 1.0,
+    "attack_new_proxy_weight": 1.0,
+    "attack_min_confidence": 0.0,
+    "attack_confidence_weight": 0.0,
+    "attack_l2_weight": 0.0,
+    "dataset": "ISRUC",
+    "model_param": "ModelConfig(ISRUC)",
+    "device": "cuda:0"
+  },
+  "initial": {
+    "old_generalization": {
+      "acc": 0.74375,
+      "mf1": 0.7191395928108633,
+      "n_epochs": 320
+    },
+    "source_train": {
+      "acc": 0.6375,
+      "mf1": 0.7335245939823432,
+      "n_epochs": 320
+    },
+    "validation": {
+      "acc": 0.11875,
+      "mf1": 0.04466607163646242,
+      "n_epochs": 320
+    }
+  },
+  "stability": {
+    "acc": [
+      0.74375,
+      0.740625,
+      0.7375
+    ],
+    "mf1": [
+      0.7191395928108633,
+      0.7181515421981782,
+      0.7163164808909428
+    ]
+  },
+  "tasks": [
+    {
+      "task": 1,
+      "subject": 64,
+      "current_before": {
+        "acc": 0.79375,
+        "mf1": 0.641431997290651,
+        "n_epochs": 320
+      },
+      "current_after": {
+        "acc": 0.7875,
+        "mf1": 0.6368268429584315,
+        "n_epochs": 320
+      },
+      "old_generalization_after": {
+        "acc": 0.740625,
+        "mf1": 0.7181515421981782,
+        "n_epochs": 320
+      },
+      "pseudo_labels": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.7197674418604652,
+        "mf1_diagnostic_only": 0.7524659426623516,
+        "mean_confidence_diagnostic_only": 0.9284314964399781,
+        "pseudo_class_counts": [
+          130,
+          165,
+          330,
+          154,
+          81
+        ],
+        "n_epochs": 860
+      },
+      "pseudo_labels_on_clean_current": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.7197674418604652,
+        "mf1_diagnostic_only": 0.7524659426623516,
+        "mean_confidence_diagnostic_only": 0.9284314964399781,
+        "pseudo_class_counts": [
+          130,
+          165,
+          330,
+          154,
+          81
+        ],
+        "n_epochs": 860
+      },
+      "guiding_cpc_losses": [
+        58.33548001448313
+      ],
+      "proxy_upload": null,
+      "progressive_proxy": {
+        "kind": "clean_feedback",
+        "task": 1,
+        "subject": 64,
+        "feedback_visible": true,
+        "feedback_kind": "clean",
+        "feedback_sequences": 43,
+        "labeled_buffer_sequences": 1030,
+        "feedback_buffer_sequences": 43,
+        "response_kl_before": 0.0331969666718082,
+        "response_kl_after": null,
+        "mean_distillation_loss": 0.0,
+        "mean_feedback_loss": 0.0,
+        "mean_supervised_loss": 0.0
+      },
+      "online": {
+        "mini_batches": 1,
+        "rows": [
+          {
+            "mini_batch": 1,
+            "current_sequences": 8,
+            "current_epochs": 160,
+            "replay_epochs": 0,
+            "current_ce": 0.273440420627594,
+            "replay_ce": 0.0,
+            "online_loss": 0.273440420627594,
+            "diversity_coefficient": 0.5,
+            "memory_update": {
+              "incoming_epochs": 160,
+              "candidate_epochs": 160,
+              "removed_epochs": 60,
+              "retained_epochs": 100,
+              "score_recomputations": 60,
+              "class_counts": [
+                28,
+                27,
+                16,
+                29,
+                0
+              ],
+              "mean_removed_score": 1.4221118792321543
+            }
+          }
+        ],
+        "memory_updates": 1,
+        "mean_online_loss": 0.273440420627594,
+        "mean_diversity_coefficient": 0.5
+      },
+      "robust_replay": [
+        {
+          "epoch": 1,
+          "mode": "recomputed_cru",
+          "loss": 0.08901142328977585,
+          "loss_gmm_means": [
+            0.010131332738725556,
+            0.4153494964141648
+          ],
+          "uncertainty_gmm_means": [
+            0.1695807325330888,
+            0.39007312021684565
+          ],
+          "loss_gmm_fallback_all_clean": false,
+          "uncertainty_gmm_fallback_all_unlabeled": false,
+          "clean_count": 80,
+          "relabel_count": 12,
+          "unlabeled_count": 8,
+          "memory_epochs": 100
+        }
+      ],
+      "memory": {
+        "capacity_epochs": 100,
+        "retained_epochs": 100,
+        "sequences": 8,
+        "class_counts": [
+          28,
+          27,
+          16,
+          29,
+          0
+        ],
+        "proxy_epochs": 0,
+        "proxy_epoch_fraction": 0.0,
+        "total_candidates_seen": 160,
+        "total_replay_draws": 0,
+        "proxy_replay_draws": 0,
+        "proxy_replay_fraction": 0.0
+      },
+      "training": {
+        "online_mini_batches": 1,
+        "memory_updates": 1,
+        "replay_epochs": 1
+      }
+    },
+    {
+      "task": 2,
+      "subject": 89,
+      "current_before": {
+        "acc": 0.775,
+        "mf1": 0.43893711653915374,
+        "n_epochs": 320
+      },
+      "current_after": {
+        "acc": 0.778125,
+        "mf1": 0.4462017744160601,
+        "n_epochs": 320
+      },
+      "old_generalization_after": {
+        "acc": 0.7375,
+        "mf1": 0.7163164808909428,
+        "n_epochs": 320
+      },
+      "pseudo_labels": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.23854166666666668,
+        "mf1_diagnostic_only": 0.11868520301084091,
+        "mean_confidence_diagnostic_only": 0.68877831120044,
+        "pseudo_class_counts": [
+          0,
+          0,
+          421,
+          539,
+          0
+        ],
+        "n_epochs": 960
+      },
+      "pseudo_labels_on_clean_current": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.657,
+        "mf1_diagnostic_only": 0.5930524921904958,
+        "mean_confidence_diagnostic_only": 0.8810850738286972,
+        "pseudo_class_counts": [
+          249,
+          102,
+          473,
+          119,
+          57
+        ],
+        "n_epochs": 1000
+      },
+      "guiding_cpc_losses": [
+        58.93431599934896
+      ],
+      "proxy_upload": {
+        "kind": "static_proxy",
+        "task": 2,
+        "subject": 89,
+        "proxy_sequences": 48,
+        "base_subject": 18,
+        "guiding_cpc_losses": [],
+        "generation": null,
+        "mean_step_relative_l2": 0.0,
+        "max_step_relative_l2": 0.0,
+        "mean_cumulative_relative_l2": 0.0,
+        "max_cumulative_relative_l2": 0.0,
+        "input_direction_cosine": null,
+        "history_gradient_cosine": null,
+        "source_gradient_cosine": null,
+        "source_conflict_accepted": null,
+        "mean_active_step_relative_l2": 0.0,
+        "mean_active_cumulative_relative_l2": 0.0,
+        "mean_passive_step_relative_l2": 0.0,
+        "mean_passive_cumulative_relative_l2": 0.0,
+        "feedback_visible": true,
+        "feedback_kind": "proxy",
+        "feedback_sequences": 48,
+        "labeled_buffer_sequences": 1030,
+        "feedback_buffer_sequences": 91,
+        "response_kl_before": 0.04650774442901214,
+        "response_kl_after": null,
+        "mean_distillation_loss": 0.0,
+        "mean_feedback_loss": 0.0,
+        "mean_supervised_loss": 0.0
+      },
+      "progressive_proxy": {
+        "kind": "static_proxy",
+        "task": 2,
+        "subject": 89,
+        "proxy_sequences": 48,
+        "base_subject": 18,
+        "guiding_cpc_losses": [],
+        "generation": null,
+        "mean_step_relative_l2": 0.0,
+        "max_step_relative_l2": 0.0,
+        "mean_cumulative_relative_l2": 0.0,
+        "max_cumulative_relative_l2": 0.0,
+        "input_direction_cosine": null,
+        "history_gradient_cosine": null,
+        "source_gradient_cosine": null,
+        "source_conflict_accepted": null,
+        "mean_active_step_relative_l2": 0.0,
+        "mean_active_cumulative_relative_l2": 0.0,
+        "mean_passive_step_relative_l2": 0.0,
+        "mean_passive_cumulative_relative_l2": 0.0,
+        "feedback_visible": true,
+        "feedback_kind": "proxy",
+        "feedback_sequences": 48,
+        "labeled_buffer_sequences": 1030,
+        "feedback_buffer_sequences": 91,
+        "response_kl_before": 0.04650774442901214,
+        "response_kl_after": null,
+        "mean_distillation_loss": 0.0,
+        "mean_feedback_loss": 0.0,
+        "mean_supervised_loss": 0.0
+      },
+      "online": {
+        "mini_batches": 1,
+        "rows": [
+          {
+            "mini_batch": 1,
+            "current_sequences": 8,
+            "current_epochs": 160,
+            "replay_epochs": 160,
+            "current_ce": 1.1043485403060913,
+            "replay_ce": 0.0896158218383789,
+            "online_loss": 0.5969821810722351,
+            "diversity_coefficient": 0.5,
+            "memory_update": {
+              "incoming_epochs": 160,
+              "candidate_epochs": 260,
+              "removed_epochs": 160,
+              "retained_epochs": 100,
+              "score_recomputations": 160,
+              "class_counts": [
+                25,
+                25,
+                25,
+                25,
+                0
+              ],
+              "mean_removed_score": 0.679771575584961
+            }
+          }
+        ],
+        "memory_updates": 1,
+        "mean_online_loss": 0.5969821810722351,
+        "mean_diversity_coefficient": 0.5
+      },
+      "robust_replay": [
+        {
+          "epoch": 1,
+          "mode": "recomputed_cru",
+          "loss": 0.0716918557882309,
+          "loss_gmm_means": [
+            0.007663604282886409,
+            0.3300778701171151
+          ],
+          "uncertainty_gmm_means": [
+            0.09739707278383354,
+            0.23659964253284688
+          ],
+          "loss_gmm_fallback_all_clean": false,
+          "uncertainty_gmm_fallback_all_unlabeled": false,
+          "clean_count": 67,
+          "relabel_count": 26,
+          "unlabeled_count": 7,
+          "memory_epochs": 100
+        }
+      ],
+      "memory": {
+        "capacity_epochs": 100,
+        "retained_epochs": 100,
+        "sequences": 14,
+        "class_counts": [
+          25,
+          25,
+          25,
+          25,
+          0
+        ],
+        "proxy_epochs": 13,
+        "proxy_epoch_fraction": 0.13,
+        "total_candidates_seen": 320,
+        "total_replay_draws": 160,
+        "proxy_replay_draws": 0,
+        "proxy_replay_fraction": 0.0
+      },
+      "training": {
+        "online_mini_batches": 1,
+        "memory_updates": 1,
+        "replay_epochs": 1
+      }
+    }
+  ],
+  "retention_snapshots": {
+    "1": {
+      "64": {
+        "acc": 0.89375,
+        "mf1": 0.6757738457525433,
+        "n_epochs": 160
+      }
+    },
+    "2": {
+      "64": {
+        "acc": 0.89375,
+        "mf1": 0.6757738457525433,
+        "n_epochs": 160
+      },
+      "89": {
+        "acc": 0.8125,
+        "mf1": 0.29292371581604965,
+        "n_epochs": 160
+      }
+    }
+  },
+  "final": {
+    "old_generalization": {
+      "acc": 0.7375,
+      "mf1": 0.7163164808909428,
+      "n_epochs": 320
+    },
+    "source_train": {
+      "acc": 0.68125,
+      "mf1": 0.7583548756684287,
+      "n_epochs": 320
+    },
+    "validation": {
+      "acc": 0.1375,
+      "mf1": 0.06374226428831452,
+      "n_epochs": 320
+    },
+    "seen_subjects": {
+      "64": {
+        "acc": 0.89375,
+        "mf1": 0.6757738457525433,
+        "n_epochs": 160
+      },
+      "89": {
+        "acc": 0.8125,
+        "mf1": 0.29292371581604965,
+        "n_epochs": 160
+      }
+    },
+    "initial_model_seen_subjects": {
+      "64": {
+        "acc": 0.9,
+        "mf1": 0.6875797589507268,
+        "n_epochs": 160
+      },
+      "89": {
+        "acc": 0.8125,
+        "mf1": 0.29439430405134376,
+        "n_epochs": 160
+      }
+    },
+    "memory": {
+      "capacity_epochs": 100,
+      "retained_epochs": 100,
+      "sequences": 14,
+      "class_counts": [
+        25,
+        25,
+        25,
+        25,
+        0
+      ],
+      "proxy_epochs": 13,
+      "proxy_epoch_fraction": 0.13,
+      "total_candidates_seen": 320,
+      "total_replay_draws": 160,
+      "proxy_replay_draws": 0,
+      "proxy_replay_fraction": 0.0
+    },
+    "progressive_proxy": {
+      "protocol": {
+        "mode": "static",
+        "victim_parameters_visible": false,
+        "public_feedback": "post-task five-class probabilities on owned uploads",
+        "source_pretrain_hard_labels_visible": true,
+        "incremental_clean_hard_labels_visible": false,
+        "clean_feedback_tasks": [
+          1
+        ],
+        "proxy_tasks": [
+          2
+        ],
+        "base_subject": 18,
+        "base_sequences": 48,
+        "upload_full_pool": true,
+        "active_sequences": 48,
+        "passive_sequences": 0,
+        "task_count_changed": false,
+        "subject_order_changed": false,
+        "step_relative_l2": 0.01,
+        "cumulative_relative_l2": 0.2,
+        "history_weight": 1.0,
+        "source_labeled_sequences": 1030
+      },
+      "proxy_tasks_completed": 1,
+      "clean_feedback_tasks_completed": 1,
+      "proxy_sequences_uploaded": 48,
+      "final_mean_cumulative_relative_l2": 0.0,
+      "feedback_buffer_sequences": 91,
+      "labeled_buffer_sequences": 1030,
+      "transcript": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/progressive_feedback_proxy_runs/v2_smoke/full_puridiver_back2_static/progressive_proxy/transcript.json"
+    }
+  },
+  "summary": {
+    "final_old_acc": 0.7375,
+    "final_old_mf1": 0.7163164808909428,
+    "old_aaa": 0.740625,
+    "old_aaf1": 0.7178692052999948,
+    "old_fr": 0.008403361344537785,
+    "mean_current_before_acc": 0.784375,
+    "mean_current_after_acc": 0.7828124999999999,
+    "mean_current_acc_gain": -0.0015625000000000222,
+    "mean_current_before_mf1": 0.5401845569149024,
+    "mean_current_after_mf1": 0.5415143086872458,
+    "mean_current_mf1_gain": 0.0013297517723434293,
+    "final_seen_acc": 0.853125,
+    "final_seen_mf1": 0.48434878078429644,
+    "bwt_acc": 0.07031250000000006,
+    "bwt_mf1": -0.05716552790294935,
+    "mean_pseudo_acc_diagnostic_only": 0.4791545542635659,
+    "mean_pseudo_mf1_diagnostic_only": 0.43557557283659626,
+    "pseudo_label_coverage": 1.0,
+    "final_memory_epochs": 100,
+    "final_memory_proxy_epoch_fraction": 0.13,
+    "proxy_replay_fraction": 0.0
+  }
+}

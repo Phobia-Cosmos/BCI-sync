@@ -37,6 +37,12 @@ from n2n_shared_proxy import (  # noqa: E402
     sha256_file,
     validate_manifest,
 )
+from progressive_feedback_proxy import (  # noqa: E402
+    ProgressiveFeedbackProxy,
+    add_progressive_proxy_args,
+    public_probabilities,
+    validate_progressive_proxy_args,
+)
 from regularization_cl_eeg import (  # noqa: E402
     adapt_guiding_model,
     build_split,
@@ -45,6 +51,7 @@ from regularization_cl_eeg import (  # noqa: E402
     parse_int_set,
     pseudo_label_diagnostics,
     summarize_run,
+    task_phase_seed,
 )
 from rttdp_brainuicl_full import (  # noqa: E402
     SequenceDataset,
@@ -324,12 +331,17 @@ def online_train_subject(
     paths: Sequence[Path],
     pseudo_labels: Sequence[np.ndarray],
     clean_data_paths: Sequence[Path],
+    sequence_indices: Sequence[int] | None,
     proxy_indices: set[int],
     memory: DynamicPuriMemory,
     args,
     task_index: int,
     subject: int,
 ) -> dict[str, Any]:
+    if sequence_indices is None:
+        sequence_indices = [int(path.stem) for path in clean_data_paths]
+    if len(sequence_indices) != len(paths):
+        raise ValueError("PuriDivER sequence indices do not match uploaded paths")
     loader = DataLoader(
         CurrentPseudoDataset(paths, pseudo_labels),
         batch_size=args.online_batch_sequences,
@@ -392,7 +404,7 @@ def online_train_subject(
                     ),
                     task=task_index,
                     subject=subject,
-                    sequence_index=int(clean_data_paths[slot].stem),
+                    sequence_index=int(sequence_indices[slot]),
                     is_proxy=slot in proxy_indices,
                 )
             )
@@ -724,6 +736,17 @@ def run(args) -> dict[str, Any]:
         manifest_validation = validate_manifest(args.n2n_manifest, expected)
         save_json(args.output_root / "manifest_validation.json", manifest_validation)
 
+    progressive_proxy = (
+        ProgressiveFeedbackProxy(
+            args,
+            split,
+            args.output_root,
+            retain_payloads_for_replay=True,
+        )
+        if args.progressive_proxy_mode != "none"
+        else None
+    )
+
     initial_blocks = load_pretrained(args)
     student_blocks = tuple(copy.deepcopy(block).to(args.device) for block in initial_blocks)
     optimizer = make_optimizer(student_blocks, args)
@@ -782,6 +805,11 @@ def run(args) -> dict[str, Any]:
                 None if args.n2n_manifest is None else str(args.n2n_manifest)
             ),
             "manifest_validation": manifest_validation,
+            "progressive_feedback_proxy": (
+                progressive_proxy.protocol()
+                if progressive_proxy is not None
+                else None
+            ),
         },
         "config": serializable_args(args),
         "initial": {
@@ -831,10 +859,31 @@ def run(args) -> dict[str, Any]:
             optimizer = make_optimizer(student_blocks, args)
         subject = int(subject)
         clean_data_paths, clean_label_paths = subject_paths(args.data_root, subject)
-        uploaded_paths, proxy_indices, proxy_diagnostics = resolve_uploaded_paths(
-            args, task_index, subject, clean_data_paths
-        )
-        if len(uploaded_paths) != len(clean_data_paths):
+        diagnostic_label_paths = list(clean_label_paths)
+        sequence_indices = [int(path.stem) for path in clean_data_paths]
+        if progressive_proxy is not None:
+            uploaded_paths, tracked_paths, proxy_diagnostics = (
+                progressive_proxy.prepare_task(
+                    task_index,
+                    subject,
+                    clean_data_paths,
+                )
+            )
+            proxy_indices = tuple(
+                index
+                for index, path in enumerate(uploaded_paths)
+                if str(path) in tracked_paths
+            )
+            diagnostic_label_paths = progressive_proxy.diagnostic_label_paths(
+                task_index,
+                clean_label_paths,
+            )
+            sequence_indices = list(range(len(uploaded_paths)))
+        else:
+            uploaded_paths, proxy_indices, proxy_diagnostics = resolve_uploaded_paths(
+                args, task_index, subject, clean_data_paths
+            )
+        if progressive_proxy is None and len(uploaded_paths) != len(clean_data_paths):
             raise RuntimeError("Full PuriDivER input resolver violated N-to-N")
         clean_eval_loader = make_loader(
             args.data_root,
@@ -857,12 +906,14 @@ def run(args) -> dict[str, Any]:
             shuffle=True,
             seed=args.seed + 10_000 * task_index,
         )
+        if progressive_proxy is not None:
+            fix_randomness(task_phase_seed(args.seed, task_index, "guide"))
         guide, cpc_losses = adapt_guiding_model(
             student_blocks, guide_loader, args, task_index, subject
         )
         pseudo_labels = infer_pseudo_labels(guide, uploaded_paths, args)
         diagnostic_loader = DataLoader(
-            SequenceDataset((uploaded_paths, clean_label_paths)),
+            SequenceDataset((uploaded_paths, diagnostic_label_paths)),
             batch_size=args.eval_batch,
             shuffle=False,
             num_workers=args.num_worker,
@@ -881,6 +932,7 @@ def run(args) -> dict[str, Any]:
             uploaded_paths,
             pseudo_labels,
             clean_data_paths,
+            sequence_indices,
             set(proxy_indices),
             memory,
             args,
@@ -906,6 +958,22 @@ def run(args) -> dict[str, Any]:
                 max_batches=args.eval_max_batches,
             )
         )
+        progressive_task_row = None
+        if progressive_proxy is not None and (
+            progressive_proxy.is_proxy_task(task_index)
+            or progressive_proxy.is_clean_feedback_task(task_index)
+        ):
+            response_probabilities = public_probabilities(
+                student_blocks,
+                uploaded_paths,
+                args,
+            )
+            progressive_task_row = progressive_proxy.observe_task(
+                task_index,
+                subject,
+                uploaded_paths,
+                response_probabilities,
+            )
         performance["stability"]["acc"].append(old["acc"])
         performance["stability"]["mf1"].append(old["mf1"])
         seen_subjects.append(subject)
@@ -920,6 +988,7 @@ def run(args) -> dict[str, Any]:
                 "pseudo_labels_on_clean_current": clean_pseudo_diagnostics,
                 "guiding_cpc_losses": cpc_losses,
                 "proxy_upload": proxy_diagnostics,
+                "progressive_proxy": progressive_task_row,
                 "online": online,
                 "robust_replay": replay,
                 "memory": memory.stats(),
@@ -989,6 +1058,8 @@ def run(args) -> dict[str, Any]:
         ),
         "memory": memory.stats(),
     }
+    if progressive_proxy is not None:
+        performance["final"]["progressive_proxy"] = progressive_proxy.summary()
     performance["summary"] = summarize_run(performance)
     performance["summary"].update(
         {
@@ -1004,6 +1075,8 @@ def run(args) -> dict[str, Any]:
         args.output_root / "summary.json",
         {"full_puridiver_eeg_adapted": performance["summary"]},
     )
+    if progressive_proxy is not None:
+        progressive_proxy.cleanup()
     return performance
 
 
@@ -1077,6 +1150,7 @@ def parse_args():
     parser.add_argument("--state-path", type=Path, default=None)
     parser.add_argument("--no-save-state", action="store_true")
     parser.add_argument("--stop-after-tasks", type=int, default=0)
+    add_progressive_proxy_args(parser)
     args = parser.parse_args()
 
     if args.memory_capacity_epochs < 1:
@@ -1113,6 +1187,35 @@ def parse_args():
         args.resume_state = args.resume_state.resolve()
         if not args.resume_state.is_file():
             parser.error(f"Resume state does not exist: {args.resume_state}")
+    if args.progressive_proxy_mode != "none":
+        if args.n2n_manifest is not None:
+            parser.error("Progressive proxy mode cannot be combined with N-to-N manifest")
+        if args.resume_state is not None or args.stop_after_tasks:
+            parser.error("Progressive proxy mode does not support resume/early stop")
+        if not args.no_save_state:
+            parser.error("Progressive proxy mode requires --no-save-state")
+        try:
+            validate_progressive_proxy_args(
+                args,
+                49 if args.max_subjects <= 0 else args.max_subjects,
+            )
+        except ValueError as error:
+            parser.error(str(error))
+    args.freeze_bn_stats = args.freeze_student_bn_stats
+    progressive_defaults = {
+        "attack_inner_lr": 1e-4,
+        "attack_target_weight": 1.0,
+        "attack_conflict_weight": 1.0,
+        "attack_gradient_norm_weight": 0.1,
+        "attack_virtual_old_weight": 1.0,
+        "attack_virtual_new_weight": 1.0,
+        "attack_new_proxy_weight": 1.0,
+        "attack_min_confidence": 0.0,
+        "attack_confidence_weight": 0.0,
+        "attack_l2_weight": 0.0,
+    }
+    for name, value in progressive_defaults.items():
+        setattr(args, name, value)
     args.dataset = "ISRUC"
     args.model_param = ModelConfig(args.dataset)
     args.device = torch.device(

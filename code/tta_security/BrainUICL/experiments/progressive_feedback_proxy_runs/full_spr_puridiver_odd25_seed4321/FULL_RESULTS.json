@@ -1,0 +1,219 @@
+{
+  "schema": "brainuicl-full-spr-puridiver-proxy-v2",
+  "seed": 4321,
+  "task_order": [
+    64,
+    89,
+    1,
+    27,
+    60,
+    5,
+    52,
+    42,
+    80,
+    26,
+    91,
+    22,
+    61,
+    85,
+    17,
+    36,
+    98,
+    33,
+    55,
+    86,
+    54,
+    84,
+    49,
+    3,
+    2,
+    10,
+    87,
+    15,
+    95,
+    57,
+    70,
+    11,
+    47,
+    65,
+    66,
+    96,
+    83,
+    9,
+    46,
+    31,
+    4,
+    19,
+    99,
+    63,
+    81,
+    25,
+    97,
+    20,
+    13
+  ],
+  "methods": {
+    "full_spr": {
+      "static": {
+        "old_acc": 0.6565269461077844,
+        "old_mf1": 0.6327694508339435,
+        "new_acc": 0.5866560771719309,
+        "new_mf1": 0.5091552731710887,
+        "bwt_acc": -0.01608228215067649,
+        "bwt_mf1": -0.024764567856192504
+      },
+      "feedback": {
+        "old_acc": 0.6802994011976048,
+        "old_mf1": 0.6434720013188586,
+        "new_acc": 0.6192807459934578,
+        "new_mf1": 0.5360184474402285,
+        "bwt_acc": -0.0036560501999176468,
+        "bwt_mf1": -0.014117803672208228
+      },
+      "delta_static": {
+        "old_acc": 0.0237724550898204,
+        "old_mf1": 0.010702550484915085,
+        "new_acc": 0.032624668821526925,
+        "new_mf1": 0.026863174269139867,
+        "bwt_acc": 0.012426231950758843,
+        "bwt_mf1": 0.010646764183984275
+      },
+      "all_endpoints_down": false,
+      "static_memory_proxy_epoch_fraction": 0.04,
+      "feedback_memory_proxy_epoch_fraction": 0.14,
+      "static_replay_proxy_fraction": 0.2699643493761141,
+      "feedback_replay_proxy_fraction": 0.32272727272727275,
+      "static_validation": {
+        "proxy_tasks": 25,
+        "proxy_sequences": 1200,
+        "clean_sequences": 1076,
+        "stream_sequences": 2276
+      },
+      "feedback_validation": {
+        "proxy_tasks": 25,
+        "proxy_sequences": 1200,
+        "clean_sequences": 1076,
+        "stream_sequences": 2276,
+        "source_gradient_cosine_mean": 0.13661291737109424,
+        "source_gradient_cosine_max": 0.36372068524360657,
+        "source_gradient_gate": 0.1,
+        "source_conflict_events": 9,
+        "max_step_relative_l2": 0.05000000819563866,
+        "max_cumulative_relative_l2": 0.1999974101781845,
+        "final_mean_cumulative_relative_l2": 0.19797880947589874,
+        "mean_pseudo_label_preservation": 0.6119166776537895,
+        "mean_target_hit_rate": 0.2705000049279382,
+        "kl_improved_events": 35
+      }
+    },
+    "full_puridiver": {
+      "static": {
+        "old_acc": 0.5474850299401197,
+        "old_mf1": 0.5485697640471818,
+        "new_acc": 0.5183331676027577,
+        "new_mf1": 0.4726295664655503,
+        "bwt_acc": -0.056918665740365255,
+        "bwt_mf1": -0.04695916945208195
+      },
+      "feedback": {
+        "old_acc": 0.35790419161676645,
+        "old_mf1": 0.37757502577921465,
+        "new_acc": 0.4074933788647253,
+        "new_mf1": 0.34548845431502057,
+        "bwt_acc": -0.1220194081816286,
+        "bwt_mf1": -0.12255596696867772
+      },
+      "delta_static": {
+        "old_acc": -0.18958083832335326,
+        "old_mf1": -0.17099473826796718,
+        "new_acc": -0.11083978873803241,
+        "new_mf1": -0.12714111215052976,
+        "bwt_acc": -0.06510074244126335,
+        "bwt_mf1": -0.07559679751659577
+      },
+      "all_endpoints_down": true,
+      "static_memory_proxy_epoch_fraction": 0.004,
+      "feedback_memory_proxy_epoch_fraction": 0.2,
+      "static_replay_proxy_fraction": 0.02289048473967684,
+      "feedback_replay_proxy_fraction": 0.14124775583482943,
+      "static_validation": {
+        "proxy_tasks": 25,
+        "proxy_sequences": 1200,
+        "clean_sequences": 1076,
+        "stream_sequences": 2276
+      },
+      "feedback_validation": {
+        "proxy_tasks": 25,
+        "proxy_sequences": 1200,
+        "clean_sequences": 1076,
+        "stream_sequences": 2276,
+        "source_gradient_cosine_mean": 0.5021142029762268,
+        "source_gradient_cosine_max": 0.8040050268173218,
+        "source_gradient_gate": 0.1,
+        "source_conflict_events": 0,
+        "max_step_relative_l2": 0.05000000819563866,
+        "max_cumulative_relative_l2": 0.1999998241662979,
+        "final_mean_cumulative_relative_l2": 0.19742131233215332,
+        "mean_pseudo_label_preservation": 0.8050833453734715,
+        "mean_target_hit_rate": 0.14337500208988785,
+        "kl_improved_events": 43
+      }
+    }
+  },
+  "references": {
+    "ewc": {
+      "static": {
+        "old_acc": 0.6510778443113773,
+        "old_mf1": 0.6069649785362801,
+        "new_acc": 0.6029140911912833,
+        "new_mf1": 0.5129949055756912,
+        "bwt_acc": -0.0040675125436516,
+        "bwt_mf1": -0.009447170765620582
+      },
+      "feedback": {
+        "old_acc": 0.6191616766467066,
+        "old_mf1": 0.5776413510400015,
+        "new_acc": 0.5891433909216839,
+        "new_mf1": 0.5072636674716593,
+        "bwt_acc": -0.012804209413932205,
+        "bwt_mf1": -0.010533830071305705
+      },
+      "delta_static": {
+        "old_acc": -0.03191616766467065,
+        "old_mf1": -0.029323627496278593,
+        "new_acc": -0.013770700269599367,
+        "new_mf1": -0.005731238104031866,
+        "bwt_acc": -0.008736696870280605,
+        "bwt_mf1": -0.0010866593056851233
+      },
+      "all_endpoints_down": true
+    },
+    "plain_er": {
+      "static": {
+        "old_acc": 0.7089221556886227,
+        "old_mf1": 0.6774186661419751,
+        "new_acc": 0.6481818684022546,
+        "new_mf1": 0.5677286574038023,
+        "bwt_acc": 0.003984707779219137,
+        "bwt_mf1": 0.0033026116994198072
+      },
+      "feedback": {
+        "old_acc": 0.698502994011976,
+        "old_mf1": 0.6630033829716566,
+        "new_acc": 0.6411606911827663,
+        "new_mf1": 0.5609711399744353,
+        "bwt_acc": 0.003972398336751277,
+        "bwt_mf1": 0.004537286036647386
+      },
+      "delta_static": {
+        "old_acc": -0.010419161676646693,
+        "old_mf1": -0.014415283170318482,
+        "new_acc": -0.0070211772194882505,
+        "new_mf1": -0.006757517429367033,
+        "bwt_acc": -1.2309442467859505e-05,
+        "bwt_mf1": 0.001234674337227579
+      },
+      "all_endpoints_down": true
+    }
+  }
+}

@@ -123,6 +123,7 @@ def add_progressive_proxy_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--progressive-max-source-gradient-cosine", type=float, default=1.0
     )
+    parser.add_argument("--progressive-source-gate-samples", type=int, default=0)
     parser.add_argument("--progressive-require-source-conflict", action="store_true")
 
 
@@ -158,6 +159,8 @@ def validate_progressive_proxy_args(args, total_tasks: int) -> None:
         raise ValueError("Progressive passive step scale must be in [0, 1]")
     if getattr(args, "progressive_history_refresh_count", 0) < 0:
         raise ValueError("Progressive history refresh count cannot be negative")
+    if getattr(args, "progressive_source_gate_samples", 0) < 0:
+        raise ValueError("Progressive source gate samples cannot be negative")
     if not -1.0 <= getattr(args, "progressive_max_source_gradient_cosine", 1.0) <= 1.0:
         raise ValueError("Progressive source-gradient cosine must be in [-1, 1]")
     proxy_tasks = resolve_task_spec(args.progressive_proxy_tasks, total_tasks)
@@ -576,6 +579,29 @@ class ProgressiveFeedbackProxy:
                 for value in refreshed
             ]
 
+    def _source_gradient_average(self, generation_args):
+        total = getattr(self.args, "progressive_source_gate_samples", 0)
+        if total <= 0:
+            total = self.args.progressive_reference_batch
+        batch_size = self.args.progressive_reference_batch
+        rows: list[tuple[list[torch.Tensor | None], int]] = []
+        remaining = total
+        while remaining > 0:
+            count = min(batch_size, remaining)
+            source_eog, source_eeg, source_targets = self._sample_labeled_reference(
+                count
+            )
+            gradients = supervised_update_gradients(
+                self.proxy_blocks,
+                source_eog,
+                source_eeg,
+                source_targets,
+                generation_args,
+            )
+            rows.append((gradients, count))
+            remaining -= count
+        return _gradient_average(rows)
+
     def _generate_progressive_pool(self, task_index: int):
         guide, cpc_losses = self._adapt_guide(task_index, self.current_pool)
         generation_args = self._generation_args()
@@ -685,16 +711,7 @@ class ProgressiveFeedbackProxy:
             gradient_rows.append((gradients, len(arrays)))
         current_gradients = _gradient_average(gradient_rows)
         history_cosine = _gradient_cosine(current_gradients, history_device)
-        source_eog, source_eeg, source_targets = self._sample_labeled_reference(
-            self.args.progressive_reference_batch
-        )
-        source_gradients = supervised_update_gradients(
-            self.proxy_blocks,
-            source_eog,
-            source_eeg,
-            source_targets,
-            generation_args,
-        )
+        source_gradients = self._source_gradient_average(generation_args)
         source_gradient_cosine = _gradient_cosine(
             current_gradients,
             source_gradients,
