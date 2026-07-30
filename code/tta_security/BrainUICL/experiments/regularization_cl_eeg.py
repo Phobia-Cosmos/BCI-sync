@@ -1353,6 +1353,7 @@ def build_split(args) -> dict:
     if args.max_subjects > 0:
         new_order = new_order[: args.max_subjects]
     return {
+        "dataset": args.dataset,
         "seed": args.seed,
         "train_idx": [int(subject) for subject in train_idx],
         "val_idx": [int(subject) for subject in val_idx],
@@ -1364,6 +1365,7 @@ def build_split(args) -> dict:
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset", choices=("ISRUC", "FACED"), default="ISRUC")
     parser.add_argument(
         "--data-root",
         type=Path,
@@ -1590,7 +1592,6 @@ def main():
     if args.robust_feature_eps <= 0 or args.robust_feature_max_regularizer <= 0:
         raise ValueError("Robust-feature numerical limits must be positive")
 
-    args.dataset = "ISRUC"
     args.model_param = ModelConfig(args.dataset)
     args.device = torch.device(
         f"cuda:{args.gpu}"

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import inspect
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
@@ -45,9 +46,69 @@ class ProgressiveFeedbackProxyTests(unittest.TestCase):
             progressive_input_cone_residual=0.5,
             progressive_proxy_tasks="1,3",
             progressive_clean_feedback_tasks="2,3",
+            progressive_upload_full_pool=True,
+            progressive_match_task_sequence_count=False,
+            progressive_active_fraction=1.0,
         )
         with self.assertRaisesRegex(ValueError, "overlap"):
             validate_progressive_proxy_args(args, 4)
+
+    def test_feedback_requires_full_pool_and_all_sequences_active(self):
+        args = SimpleNamespace(
+            progressive_proxy_mode="feedback",
+            progressive_proxy_lr=1e-6,
+            progressive_feedback_batch=2,
+            progressive_generation_steps=1,
+            progressive_generation_batch=2,
+            progressive_reference_batch=1,
+            progressive_step_relative_l2=0.01,
+            progressive_step_linf_std=0.02,
+            progressive_cumulative_relative_l2=0.1,
+            progressive_cumulative_linf_std=0.2,
+            progressive_feedback_capacity=10,
+            progressive_feedback_steps=1,
+            progressive_guide_epochs=1,
+            progressive_history_decay=0.8,
+            progressive_feedback_decay=0.95,
+            progressive_input_cone_residual=0.5,
+            progressive_proxy_tasks="1,3",
+            progressive_clean_feedback_tasks="2,4",
+            progressive_upload_full_pool=False,
+            progressive_match_task_sequence_count=False,
+            progressive_active_fraction=1.0,
+        )
+        with self.assertRaisesRegex(ValueError, "full-pool"):
+            validate_progressive_proxy_args(args, 4)
+        args.progressive_upload_full_pool = True
+        args.progressive_active_fraction = 0.5
+        with self.assertRaisesRegex(ValueError, "active-fraction 1"):
+            validate_progressive_proxy_args(args, 4)
+
+    def test_feedback_accepts_task_matched_cardinality(self):
+        args = SimpleNamespace(
+            progressive_proxy_mode="feedback",
+            progressive_proxy_lr=1e-6,
+            progressive_feedback_batch=2,
+            progressive_generation_steps=1,
+            progressive_generation_batch=2,
+            progressive_reference_batch=1,
+            progressive_step_relative_l2=0.01,
+            progressive_step_linf_std=0.02,
+            progressive_cumulative_relative_l2=0.1,
+            progressive_cumulative_linf_std=0.2,
+            progressive_feedback_capacity=10,
+            progressive_feedback_steps=1,
+            progressive_guide_epochs=1,
+            progressive_history_decay=0.8,
+            progressive_feedback_decay=0.95,
+            progressive_input_cone_residual=0.5,
+            progressive_proxy_tasks="1,2",
+            progressive_clean_feedback_tasks="3,4",
+            progressive_upload_full_pool=False,
+            progressive_match_task_sequence_count=True,
+            progressive_active_fraction=1.0,
+        )
+        validate_progressive_proxy_args(args, 4)
 
     def test_numpy_projection_enforces_relative_and_linf_budgets(self):
         rng = np.random.default_rng(7)
@@ -98,6 +159,36 @@ class ProgressiveFeedbackProxyTests(unittest.TestCase):
         )
         np.testing.assert_allclose(relative, 0.05, atol=1e-6)
         np.testing.assert_allclose(cosine, 1.0, atol=1e-6)
+
+    def test_proxy_pool_expands_for_larger_natural_task(self):
+        proxy = ProgressiveFeedbackProxy.__new__(ProgressiveFeedbackProxy)
+        proxy.initial_pool = np.arange(2 * 2 * 1 * 4, dtype=np.float32).reshape(
+            2, 2, 1, 4
+        )
+        proxy.current_pool = proxy.initial_pool + 1.0
+        proxy.active_mask = np.array([True, True])
+        proxy.input_direction = proxy.current_pool - proxy.initial_pool
+
+        proxy._ensure_pool_capacity(5)
+
+        self.assertEqual(len(proxy.current_pool), 5)
+        self.assertEqual(proxy.active_mask.tolist(), [True] * 5)
+        np.testing.assert_array_equal(proxy.initial_pool[2], proxy.initial_pool[0])
+        np.testing.assert_array_equal(proxy.current_pool[4], proxy.current_pool[0])
+        np.testing.assert_array_equal(proxy.input_direction[3], proxy.input_direction[1])
+
+    def test_proxy_diagnostic_labels_cycle_when_task_has_more_sequences(self):
+        proxy = ProgressiveFeedbackProxy.__new__(ProgressiveFeedbackProxy)
+        proxy.proxy_tasks = {1}
+        proxy.base_label_paths = [Path("0.npy"), Path("1.npy")]
+        proxy.args = SimpleNamespace(progressive_match_task_sequence_count=True)
+
+        labels = proxy.diagnostic_label_paths(
+            1,
+            [Path(f"{index}.npy") for index in range(5)],
+        )
+
+        self.assertEqual(labels, [Path("0.npy"), Path("1.npy"), Path("0.npy"), Path("1.npy"), Path("0.npy")])
 
     def test_controller_interface_receives_scores_not_victim_blocks(self):
         prepare = set(inspect.signature(ProgressiveFeedbackProxy.prepare_task).parameters)

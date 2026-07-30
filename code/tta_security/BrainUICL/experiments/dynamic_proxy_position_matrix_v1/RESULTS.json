@@ -1,0 +1,4336 @@
+{
+  "protocol": {
+    "seed": 4321,
+    "strength_definition": "number of Proxy tasks",
+    "strengths": [
+      10,
+      20
+    ],
+    "placements": [
+      "front",
+      "middle",
+      "tail"
+    ],
+    "natural_clean_baseline": true,
+    "match_task_sequence_count": true,
+    "all_proxy_sequences_modified": true,
+    "source_conflict_gate": "diagnostic_only",
+    "batch_norm_running_stats": "updated",
+    "step_relative_l2": 0.05,
+    "cumulative_relative_l2": 0.2
+  },
+  "clean_metrics": {
+    "ISRUC/finetune": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/paper_aligned_regularization_clean/isruc_b32_bn_updated_lr1e7_clean_full49_seed4321/finetune/metrics.json",
+    "ISRUC/ewc": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/paper_aligned_regularization_clean/isruc_b32_bn_updated_lr1e7_clean_full49_seed4321/ewc/metrics.json",
+    "ISRUC/online_ewc": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/paper_aligned_regularization_clean/isruc_b32_bn_updated_lr1e7_clean_full49_seed4321/online_ewc/metrics.json",
+    "ISRUC/si": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/paper_aligned_regularization_clean/isruc_b32_bn_updated_lr1e7_clean_full49_seed4321/si/metrics.json",
+    "ISRUC/mas": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/paper_aligned_regularization_clean/isruc_b32_bn_updated_lr1e7_clean_full49_seed4321/mas/metrics.json",
+    "ISRUC/full_spr": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/dynamic_proxy_position_matrix_v1/clean/isruc/full_spr/metrics.json",
+    "ISRUC/full_puridiver": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/dynamic_proxy_position_matrix_v1/clean/isruc/full_puridiver/metrics.json",
+    "FACED/finetune": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/paper_aligned_regularization_clean/faced_b32_bn_updated_lr1e7_clean_full61_seed4321/finetune/metrics.json",
+    "FACED/ewc": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/paper_aligned_regularization_clean/faced_b32_bn_updated_lr1e7_clean_full61_seed4321/ewc/metrics.json",
+    "FACED/online_ewc": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/paper_aligned_regularization_clean/faced_b32_bn_updated_lr1e7_clean_full61_seed4321/online_ewc/metrics.json",
+    "FACED/si": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/paper_aligned_regularization_clean/faced_b32_bn_updated_lr1e7_clean_full61_seed4321/si/metrics.json",
+    "FACED/mas": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/paper_aligned_regularization_clean/faced_b32_bn_updated_lr1e7_clean_full61_seed4321/mas/metrics.json",
+    "FACED/full_spr": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/dynamic_proxy_position_matrix_v1/clean/faced/full_spr/metrics.json",
+    "FACED/full_puridiver": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/dynamic_proxy_position_matrix_v1/clean/faced/full_puridiver/metrics.json"
+  },
+  "rows": [
+    {
+      "dataset": "ISRUC",
+      "method": "finetune",
+      "strength_proxy_tasks": 10,
+      "placement": "front",
+      "window_start": 1,
+      "window_end": 19,
+      "proxy_tasks": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19
+      ],
+      "proxy_sequences": 432,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.2011173184357542,
+      "window_end_old_delta_pp": {
+        "old_acc": -30.425149700598798,
+        "old_mf1": -40.92195842874317
+      },
+      "worst_old_delta_pp": {
+        "acc": -50.5688622754491,
+        "acc_task": 7,
+        "mf1": -61.3924717287574,
+        "mf1_task": 7
+      },
+      "final_delta_pp": {
+        "final_old_acc": -0.017964071856280128,
+        "final_old_mf1": 0.03067187149085049,
+        "final_seen_acc": -0.16668233247676412,
+        "final_seen_mf1": -0.11753861260724863
+      },
+      "final_absolute": {
+        "final_old_acc": 0.66,
+        "final_old_mf1": 0.6452418688455205,
+        "final_seen_acc": 0.5845435142913704,
+        "final_seen_mf1": 0.5052234685982622
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "ewc",
+      "strength_proxy_tasks": 10,
+      "placement": "front",
+      "window_start": 1,
+      "window_end": 19,
+      "proxy_tasks": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19
+      ],
+      "proxy_sequences": 432,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.2011173184357542,
+      "window_end_old_delta_pp": {
+        "old_acc": -30.38922155688623,
+        "old_mf1": -40.88717998471925
+      },
+      "worst_old_delta_pp": {
+        "acc": -50.5688622754491,
+        "acc_task": 7,
+        "mf1": -61.39767178872896,
+        "mf1_task": 7
+      },
+      "final_delta_pp": {
+        "final_old_acc": 0.01796407185629123,
+        "final_old_mf1": 0.04816941094644145,
+        "final_seen_acc": -0.13538184716019863,
+        "final_seen_mf1": -0.11127365331248251
+      },
+      "final_absolute": {
+        "final_old_acc": 0.6610179640718563,
+        "final_old_mf1": 0.6461427997500723,
+        "final_seen_acc": 0.5866623400782062,
+        "final_seen_mf1": 0.5065763283417243
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "online_ewc",
+      "strength_proxy_tasks": 10,
+      "placement": "front",
+      "window_start": 1,
+      "window_end": 19,
+      "proxy_tasks": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19
+      ],
+      "proxy_sequences": 432,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.2011173184357542,
+      "window_end_old_delta_pp": {
+        "old_acc": -30.58682634730539,
+        "old_mf1": -41.37360433585236
+      },
+      "worst_old_delta_pp": {
+        "acc": -50.58682634730539,
+        "acc_task": 7,
+        "mf1": -61.424898394800785,
+        "mf1_task": 7
+      },
+      "final_delta_pp": {
+        "final_old_acc": 0.0778443113772398,
+        "final_old_mf1": 0.09806522533338802,
+        "final_seen_acc": -0.1144062118737521,
+        "final_seen_mf1": -0.059094201717435624
+      },
+      "final_absolute": {
+        "final_old_acc": 0.6670059880239521,
+        "final_old_mf1": 0.6532439220794761,
+        "final_seen_acc": 0.5900078926043612,
+        "final_seen_mf1": 0.512535064487623
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "si",
+      "strength_proxy_tasks": 10,
+      "placement": "front",
+      "window_start": 1,
+      "window_end": 19,
+      "proxy_tasks": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19
+      ],
+      "proxy_sequences": 432,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.2011173184357542,
+      "window_end_old_delta_pp": {
+        "old_acc": -30.7125748502994,
+        "old_mf1": -41.59711619222015
+      },
+      "worst_old_delta_pp": {
+        "acc": -50.610778443113766,
+        "acc_task": 7,
+        "mf1": -61.45848546469447,
+        "mf1_task": 7
+      },
+      "final_delta_pp": {
+        "final_old_acc": -0.07185628742515382,
+        "final_old_mf1": -0.06141898785197997,
+        "final_seen_acc": -0.15105763756139146,
+        "final_seen_mf1": -0.13321871445193256
+      },
+      "final_absolute": {
+        "final_old_acc": 0.6676047904191617,
+        "final_old_mf1": 0.6539493192920341,
+        "final_seen_acc": 0.5904363841894216,
+        "final_seen_mf1": 0.5128051088536394
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "mas",
+      "strength_proxy_tasks": 10,
+      "placement": "front",
+      "window_start": 1,
+      "window_end": 19,
+      "proxy_tasks": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19
+      ],
+      "proxy_sequences": 432,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.2011173184357542,
+      "window_end_old_delta_pp": {
+        "old_acc": -30.646706586826344,
+        "old_mf1": -41.46025117897458
+      },
+      "worst_old_delta_pp": {
+        "acc": -50.598802395209574,
+        "acc_task": 7,
+        "mf1": -61.41718445856732,
+        "mf1_task": 7
+      },
+      "final_delta_pp": {
+        "final_old_acc": -0.11976047904191933,
+        "final_old_mf1": -0.13684958167882177,
+        "final_seen_acc": -0.1153936418820889,
+        "final_seen_mf1": -0.11210124947027555
+      },
+      "final_absolute": {
+        "final_old_acc": 0.6665868263473054,
+        "final_old_mf1": 0.6526198870474579,
+        "final_seen_acc": 0.5904383017339115,
+        "final_seen_mf1": 0.5125990956738935
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "full_spr",
+      "strength_proxy_tasks": 10,
+      "placement": "front",
+      "window_start": 1,
+      "window_end": 19,
+      "proxy_tasks": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19
+      ],
+      "proxy_sequences": 432,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.2011173184357542,
+      "window_end_old_delta_pp": {
+        "old_acc": -4.287425149700597,
+        "old_mf1": -5.9486525297055675
+      },
+      "worst_old_delta_pp": {
+        "acc": -47.125748502994014,
+        "acc_task": 1,
+        "mf1": -57.04640879230587,
+        "mf1_task": 1
+      },
+      "final_delta_pp": {
+        "final_old_acc": -4.221556886227551,
+        "final_old_mf1": -6.404075396282016,
+        "final_seen_acc": -1.3936098349804582,
+        "final_seen_mf1": -5.354463366577178
+      },
+      "final_absolute": {
+        "final_old_acc": 0.631437125748503,
+        "final_old_mf1": 0.5859933904419037,
+        "final_seen_acc": 0.6001955426925244,
+        "final_seen_mf1": 0.5057294842740564
+      },
+      "memory": {
+        "final_memory_proxy_epoch_fraction": 0.39,
+        "proxy_replay_fraction": 0.5273629489603024
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "full_puridiver",
+      "strength_proxy_tasks": 10,
+      "placement": "front",
+      "window_start": 1,
+      "window_end": 19,
+      "proxy_tasks": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19
+      ],
+      "proxy_sequences": 432,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.2011173184357542,
+      "window_end_old_delta_pp": {
+        "old_acc": 11.035928143712571,
+        "old_mf1": 15.434456383109513
+      },
+      "worst_old_delta_pp": {
+        "acc": -46.0,
+        "acc_task": 1,
+        "mf1": -56.59060813027157,
+        "mf1_task": 1
+      },
+      "final_delta_pp": {
+        "final_old_acc": 14.688622754491016,
+        "final_old_mf1": 18.768384238424616,
+        "final_seen_acc": 11.669657497083968,
+        "final_seen_mf1": 14.408959551865252
+      },
+      "final_absolute": {
+        "final_old_acc": 0.6412574850299401,
+        "final_old_mf1": 0.6221692796011563,
+        "final_seen_acc": 0.5745824519791275,
+        "final_seen_mf1": 0.4915109341981523
+      },
+      "memory": {
+        "final_memory_proxy_epoch_fraction": 0.0,
+        "proxy_replay_fraction": 0.03624703087885986
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "finetune",
+      "strength_proxy_tasks": 10,
+      "placement": "middle",
+      "window_start": 16,
+      "window_end": 34,
+      "proxy_tasks": [
+        16,
+        18,
+        20,
+        22,
+        24,
+        26,
+        28,
+        30,
+        32,
+        34
+      ],
+      "proxy_sequences": 458,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.2132216014897579,
+      "window_end_old_delta_pp": {
+        "old_acc": -16.976047904191617,
+        "old_mf1": -23.761314428612508
+      },
+      "worst_old_delta_pp": {
+        "acc": -33.60479041916168,
+        "acc_task": 16,
+        "mf1": -40.736049956653886,
+        "mf1_task": 32
+      },
+      "final_delta_pp": {
+        "final_old_acc": -0.07185628742514272,
+        "final_old_mf1": 0.03764642053288858,
+        "final_seen_acc": -0.06693049663721862,
+        "final_seen_mf1": -0.05769131021770013
+      },
+      "final_absolute": {
+        "final_old_acc": 0.6594610778443114,
+        "final_old_mf1": 0.6453116143359409,
+        "final_seen_acc": 0.5855410326497659,
+        "final_seen_mf1": 0.5058219416221577
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "ewc",
+      "strength_proxy_tasks": 10,
+      "placement": "middle",
+      "window_start": 16,
+      "window_end": 34,
+      "proxy_tasks": [
+        16,
+        18,
+        20,
+        22,
+        24,
+        26,
+        28,
+        30,
+        32,
+        34
+      ],
+      "proxy_sequences": 458,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.2132216014897579,
+      "window_end_old_delta_pp": {
+        "old_acc": -16.964071856287426,
+        "old_mf1": -24.00644817521415
+      },
+      "worst_old_delta_pp": {
+        "acc": -33.55089820359281,
+        "acc_task": 16,
+        "mf1": -40.867122060408235,
+        "mf1_task": 32
+      },
+      "final_delta_pp": {
+        "final_old_acc": -0.029940119760474282,
+        "final_old_mf1": 0.0070519998388030025,
+        "final_seen_acc": -0.13502201179289575,
+        "final_seen_mf1": -0.18297592042950672
+      },
+      "final_absolute": {
+        "final_old_acc": 0.6605389221556887,
+        "final_old_mf1": 0.6457316256389959,
+        "final_seen_acc": 0.5866659384318792,
+        "final_seen_mf1": 0.505859305670554
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "online_ewc",
+      "strength_proxy_tasks": 10,
+      "placement": "middle",
+      "window_start": 16,
+      "window_end": 34,
+      "proxy_tasks": [
+        16,
+        18,
+        20,
+        22,
+        24,
+        26,
+        28,
+        30,
+        32,
+        34
+      ],
+      "proxy_sequences": 458,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.2132216014897579,
+      "window_end_old_delta_pp": {
+        "old_acc": -17.47904191616766,
+        "old_mf1": -24.88664304463763
+      },
+      "worst_old_delta_pp": {
+        "acc": -33.39520958083832,
+        "acc_task": 16,
+        "mf1": -41.28552638696033,
+        "mf1_task": 32
+      },
+      "final_delta_pp": {
+        "final_old_acc": 0.005988023952097077,
+        "final_old_mf1": 0.03616315249156399,
+        "final_seen_acc": -0.033232305978425636,
+        "final_seen_mf1": -0.03460547677816006
+      },
+      "final_absolute": {
+        "final_old_acc": 0.6662874251497006,
+        "final_old_mf1": 0.6526249013510579,
+        "final_seen_acc": 0.5908196316633144,
+        "final_seen_mf1": 0.5127799517370157
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "si",
+      "strength_proxy_tasks": 10,
+      "placement": "middle",
+      "window_start": 16,
+      "window_end": 34,
+      "proxy_tasks": [
+        16,
+        18,
+        20,
+        22,
+        24,
+        26,
+        28,
+        30,
+        32,
+        34
+      ],
+      "proxy_sequences": 458,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.2132216014897579,
+      "window_end_old_delta_pp": {
+        "old_acc": -17.628742514970057,
+        "old_mf1": -25.30969575669892
+      },
+      "worst_old_delta_pp": {
+        "acc": -33.293413173652695,
+        "acc_task": 16,
+        "mf1": -41.5252610981441,
+        "mf1_task": 32
+      },
+      "final_delta_pp": {
+        "final_old_acc": -0.011976047904194154,
+        "final_old_mf1": -0.0011218581334904165,
+        "final_seen_acc": 0.011284150787072011,
+        "final_seen_mf1": 0.010388893674706523
+      },
+      "final_absolute": {
+        "final_old_acc": 0.6682035928143712,
+        "final_old_mf1": 0.654552290589219,
+        "final_seen_acc": 0.5920598020729062,
+        "final_seen_mf1": 0.5142411849349058
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "mas",
+      "strength_proxy_tasks": 10,
+      "placement": "middle",
+      "window_start": 16,
+      "window_end": 34,
+      "proxy_tasks": [
+        16,
+        18,
+        20,
+        22,
+        24,
+        26,
+        28,
+        30,
+        32,
+        34
+      ],
+      "proxy_sequences": 458,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.2132216014897579,
+      "window_end_old_delta_pp": {
+        "old_acc": -18.04790419161677,
+        "old_mf1": -25.492356168192142
+      },
+      "worst_old_delta_pp": {
+        "acc": -33.29940119760479,
+        "acc_task": 16,
+        "mf1": -41.568415201770605,
+        "mf1_task": 32
+      },
+      "final_delta_pp": {
+        "final_old_acc": 0.041916167664668436,
+        "final_old_mf1": 0.05433982253486569,
+        "final_seen_acc": 0.001702894593802462,
+        "final_seen_mf1": -0.022837589429092198
+      },
+      "final_absolute": {
+        "final_old_acc": 0.6682035928143712,
+        "final_old_mf1": 0.6545317810895948,
+        "final_seen_acc": 0.5916092670986705,
+        "final_seen_mf1": 0.5134917322743053
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "full_spr",
+      "strength_proxy_tasks": 10,
+      "placement": "middle",
+      "window_start": 16,
+      "window_end": 34,
+      "proxy_tasks": [
+        16,
+        18,
+        20,
+        22,
+        24,
+        26,
+        28,
+        30,
+        32,
+        34
+      ],
+      "proxy_sequences": 458,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.2132216014897579,
+      "window_end_old_delta_pp": {
+        "old_acc": -0.8922155688622757,
+        "old_mf1": -1.573367275715476
+      },
+      "worst_old_delta_pp": {
+        "acc": -5.5149700598802305,
+        "acc_task": 21,
+        "mf1": -7.296337339301118,
+        "mf1_task": 21
+      },
+      "final_delta_pp": {
+        "final_old_acc": -3.1017964071856308,
+        "final_old_mf1": -3.373526937387483,
+        "final_seen_acc": -1.0891134285923476,
+        "final_seen_mf1": -3.765987502369461
+      },
+      "final_absolute": {
+        "final_old_acc": 0.6426347305389222,
+        "final_old_mf1": 0.616298875030849,
+        "final_seen_acc": 0.6032405067564055,
+        "final_seen_mf1": 0.5216142429161336
+      },
+      "memory": {
+        "final_memory_proxy_epoch_fraction": 0.271,
+        "proxy_replay_fraction": 0.20633270321361058
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "full_puridiver",
+      "strength_proxy_tasks": 10,
+      "placement": "middle",
+      "window_start": 16,
+      "window_end": 34,
+      "proxy_tasks": [
+        16,
+        18,
+        20,
+        22,
+        24,
+        26,
+        28,
+        30,
+        32,
+        34
+      ],
+      "proxy_sequences": 458,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.2132216014897579,
+      "window_end_old_delta_pp": {
+        "old_acc": 5.347305389221557,
+        "old_mf1": 8.1779169336398
+      },
+      "worst_old_delta_pp": {
+        "acc": -12.341317365269466,
+        "acc_task": 38,
+        "mf1": -17.57073271608559,
+        "mf1_task": 37
+      },
+      "final_delta_pp": {
+        "final_old_acc": 0.6706586826347338,
+        "final_old_mf1": 0.46622708763384146,
+        "final_seen_acc": -0.38017101223517535,
+        "final_seen_mf1": -0.8480418236857246
+      },
+      "final_absolute": {
+        "final_old_acc": 0.5010778443113773,
+        "final_old_mf1": 0.43914770809324855,
+        "final_seen_acc": 0.45408416688593606,
+        "final_seen_mf1": 0.3389409204426425
+      },
+      "memory": {
+        "final_memory_proxy_epoch_fraction": 0.0,
+        "proxy_replay_fraction": 0.0044655581947743465
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "finetune",
+      "strength_proxy_tasks": 10,
+      "placement": "tail",
+      "window_start": 31,
+      "window_end": 49,
+      "proxy_tasks": [
+        31,
+        33,
+        35,
+        37,
+        39,
+        41,
+        43,
+        45,
+        47,
+        49
+      ],
+      "proxy_sequences": 429,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.19972067039106145,
+      "window_end_old_delta_pp": {
+        "old_acc": -31.38922155688622,
+        "old_mf1": -39.54620713530919
+      },
+      "worst_old_delta_pp": {
+        "acc": -50.73053892215569,
+        "acc_task": 39,
+        "mf1": -59.1092598941093,
+        "mf1_task": 39
+      },
+      "final_delta_pp": {
+        "final_old_acc": -31.38922155688622,
+        "final_old_mf1": -39.54620713530919,
+        "final_seen_acc": -16.988194326174728,
+        "final_seen_mf1": -24.088449262395816
+      },
+      "final_absolute": {
+        "final_old_acc": 0.3462874251497006,
+        "final_old_mf1": 0.24947307877752006,
+        "final_seen_acc": 0.4163283943543908,
+        "final_seen_mf1": 0.2655143621003765
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "ewc",
+      "strength_proxy_tasks": 10,
+      "placement": "tail",
+      "window_start": 31,
+      "window_end": 49,
+      "proxy_tasks": [
+        31,
+        33,
+        35,
+        37,
+        39,
+        41,
+        43,
+        45,
+        47,
+        49
+      ],
+      "proxy_sequences": 429,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.19972067039106145,
+      "window_end_old_delta_pp": {
+        "old_acc": -31.017964071856284,
+        "old_mf1": -39.35278790401218
+      },
+      "worst_old_delta_pp": {
+        "acc": -50.72455089820359,
+        "acc_task": 39,
+        "mf1": -59.079369485148035,
+        "mf1_task": 39
+      },
+      "final_delta_pp": {
+        "final_old_acc": -31.017964071856284,
+        "final_old_mf1": -39.35278790401218,
+        "final_seen_acc": -16.656882136705963,
+        "final_seen_mf1": -23.821303848087226
+      },
+      "final_absolute": {
+        "final_old_acc": 0.35065868263473055,
+        "final_old_mf1": 0.25213322660048604,
+        "final_seen_acc": 0.4214473371827485,
+        "final_seen_mf1": 0.26947602639397683
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "online_ewc",
+      "strength_proxy_tasks": 10,
+      "placement": "tail",
+      "window_start": 31,
+      "window_end": 49,
+      "proxy_tasks": [
+        31,
+        33,
+        35,
+        37,
+        39,
+        41,
+        43,
+        45,
+        47,
+        49
+      ],
+      "proxy_sequences": 429,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.19972067039106145,
+      "window_end_old_delta_pp": {
+        "old_acc": -31.04790419161677,
+        "old_mf1": -39.90031966551682
+      },
+      "worst_old_delta_pp": {
+        "acc": -50.377245508982035,
+        "acc_task": 39,
+        "mf1": -58.52582423415955,
+        "mf1_task": 39
+      },
+      "final_delta_pp": {
+        "final_old_acc": -31.04790419161677,
+        "final_old_mf1": -39.90031966551682,
+        "final_seen_acc": -16.270458771941787,
+        "final_seen_mf1": -23.91285382974487
+      },
+      "final_absolute": {
+        "final_old_acc": 0.35574850299401195,
+        "final_old_mf1": 0.2532600731709741,
+        "final_seen_acc": 0.4284473670036808,
+        "final_seen_mf1": 0.27399746820734866
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "si",
+      "strength_proxy_tasks": 10,
+      "placement": "tail",
+      "window_start": 31,
+      "window_end": 49,
+      "proxy_tasks": [
+        31,
+        33,
+        35,
+        37,
+        39,
+        41,
+        43,
+        45,
+        47,
+        49
+      ],
+      "proxy_sequences": 429,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.19972067039106145,
+      "window_end_old_delta_pp": {
+        "old_acc": -31.005988023952096,
+        "old_mf1": -40.165521642308875
+      },
+      "worst_old_delta_pp": {
+        "acc": -50.21556886227545,
+        "acc_task": 39,
+        "mf1": -58.21908935391983,
+        "mf1_task": 39
+      },
+      "final_delta_pp": {
+        "final_old_acc": -31.005988023952096,
+        "final_old_mf1": -40.165521642308875,
+        "final_seen_acc": -16.011985897029707,
+        "final_seen_mf1": -23.776645758096173
+      },
+      "final_absolute": {
+        "final_old_acc": 0.3582634730538922,
+        "final_old_mf1": 0.2529082927474652,
+        "final_seen_acc": 0.4318271015947384,
+        "final_seen_mf1": 0.276370838417197
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "mas",
+      "strength_proxy_tasks": 10,
+      "placement": "tail",
+      "window_start": 31,
+      "window_end": 49,
+      "proxy_tasks": [
+        31,
+        33,
+        35,
+        37,
+        39,
+        41,
+        43,
+        45,
+        47,
+        49
+      ],
+      "proxy_sequences": 429,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.19972067039106145,
+      "window_end_old_delta_pp": {
+        "old_acc": -31.101796407185628,
+        "old_mf1": -39.832864274508
+      },
+      "worst_old_delta_pp": {
+        "acc": -50.41317365269461,
+        "acc_task": 39,
+        "mf1": -58.20682446454452,
+        "mf1_task": 39
+      },
+      "final_delta_pp": {
+        "final_old_acc": -31.101796407185628,
+        "final_old_mf1": -39.832864274508,
+        "final_seen_acc": -16.24971465352984,
+        "final_seen_mf1": -23.883181041669154
+      },
+      "final_absolute": {
+        "final_old_acc": 0.3567664670658683,
+        "final_old_mf1": 0.25565974011916615,
+        "final_seen_acc": 0.42909509161743403,
+        "final_seen_mf1": 0.2748882977519047
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "full_spr",
+      "strength_proxy_tasks": 10,
+      "placement": "tail",
+      "window_start": 31,
+      "window_end": 49,
+      "proxy_tasks": [
+        31,
+        33,
+        35,
+        37,
+        39,
+        41,
+        43,
+        45,
+        47,
+        49
+      ],
+      "proxy_sequences": 429,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.19972067039106145,
+      "window_end_old_delta_pp": {
+        "old_acc": -0.6227544910179628,
+        "old_mf1": -1.7194815886983683
+      },
+      "worst_old_delta_pp": {
+        "acc": -2.491017964071862,
+        "acc_task": 3,
+        "mf1": -5.0226586044739285,
+        "mf1_task": 37
+      },
+      "final_delta_pp": {
+        "final_old_acc": -0.6227544910179628,
+        "final_old_mf1": -1.7194815886983683,
+        "final_seen_acc": 3.483892798808552,
+        "final_seen_mf1": 1.1002780245890298
+      },
+      "final_absolute": {
+        "final_old_acc": 0.6674251497005989,
+        "final_old_mf1": 0.6328393285177402,
+        "final_seen_acc": 0.6489705690304145,
+        "final_seen_mf1": 0.5702768981857185
+      },
+      "memory": {
+        "final_memory_proxy_epoch_fraction": 0.048,
+        "proxy_replay_fraction": 0.019706994328922495
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "full_puridiver",
+      "strength_proxy_tasks": 10,
+      "placement": "tail",
+      "window_start": 31,
+      "window_end": 49,
+      "proxy_tasks": [
+        31,
+        33,
+        35,
+        37,
+        39,
+        41,
+        43,
+        45,
+        47,
+        49
+      ],
+      "proxy_sequences": 429,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.19972067039106145,
+      "window_end_old_delta_pp": {
+        "old_acc": -5.143712574850295,
+        "old_mf1": -8.447846335152837
+      },
+      "worst_old_delta_pp": {
+        "acc": -11.317365269461083,
+        "acc_task": 38,
+        "mf1": -15.810673301876953,
+        "mf1_task": 38
+      },
+      "final_delta_pp": {
+        "final_old_acc": -5.143712574850295,
+        "final_old_mf1": -8.447846335152837,
+        "final_seen_acc": -3.532358000906738,
+        "final_seen_mf1": -5.269752951023909
+      },
+      "final_absolute": {
+        "final_old_acc": 0.44293413173652696,
+        "final_old_mf1": 0.35000697386538177,
+        "final_seen_acc": 0.42256229699922043,
+        "final_seen_mf1": 0.29472380916926066
+      },
+      "memory": {
+        "final_memory_proxy_epoch_fraction": 0.0,
+        "proxy_replay_fraction": 0.00026128266033254157
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "finetune",
+      "strength_proxy_tasks": 20,
+      "placement": "front",
+      "window_start": 1,
+      "window_end": 39,
+      "proxy_tasks": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39
+      ],
+      "proxy_sequences": 854,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.39757914338919925,
+      "window_end_old_delta_pp": {
+        "old_acc": -51.58682634730538,
+        "old_mf1": -59.68606880334386
+      },
+      "worst_old_delta_pp": {
+        "acc": -51.58682634730538,
+        "acc_task": 39,
+        "mf1": -61.3924717287574,
+        "mf1_task": 7
+      },
+      "final_delta_pp": {
+        "final_old_acc": -0.1017964071856281,
+        "final_old_mf1": 0.06505614071525834,
+        "final_seen_acc": -0.2834737646054464,
+        "final_seen_mf1": -0.2135071817300216
+      },
+      "final_absolute": {
+        "final_old_acc": 0.6591616766467066,
+        "final_old_mf1": 0.6455857115377646,
+        "final_seen_acc": 0.5833755999700836,
+        "final_seen_mf1": 0.5042637829070344
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "ewc",
+      "strength_proxy_tasks": 20,
+      "placement": "front",
+      "window_start": 1,
+      "window_end": 39,
+      "proxy_tasks": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39
+      ],
+      "proxy_sequences": 854,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.39757914338919925,
+      "window_end_old_delta_pp": {
+        "old_acc": -51.39520958083832,
+        "old_mf1": -59.25733008986671
+      },
+      "worst_old_delta_pp": {
+        "acc": -51.39520958083832,
+        "acc_task": 39,
+        "mf1": -61.39767178872896,
+        "mf1_task": 7
+      },
+      "final_delta_pp": {
+        "final_old_acc": 0.0778443113772509,
+        "final_old_mf1": 0.15886816303124496,
+        "final_seen_acc": -0.14252132956256158,
+        "final_seen_mf1": -0.13628999436166023
+      },
+      "final_absolute": {
+        "final_old_acc": 0.6616167664670659,
+        "final_old_mf1": 0.6472497872709203,
+        "final_seen_acc": 0.5865909452541825,
+        "final_seen_mf1": 0.5063261649312325
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "online_ewc",
+      "strength_proxy_tasks": 20,
+      "placement": "front",
+      "window_start": 1,
+      "window_end": 39,
+      "proxy_tasks": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39
+      ],
+      "proxy_sequences": 854,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.39757914338919925,
+      "window_end_old_delta_pp": {
+        "old_acc": -50.772455089820355,
+        "old_mf1": -58.15048697129471
+      },
+      "worst_old_delta_pp": {
+        "acc": -50.772455089820355,
+        "acc_task": 39,
+        "mf1": -61.424898394800785,
+        "mf1_task": 7
+      },
+      "final_delta_pp": {
+        "final_old_acc": 0.05389221556886259,
+        "final_old_mf1": 0.08918198966237911,
+        "final_seen_acc": -0.1403048691817066,
+        "final_seen_mf1": -0.07473863469270592
+      },
+      "final_absolute": {
+        "final_old_acc": 0.6667664670658683,
+        "final_old_mf1": 0.653155089722766,
+        "final_seen_acc": 0.5897489060312816,
+        "final_seen_mf1": 0.5123786201578703
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "si",
+      "strength_proxy_tasks": 20,
+      "placement": "front",
+      "window_start": 1,
+      "window_end": 39,
+      "proxy_tasks": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39
+      ],
+      "proxy_sequences": 854,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.39757914338919925,
+      "window_end_old_delta_pp": {
+        "old_acc": -50.55089820359282,
+        "old_mf1": -57.723781548870456
+      },
+      "worst_old_delta_pp": {
+        "acc": -50.610778443113766,
+        "acc_task": 7,
+        "mf1": -61.45848546469447,
+        "mf1_task": 7
+      },
+      "final_delta_pp": {
+        "final_old_acc": -0.029940119760485384,
+        "final_old_mf1": -0.011366263706880098,
+        "final_seen_acc": -0.1426700243968293,
+        "final_seen_mf1": -0.13154172800635688
+      },
+      "final_absolute": {
+        "final_old_acc": 0.6680239520958083,
+        "final_old_mf1": 0.6544498465334851,
+        "final_seen_acc": 0.5905202603210672,
+        "final_seen_mf1": 0.5128218787180951
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "mas",
+      "strength_proxy_tasks": 20,
+      "placement": "front",
+      "window_start": 1,
+      "window_end": 39,
+      "proxy_tasks": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39
+      ],
+      "proxy_sequences": 854,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.39757914338919925,
+      "window_end_old_delta_pp": {
+        "old_acc": -50.64071856287424,
+        "old_mf1": -57.86934606226267
+      },
+      "worst_old_delta_pp": {
+        "acc": -50.64071856287424,
+        "acc_task": 39,
+        "mf1": -61.41718445856732,
+        "mf1_task": 7
+      },
+      "final_delta_pp": {
+        "final_old_acc": -0.10778443113772518,
+        "final_old_mf1": -0.11564762293613251,
+        "final_seen_acc": -0.09517703513582942,
+        "final_seen_mf1": -0.10093444456388267
+      },
+      "final_absolute": {
+        "final_old_acc": 0.6667065868263473,
+        "final_old_mf1": 0.6528319066348848,
+        "final_seen_acc": 0.5906404678013741,
+        "final_seen_mf1": 0.5127107637229574
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "full_spr",
+      "strength_proxy_tasks": 20,
+      "placement": "front",
+      "window_start": 1,
+      "window_end": 39,
+      "proxy_tasks": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39
+      ],
+      "proxy_sequences": 854,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.39757914338919925,
+      "window_end_old_delta_pp": {
+        "old_acc": -6.155688622754485,
+        "old_mf1": -10.208182078660055
+      },
+      "worst_old_delta_pp": {
+        "acc": -47.125748502994014,
+        "acc_task": 1,
+        "mf1": -57.04640879230587,
+        "mf1_task": 1
+      },
+      "final_delta_pp": {
+        "final_old_acc": -4.8562874251497075,
+        "final_old_mf1": -7.0631978378929645,
+        "final_seen_acc": -1.9296236556207713,
+        "final_seen_mf1": -7.01558733755292
+      },
+      "final_absolute": {
+        "final_old_acc": 0.6250898203592814,
+        "final_old_mf1": 0.5794021660257942,
+        "final_seen_acc": 0.5948354044861213,
+        "final_seen_mf1": 0.489118244564299
+      },
+      "memory": {
+        "final_memory_proxy_epoch_fraction": 0.5,
+        "proxy_replay_fraction": 0.6218336483931947
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "full_puridiver",
+      "strength_proxy_tasks": 20,
+      "placement": "front",
+      "window_start": 1,
+      "window_end": 39,
+      "proxy_tasks": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39
+      ],
+      "proxy_sequences": 854,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.39757914338919925,
+      "window_end_old_delta_pp": {
+        "old_acc": 14.802395209580837,
+        "old_mf1": 18.74304979063991
+      },
+      "worst_old_delta_pp": {
+        "acc": -46.0,
+        "acc_task": 1,
+        "mf1": -56.59060813027157,
+        "mf1_task": 1
+      },
+      "final_delta_pp": {
+        "final_old_acc": 9.982035928143713,
+        "final_old_mf1": 13.366860005697745,
+        "final_seen_acc": 8.974129782699375,
+        "final_seen_mf1": 9.944389794386964
+      },
+      "final_absolute": {
+        "final_old_acc": 0.594191616766467,
+        "final_old_mf1": 0.5681540372738876,
+        "final_seen_acc": 0.5476271748352816,
+        "final_seen_mf1": 0.4468652366233694
+      },
+      "memory": {
+        "final_memory_proxy_epoch_fraction": 0.0,
+        "proxy_replay_fraction": 0.0497624703087886
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "finetune",
+      "strength_proxy_tasks": 20,
+      "placement": "middle",
+      "window_start": 6,
+      "window_end": 44,
+      "proxy_tasks": [
+        6,
+        8,
+        10,
+        12,
+        14,
+        16,
+        18,
+        20,
+        22,
+        24,
+        26,
+        28,
+        30,
+        32,
+        34,
+        36,
+        38,
+        40,
+        42,
+        44
+      ],
+      "proxy_sequences": 891,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.41480446927374304,
+      "window_end_old_delta_pp": {
+        "old_acc": -32.461077844311376,
+        "old_mf1": -39.96607144877024
+      },
+      "worst_old_delta_pp": {
+        "acc": -41.359281437125745,
+        "acc_task": 14,
+        "mf1": -48.586269254146735,
+        "mf1_task": 42
+      },
+      "final_delta_pp": {
+        "final_old_acc": -0.20958083832335328,
+        "final_old_mf1": -0.1514654749732558,
+        "final_seen_acc": -0.48038108438124283,
+        "final_seen_mf1": -0.3131068930756209
+      },
+      "final_absolute": {
+        "final_old_acc": 0.6580838323353293,
+        "final_old_mf1": 0.6434204953808794,
+        "final_seen_acc": 0.5814065267723256,
+        "final_seen_mf1": 0.5032677857935784
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "ewc",
+      "strength_proxy_tasks": 20,
+      "placement": "middle",
+      "window_start": 6,
+      "window_end": 44,
+      "proxy_tasks": [
+        6,
+        8,
+        10,
+        12,
+        14,
+        16,
+        18,
+        20,
+        22,
+        24,
+        26,
+        28,
+        30,
+        32,
+        34,
+        36,
+        38,
+        40,
+        42,
+        44
+      ],
+      "proxy_sequences": 891,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.41480446927374304,
+      "window_end_old_delta_pp": {
+        "old_acc": -32.40119760479042,
+        "old_mf1": -40.08447962526547
+      },
+      "worst_old_delta_pp": {
+        "acc": -41.40119760479041,
+        "acc_task": 14,
+        "mf1": -48.464247876704206,
+        "mf1_task": 42
+      },
+      "final_delta_pp": {
+        "final_old_acc": -0.1556886227544907,
+        "final_old_mf1": -0.14718570907017448,
+        "final_seen_acc": -0.4292695774858801,
+        "final_seen_mf1": -0.3040410010048733
+      },
+      "final_absolute": {
+        "final_old_acc": 0.6592814371257485,
+        "final_old_mf1": 0.6441892485499061,
+        "final_seen_acc": 0.5837234627749494,
+        "final_seen_mf1": 0.5046486548648004
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "online_ewc",
+      "strength_proxy_tasks": 20,
+      "placement": "middle",
+      "window_start": 6,
+      "window_end": 44,
+      "proxy_tasks": [
+        6,
+        8,
+        10,
+        12,
+        14,
+        16,
+        18,
+        20,
+        22,
+        24,
+        26,
+        28,
+        30,
+        32,
+        34,
+        36,
+        38,
+        40,
+        42,
+        44
+      ],
+      "proxy_sequences": 891,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.41480446927374304,
+      "window_end_old_delta_pp": {
+        "old_acc": -31.904191616766465,
+        "old_mf1": -40.638249004501304
+      },
+      "worst_old_delta_pp": {
+        "acc": -41.101796407185624,
+        "acc_task": 14,
+        "mf1": -48.455101822370175,
+        "mf1_task": 42
+      },
+      "final_delta_pp": {
+        "final_old_acc": 0.011976047904194154,
+        "final_old_mf1": 0.048922738541168354,
+        "final_seen_acc": -0.12363913353629075,
+        "final_seen_mf1": -0.04753392385399291
+      },
+      "final_absolute": {
+        "final_old_acc": 0.6663473053892216,
+        "final_old_mf1": 0.6527524972115539,
+        "final_seen_acc": 0.5899155633877358,
+        "final_seen_mf1": 0.5126506672662574
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "si",
+      "strength_proxy_tasks": 20,
+      "placement": "middle",
+      "window_start": 6,
+      "window_end": 44,
+      "proxy_tasks": [
+        6,
+        8,
+        10,
+        12,
+        14,
+        16,
+        18,
+        20,
+        22,
+        24,
+        26,
+        28,
+        30,
+        32,
+        34,
+        36,
+        38,
+        40,
+        42,
+        44
+      ],
+      "proxy_sequences": 891,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.41480446927374304,
+      "window_end_old_delta_pp": {
+        "old_acc": -31.634730538922156,
+        "old_mf1": -40.81021076665033
+      },
+      "worst_old_delta_pp": {
+        "acc": -40.718562874251504,
+        "acc_task": 14,
+        "mf1": -48.38130897611397,
+        "mf1_task": 42
+      },
+      "final_delta_pp": {
+        "final_old_acc": -0.005988023952097077,
+        "final_old_mf1": 0.0008612187532008875,
+        "final_seen_acc": -0.00816899125174464,
+        "final_seen_mf1": 0.024417956871491953
+      },
+      "final_absolute": {
+        "final_old_acc": 0.6682634730538922,
+        "final_old_mf1": 0.654572121358086,
+        "final_seen_acc": 0.591865270652518,
+        "final_seen_mf1": 0.5143814755668736
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "mas",
+      "strength_proxy_tasks": 20,
+      "placement": "middle",
+      "window_start": 6,
+      "window_end": 44,
+      "proxy_tasks": [
+        6,
+        8,
+        10,
+        12,
+        14,
+        16,
+        18,
+        20,
+        22,
+        24,
+        26,
+        28,
+        30,
+        32,
+        34,
+        36,
+        38,
+        40,
+        42,
+        44
+      ],
+      "proxy_sequences": 891,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.41480446927374304,
+      "window_end_old_delta_pp": {
+        "old_acc": -31.7125748502994,
+        "old_mf1": -40.70675826725131
+      },
+      "worst_old_delta_pp": {
+        "acc": -40.91616766467066,
+        "acc_task": 14,
+        "mf1": -48.43870389085063,
+        "mf1_task": 42
+      },
+      "final_delta_pp": {
+        "final_old_acc": -0.04790419161676551,
+        "final_old_mf1": -0.03692734677595011,
+        "final_seen_acc": -0.07875946891635621,
+        "final_seen_mf1": -0.07680597105214071
+      },
+      "final_absolute": {
+        "final_old_acc": 0.6673053892215569,
+        "final_old_mf1": 0.6536191093964866,
+        "final_seen_acc": 0.5908046434635689,
+        "final_seen_mf1": 0.5129520484580748
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "full_spr",
+      "strength_proxy_tasks": 20,
+      "placement": "middle",
+      "window_start": 6,
+      "window_end": 44,
+      "proxy_tasks": [
+        6,
+        8,
+        10,
+        12,
+        14,
+        16,
+        18,
+        20,
+        22,
+        24,
+        26,
+        28,
+        30,
+        32,
+        34,
+        36,
+        38,
+        40,
+        42,
+        44
+      ],
+      "proxy_sequences": 891,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.41480446927374304,
+      "window_end_old_delta_pp": {
+        "old_acc": -7.574850299401192,
+        "old_mf1": -5.781823090622762
+      },
+      "worst_old_delta_pp": {
+        "acc": -8.712574850299404,
+        "acc_task": 32,
+        "mf1": -8.21067537698661,
+        "mf1_task": 21
+      },
+      "final_delta_pp": {
+        "final_old_acc": -4.455089820359282,
+        "final_old_mf1": -3.72982860440515,
+        "final_seen_acc": -2.6252672141531375,
+        "final_seen_mf1": -5.744007703130382
+      },
+      "final_absolute": {
+        "final_old_acc": 0.6291017964071857,
+        "final_old_mf1": 0.6127358583606723,
+        "final_seen_acc": 0.5878789689007976,
+        "final_seen_mf1": 0.5018340409085243
+      },
+      "memory": {
+        "final_memory_proxy_epoch_fraction": 0.662,
+        "proxy_replay_fraction": 0.5176275992438564
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "full_puridiver",
+      "strength_proxy_tasks": 20,
+      "placement": "middle",
+      "window_start": 6,
+      "window_end": 44,
+      "proxy_tasks": [
+        6,
+        8,
+        10,
+        12,
+        14,
+        16,
+        18,
+        20,
+        22,
+        24,
+        26,
+        28,
+        30,
+        32,
+        34,
+        36,
+        38,
+        40,
+        42,
+        44
+      ],
+      "proxy_sequences": 891,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.41480446927374304,
+      "window_end_old_delta_pp": {
+        "old_acc": 2.203592814371258,
+        "old_mf1": 3.363380189127202
+      },
+      "worst_old_delta_pp": {
+        "acc": -8.389221556886229,
+        "acc_task": 30,
+        "mf1": -10.97649224572248,
+        "mf1_task": 30
+      },
+      "final_delta_pp": {
+        "final_old_acc": 6.485029940119763,
+        "final_old_mf1": 8.723229883684203,
+        "final_seen_acc": 3.378051826364714,
+        "final_seen_mf1": 5.976634834485645
+      },
+      "final_absolute": {
+        "final_old_acc": 0.5592215568862275,
+        "final_old_mf1": 0.5217177360537522,
+        "final_seen_acc": 0.49166639527193495,
+        "final_seen_mf1": 0.4071876870243562
+      },
+      "memory": {
+        "final_memory_proxy_epoch_fraction": 0.0,
+        "proxy_replay_fraction": 0.012470308788598575
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "finetune",
+      "strength_proxy_tasks": 20,
+      "placement": "tail",
+      "window_start": 11,
+      "window_end": 49,
+      "proxy_tasks": [
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39,
+        41,
+        43,
+        45,
+        47,
+        49
+      ],
+      "proxy_sequences": 855,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.39804469273743015,
+      "window_end_old_delta_pp": {
+        "old_acc": -29.383233532934128,
+        "old_mf1": -39.33653947710851
+      },
+      "worst_old_delta_pp": {
+        "acc": -49.377245508982035,
+        "acc_task": 39,
+        "mf1": -59.29741404976716,
+        "mf1_task": 39
+      },
+      "final_delta_pp": {
+        "final_old_acc": -29.383233532934128,
+        "final_old_mf1": -39.33653947710851,
+        "final_seen_acc": -17.89099496100493,
+        "final_seen_mf1": -25.121979772537145
+      },
+      "final_absolute": {
+        "final_old_acc": 0.36634730538922156,
+        "final_old_mf1": 0.25156975535952686,
+        "final_seen_acc": 0.40730038800608875,
+        "final_seen_mf1": 0.2551790569989632
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "ewc",
+      "strength_proxy_tasks": 20,
+      "placement": "tail",
+      "window_start": 11,
+      "window_end": 49,
+      "proxy_tasks": [
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39,
+        41,
+        43,
+        45,
+        47,
+        49
+      ],
+      "proxy_sequences": 855,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.39804469273743015,
+      "window_end_old_delta_pp": {
+        "old_acc": -28.7065868263473,
+        "old_mf1": -39.00873663430081
+      },
+      "worst_old_delta_pp": {
+        "acc": -49.41317365269461,
+        "acc_task": 39,
+        "mf1": -59.17151534414189,
+        "mf1_task": 39
+      },
+      "final_delta_pp": {
+        "final_old_acc": -28.7065868263473,
+        "final_old_mf1": -39.00873663430081,
+        "final_seen_acc": -17.268345721071288,
+        "final_seen_mf1": -24.670659051012265
+      },
+      "final_absolute": {
+        "final_old_acc": 0.3737724550898204,
+        "final_old_mf1": 0.25557373929759974,
+        "final_seen_acc": 0.4153327013390953,
+        "final_seen_mf1": 0.26098247436472644
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "online_ewc",
+      "strength_proxy_tasks": 20,
+      "placement": "tail",
+      "window_start": 11,
+      "window_end": 49,
+      "proxy_tasks": [
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39,
+        41,
+        43,
+        45,
+        47,
+        49
+      ],
+      "proxy_sequences": 855,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.39804469273743015,
+      "window_end_old_delta_pp": {
+        "old_acc": -28.16766467065868,
+        "old_mf1": -39.16966996792669
+      },
+      "worst_old_delta_pp": {
+        "acc": -48.89221556886228,
+        "acc_task": 39,
+        "mf1": -59.21842435654264,
+        "mf1_task": 27
+      },
+      "final_delta_pp": {
+        "final_old_acc": -28.16766467065868,
+        "final_old_mf1": -39.16966996792669,
+        "final_seen_acc": -16.349070114970587,
+        "final_seen_mf1": -24.398853364965493
+      },
+      "final_absolute": {
+        "final_old_acc": 0.38455089820359284,
+        "final_old_mf1": 0.26056657014687534,
+        "final_seen_acc": 0.4276612535733928,
+        "final_seen_mf1": 0.2691374728551424
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "si",
+      "strength_proxy_tasks": 20,
+      "placement": "tail",
+      "window_start": 11,
+      "window_end": 49,
+      "proxy_tasks": [
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39,
+        41,
+        43,
+        45,
+        47,
+        49
+      ],
+      "proxy_sequences": 855,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.39804469273743015,
+      "window_end_old_delta_pp": {
+        "old_acc": -28.083832335329344,
+        "old_mf1": -39.312305680536156
+      },
+      "worst_old_delta_pp": {
+        "acc": -48.868263473053894,
+        "acc_task": 39,
+        "mf1": -59.32121590657753,
+        "mf1_task": 27
+      },
+      "final_delta_pp": {
+        "final_old_acc": -28.083832335329344,
+        "final_old_mf1": -39.312305680536156,
+        "final_seen_acc": -15.968369068524485,
+        "final_seen_mf1": -24.1495651165843
+      },
+      "final_absolute": {
+        "final_old_acc": 0.38748502994011974,
+        "final_old_mf1": 0.2614404523651924,
+        "final_seen_acc": 0.43226326987979063,
+        "final_seen_mf1": 0.27264164483231573
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "mas",
+      "strength_proxy_tasks": 20,
+      "placement": "tail",
+      "window_start": 11,
+      "window_end": 49,
+      "proxy_tasks": [
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39,
+        41,
+        43,
+        45,
+        47,
+        49
+      ],
+      "proxy_sequences": 855,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.39804469273743015,
+      "window_end_old_delta_pp": {
+        "old_acc": -28.029940119760482,
+        "old_mf1": -39.20417003364928
+      },
+      "worst_old_delta_pp": {
+        "acc": -48.778443113772454,
+        "acc_task": 39,
+        "mf1": -59.24000520756727,
+        "mf1_task": 27
+      },
+      "final_delta_pp": {
+        "final_old_acc": -28.029940119760482,
+        "final_old_mf1": -39.20417003364928,
+        "final_seen_acc": -16.000545467280702,
+        "final_seen_mf1": -24.171305838271508
+      },
+      "final_absolute": {
+        "final_old_acc": 0.38748502994011974,
+        "final_old_mf1": 0.2619466825277533,
+        "final_seen_acc": 0.4315867834799254,
+        "final_seen_mf1": 0.2720070497858812
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "full_spr",
+      "strength_proxy_tasks": 20,
+      "placement": "tail",
+      "window_start": 11,
+      "window_end": 49,
+      "proxy_tasks": [
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39,
+        41,
+        43,
+        45,
+        47,
+        49
+      ],
+      "proxy_sequences": 855,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.39804469273743015,
+      "window_end_old_delta_pp": {
+        "old_acc": -3.658682634730548,
+        "old_mf1": -4.893125436666878
+      },
+      "worst_old_delta_pp": {
+        "acc": -6.778443113772459,
+        "acc_task": 40,
+        "mf1": -11.576957756012273,
+        "mf1_task": 38
+      },
+      "final_delta_pp": {
+        "final_old_acc": -3.658682634730548,
+        "final_old_mf1": -4.893125436666878,
+        "final_seen_acc": -1.5892440751340553,
+        "final_seen_mf1": -6.485995350602325
+      },
+      "final_absolute": {
+        "final_old_acc": 0.637065868263473,
+        "final_old_mf1": 0.6011028900380551,
+        "final_seen_acc": 0.5982392002909884,
+        "final_seen_mf1": 0.4944141644338049
+      },
+      "memory": {
+        "final_memory_proxy_epoch_fraction": 0.519,
+        "proxy_replay_fraction": 0.3779773156899811
+      }
+    },
+    {
+      "dataset": "ISRUC",
+      "method": "full_puridiver",
+      "strength_proxy_tasks": 20,
+      "placement": "tail",
+      "window_start": 11,
+      "window_end": 49,
+      "proxy_tasks": [
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39,
+        41,
+        43,
+        45,
+        47,
+        49
+      ],
+      "proxy_sequences": 855,
+      "total_sequences": 2148,
+      "proxy_sequence_fraction": 0.39804469273743015,
+      "window_end_old_delta_pp": {
+        "old_acc": 17.31137724550898,
+        "old_mf1": 20.84097227840124
+      },
+      "worst_old_delta_pp": {
+        "acc": -1.4610778443113759,
+        "acc_task": 16,
+        "mf1": -1.6053253782479793,
+        "mf1_task": 16
+      },
+      "final_delta_pp": {
+        "final_old_acc": 17.31137724550898,
+        "final_old_mf1": 20.84097227840124,
+        "final_seen_acc": 12.911041596011257,
+        "final_seen_mf1": 15.255508411835
+      },
+      "final_absolute": {
+        "final_old_acc": 0.6674850299401197,
+        "final_old_mf1": 0.6428951600009225,
+        "final_seen_acc": 0.5869962929684004,
+        "final_seen_mf1": 0.49997642279784976
+      },
+      "memory": {
+        "final_memory_proxy_epoch_fraction": 0.087,
+        "proxy_replay_fraction": 0.011425178147268409
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "finetune",
+      "strength_proxy_tasks": 10,
+      "placement": "front",
+      "window_start": 1,
+      "window_end": 19,
+      "proxy_tasks": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19
+      ],
+      "proxy_sequences": 80,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.16393442622950818,
+      "window_end_old_delta_pp": {
+        "old_acc": -5.130208333333333,
+        "old_mf1": -6.535542598887323
+      },
+      "worst_old_delta_pp": {
+        "acc": -8.41145833333333,
+        "acc_task": 15,
+        "mf1": -9.147263145767766,
+        "mf1_task": 3
+      },
+      "final_delta_pp": {
+        "final_old_acc": 0.07812500000000111,
+        "final_old_mf1": 0.05084126240990916,
+        "final_seen_acc": -0.04098360655737654,
+        "final_seen_mf1": -0.05641452879841524
+      },
+      "final_absolute": {
+        "final_old_acc": 0.24505208333333334,
+        "final_old_mf1": 0.24057184319705435,
+        "final_seen_acc": 0.2646516393442623,
+        "final_seen_mf1": 0.21547985166206313
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "ewc",
+      "strength_proxy_tasks": 10,
+      "placement": "front",
+      "window_start": 1,
+      "window_end": 19,
+      "proxy_tasks": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19
+      ],
+      "proxy_sequences": 80,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.16393442622950818,
+      "window_end_old_delta_pp": {
+        "old_acc": -5.677083333333332,
+        "old_mf1": -7.2318793544185604
+      },
+      "worst_old_delta_pp": {
+        "acc": -8.541666666666666,
+        "acc_task": 15,
+        "mf1": -9.349038649523479,
+        "mf1_task": 7
+      },
+      "final_delta_pp": {
+        "final_old_acc": -0.05208333333333315,
+        "final_old_mf1": -0.08155005360542533,
+        "final_seen_acc": -0.051229508196726226,
+        "final_seen_mf1": -0.06308563574842496
+      },
+      "final_absolute": {
+        "final_old_acc": 0.24479166666666666,
+        "final_old_mf1": 0.24022639453490177,
+        "final_seen_acc": 0.2646516393442623,
+        "final_seen_mf1": 0.21556817490794383
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "online_ewc",
+      "strength_proxy_tasks": 10,
+      "placement": "front",
+      "window_start": 1,
+      "window_end": 19,
+      "proxy_tasks": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19
+      ],
+      "proxy_sequences": 80,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.16393442622950818,
+      "window_end_old_delta_pp": {
+        "old_acc": -5.703124999999998,
+        "old_mf1": -7.392558040869665
+      },
+      "worst_old_delta_pp": {
+        "acc": -8.541666666666664,
+        "acc_task": 15,
+        "mf1": -9.468537545093591,
+        "mf1_task": 7
+      },
+      "final_delta_pp": {
+        "final_old_acc": 0.1041666666666663,
+        "final_old_mf1": 0.07049666225534545,
+        "final_seen_acc": -0.08196721311475308,
+        "final_seen_mf1": -0.09390394042548822
+      },
+      "final_absolute": {
+        "final_old_acc": 0.2453125,
+        "final_old_mf1": 0.2407659842210847,
+        "final_seen_acc": 0.2642418032786885,
+        "final_seen_mf1": 0.2151141658412403
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "si",
+      "strength_proxy_tasks": 10,
+      "placement": "front",
+      "window_start": 1,
+      "window_end": 19,
+      "proxy_tasks": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19
+      ],
+      "proxy_sequences": 80,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.16393442622950818,
+      "window_end_old_delta_pp": {
+        "old_acc": -5.703125000000001,
+        "old_mf1": -7.4890440313882225
+      },
+      "worst_old_delta_pp": {
+        "acc": -8.671874999999998,
+        "acc_task": 15,
+        "mf1": -9.310994171029687,
+        "mf1_task": 15
+      },
+      "final_delta_pp": {
+        "final_old_acc": 0.026041666666665186,
+        "final_old_mf1": 0.009950794453569833,
+        "final_seen_acc": 0.02049180327868827,
+        "final_seen_mf1": 0.017629499280802374
+      },
+      "final_absolute": {
+        "final_old_acc": 0.24765625,
+        "final_old_mf1": 0.2424489428000445,
+        "final_seen_acc": 0.26547131147540987,
+        "final_seen_mf1": 0.21619888290840153
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "mas",
+      "strength_proxy_tasks": 10,
+      "placement": "front",
+      "window_start": 1,
+      "window_end": 19,
+      "proxy_tasks": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19
+      ],
+      "proxy_sequences": 80,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.16393442622950818,
+      "window_end_old_delta_pp": {
+        "old_acc": -5.755208333333334,
+        "old_mf1": -7.480170827027657
+      },
+      "worst_old_delta_pp": {
+        "acc": -8.75,
+        "acc_task": 15,
+        "mf1": -9.396852986547854,
+        "mf1_task": 15
+      },
+      "final_delta_pp": {
+        "final_old_acc": 0.05208333333333315,
+        "final_old_mf1": 0.019815387479527047,
+        "final_seen_acc": -0.04098360655737099,
+        "final_seen_mf1": -0.08891221925079185
+      },
+      "final_absolute": {
+        "final_old_acc": 0.246875,
+        "final_old_mf1": 0.24168930174984482,
+        "final_seen_acc": 0.265266393442623,
+        "final_seen_mf1": 0.21559222331630043
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "full_spr",
+      "strength_proxy_tasks": 10,
+      "placement": "front",
+      "window_start": 1,
+      "window_end": 19,
+      "proxy_tasks": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19
+      ],
+      "proxy_sequences": 80,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.16393442622950818,
+      "window_end_old_delta_pp": {
+        "old_acc": -3.2812499999999996,
+        "old_mf1": -5.039487048217631
+      },
+      "worst_old_delta_pp": {
+        "acc": -5.390625000000002,
+        "acc_task": 3,
+        "mf1": -6.73805646928751,
+        "mf1_task": 7
+      },
+      "final_delta_pp": {
+        "final_old_acc": -1.093749999999999,
+        "final_old_mf1": -0.8995014733831602,
+        "final_seen_acc": -0.04098360655737099,
+        "final_seen_mf1": 0.13866177524731182
+      },
+      "final_absolute": {
+        "final_old_acc": 0.19973958333333333,
+        "final_old_mf1": 0.1972452788275882,
+        "final_seen_acc": 0.23463114754098363,
+        "final_seen_mf1": 0.18559121523157782
+      },
+      "memory": {
+        "final_memory_proxy_epoch_fraction": 0.165,
+        "proxy_replay_fraction": 0.336875
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "full_puridiver",
+      "strength_proxy_tasks": 10,
+      "placement": "front",
+      "window_start": 1,
+      "window_end": 19,
+      "proxy_tasks": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19
+      ],
+      "proxy_sequences": 80,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.16393442622950818,
+      "window_end_old_delta_pp": {
+        "old_acc": -7.447916666666668,
+        "old_mf1": -9.764642238930898
+      },
+      "worst_old_delta_pp": {
+        "acc": -7.604166666666668,
+        "acc_task": 11,
+        "mf1": -9.764642238930898,
+        "mf1_task": 19
+      },
+      "final_delta_pp": {
+        "final_old_acc": -6.145833333333334,
+        "final_old_mf1": -8.811906080902634,
+        "final_seen_acc": -4.856557377049178,
+        "final_seen_mf1": -5.7378879301729775
+      },
+      "final_absolute": {
+        "final_old_acc": 0.165625,
+        "final_old_mf1": 0.13242959265378915,
+        "final_seen_acc": 0.19006147540983606,
+        "final_seen_mf1": 0.1336385523654477
+      },
+      "memory": {
+        "final_memory_proxy_epoch_fraction": 0.502,
+        "proxy_replay_fraction": 0.6003125
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "finetune",
+      "strength_proxy_tasks": 10,
+      "placement": "middle",
+      "window_start": 22,
+      "window_end": 40,
+      "proxy_tasks": [
+        22,
+        24,
+        26,
+        28,
+        30,
+        32,
+        34,
+        36,
+        38,
+        40
+      ],
+      "proxy_sequences": 80,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.16393442622950818,
+      "window_end_old_delta_pp": {
+        "old_acc": -0.5989583333333354,
+        "old_mf1": -4.305912042726357
+      },
+      "worst_old_delta_pp": {
+        "acc": -4.895833333333332,
+        "acc_task": 30,
+        "mf1": -7.822375955663604,
+        "mf1_task": 30
+      },
+      "final_delta_pp": {
+        "final_old_acc": 0.07812500000000111,
+        "final_old_mf1": 0.062017029017588654,
+        "final_seen_acc": -0.13319672131147375,
+        "final_seen_mf1": -0.14256535061301923
+      },
+      "final_absolute": {
+        "final_old_acc": 0.24505208333333334,
+        "final_old_mf1": 0.24068360086313115,
+        "final_seen_acc": 0.2637295081967213,
+        "final_seen_mf1": 0.2146183434439171
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "ewc",
+      "strength_proxy_tasks": 10,
+      "placement": "middle",
+      "window_start": 22,
+      "window_end": 40,
+      "proxy_tasks": [
+        22,
+        24,
+        26,
+        28,
+        30,
+        32,
+        34,
+        36,
+        38,
+        40
+      ],
+      "proxy_sequences": 80,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.16393442622950818,
+      "window_end_old_delta_pp": {
+        "old_acc": -1.4062500000000004,
+        "old_mf1": -5.825324700513771
+      },
+      "worst_old_delta_pp": {
+        "acc": -5.546875000000001,
+        "acc_task": 30,
+        "mf1": -9.307370302906314,
+        "mf1_task": 30
+      },
+      "final_delta_pp": {
+        "final_old_acc": -0.05208333333333315,
+        "final_old_mf1": -0.06852123741175609,
+        "final_seen_acc": -0.1331967213114793,
+        "final_seen_mf1": -0.16178127338069004
+      },
+      "final_absolute": {
+        "final_old_acc": 0.24479166666666666,
+        "final_old_mf1": 0.24035668269683846,
+        "final_seen_acc": 0.26383196721311475,
+        "final_seen_mf1": 0.21458121853162118
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "online_ewc",
+      "strength_proxy_tasks": 10,
+      "placement": "middle",
+      "window_start": 22,
+      "window_end": 40,
+      "proxy_tasks": [
+        22,
+        24,
+        26,
+        28,
+        30,
+        32,
+        34,
+        36,
+        38,
+        40
+      ],
+      "proxy_sequences": 80,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.16393442622950818,
+      "window_end_old_delta_pp": {
+        "old_acc": -2.9427083333333353,
+        "old_mf1": -7.0264551148956995
+      },
+      "worst_old_delta_pp": {
+        "acc": -6.927083333333334,
+        "acc_task": 30,
+        "mf1": -10.424131473275875,
+        "mf1_task": 30
+      },
+      "final_delta_pp": {
+        "final_old_acc": -0.15624999999999944,
+        "final_old_mf1": -0.19142021731810566,
+        "final_seen_acc": 0.010245901639349686,
+        "final_seen_mf1": -0.0007713124733299548
+      },
+      "final_absolute": {
+        "final_old_acc": 0.24270833333333333,
+        "final_old_mf1": 0.23814681542535018,
+        "final_seen_acc": 0.26516393442622954,
+        "final_seen_mf1": 0.21604549212076188
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "si",
+      "strength_proxy_tasks": 10,
+      "placement": "middle",
+      "window_start": 22,
+      "window_end": 40,
+      "proxy_tasks": [
+        22,
+        24,
+        26,
+        28,
+        30,
+        32,
+        34,
+        36,
+        38,
+        40
+      ],
+      "proxy_sequences": 80,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.16393442622950818,
+      "window_end_old_delta_pp": {
+        "old_acc": -1.0416666666666656,
+        "old_mf1": -5.462875240007678
+      },
+      "worst_old_delta_pp": {
+        "acc": -5.416666666666667,
+        "acc_task": 30,
+        "mf1": -9.103155659070735,
+        "mf1_task": 30
+      },
+      "final_delta_pp": {
+        "final_old_acc": -0.026041666666667962,
+        "final_old_mf1": -0.05596671602488834,
+        "final_seen_acc": 0.0,
+        "final_seen_mf1": -0.0008935571090662453
+      },
+      "final_absolute": {
+        "final_old_acc": 0.24713541666666666,
+        "final_old_mf1": 0.24178976769525992,
+        "final_seen_acc": 0.265266393442623,
+        "final_seen_mf1": 0.21601365234450284
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "mas",
+      "strength_proxy_tasks": 10,
+      "placement": "middle",
+      "window_start": 22,
+      "window_end": 40,
+      "proxy_tasks": [
+        22,
+        24,
+        26,
+        28,
+        30,
+        32,
+        34,
+        36,
+        38,
+        40
+      ],
+      "proxy_sequences": 80,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.16393442622950818,
+      "window_end_old_delta_pp": {
+        "old_acc": -2.786458333333333,
+        "old_mf1": -7.541615667219753
+      },
+      "worst_old_delta_pp": {
+        "acc": -6.614583333333332,
+        "acc_task": 30,
+        "mf1": -10.717348754036829,
+        "mf1_task": 30
+      },
+      "final_delta_pp": {
+        "final_old_acc": -0.026041666666667962,
+        "final_old_mf1": -0.052916041651052126,
+        "final_seen_acc": -0.02049180327868827,
+        "final_seen_mf1": -0.0472488632846324
+      },
+      "final_absolute": {
+        "final_old_acc": 0.24609375,
+        "final_old_mf1": 0.24096198745853903,
+        "final_seen_acc": 0.2654713114754098,
+        "final_seen_mf1": 0.21600885687596202
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "full_spr",
+      "strength_proxy_tasks": 10,
+      "placement": "middle",
+      "window_start": 22,
+      "window_end": 40,
+      "proxy_tasks": [
+        22,
+        24,
+        26,
+        28,
+        30,
+        32,
+        34,
+        36,
+        38,
+        40
+      ],
+      "proxy_sequences": 80,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.16393442622950818,
+      "window_end_old_delta_pp": {
+        "old_acc": -1.223958333333333,
+        "old_mf1": -2.480206839752608
+      },
+      "worst_old_delta_pp": {
+        "acc": -1.6666666666666663,
+        "acc_task": 30,
+        "mf1": -2.7021115778261633,
+        "mf1_task": 37
+      },
+      "final_delta_pp": {
+        "final_old_acc": -0.8593749999999983,
+        "final_old_mf1": -0.8517980692274857,
+        "final_seen_acc": -0.4508196721311447,
+        "final_seen_mf1": -0.8755333494847362
+      },
+      "final_absolute": {
+        "final_old_acc": 0.20208333333333334,
+        "final_old_mf1": 0.19772231286914493,
+        "final_seen_acc": 0.2305327868852459,
+        "final_seen_mf1": 0.17544926398425734
+      },
+      "memory": {
+        "final_memory_proxy_epoch_fraction": 0.09,
+        "proxy_replay_fraction": 0.10833333333333334
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "full_puridiver",
+      "strength_proxy_tasks": 10,
+      "placement": "middle",
+      "window_start": 22,
+      "window_end": 40,
+      "proxy_tasks": [
+        22,
+        24,
+        26,
+        28,
+        30,
+        32,
+        34,
+        36,
+        38,
+        40
+      ],
+      "proxy_sequences": 80,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.16393442622950818,
+      "window_end_old_delta_pp": {
+        "old_acc": -4.088541666666664,
+        "old_mf1": -5.582177258710569
+      },
+      "worst_old_delta_pp": {
+        "acc": -4.973958333333334,
+        "acc_task": 47,
+        "mf1": -6.494793120952577,
+        "mf1_task": 61
+      },
+      "final_delta_pp": {
+        "final_old_acc": -4.817708333333334,
+        "final_old_mf1": -6.494793120952577,
+        "final_seen_acc": -3.8934426229508183,
+        "final_seen_mf1": -4.024862092256851
+      },
+      "final_absolute": {
+        "final_old_acc": 0.17890625,
+        "final_old_mf1": 0.15560072225328972,
+        "final_seen_acc": 0.19969262295081966,
+        "final_seen_mf1": 0.15076881074460896
+      },
+      "memory": {
+        "final_memory_proxy_epoch_fraction": 0.578,
+        "proxy_replay_fraction": 0.3460416666666667
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "finetune",
+      "strength_proxy_tasks": 10,
+      "placement": "tail",
+      "window_start": 43,
+      "window_end": 61,
+      "proxy_tasks": [
+        43,
+        45,
+        47,
+        49,
+        51,
+        53,
+        55,
+        57,
+        59,
+        61
+      ],
+      "proxy_sequences": 80,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.16393442622950818,
+      "window_end_old_delta_pp": {
+        "old_acc": -1.5885416666666652,
+        "old_mf1": -2.666080445870983
+      },
+      "worst_old_delta_pp": {
+        "acc": -2.682291666666667,
+        "acc_task": 55,
+        "mf1": -3.0852964161358356,
+        "mf1_task": 55
+      },
+      "final_delta_pp": {
+        "final_old_acc": -1.5885416666666652,
+        "final_old_mf1": -2.666080445870983,
+        "final_seen_acc": -2.141393442622946,
+        "final_seen_mf1": -2.904252843030469
+      },
+      "final_absolute": {
+        "final_old_acc": 0.22838541666666667,
+        "final_old_mf1": 0.21340262611424543,
+        "final_seen_acc": 0.24364754098360658,
+        "final_seen_mf1": 0.1870014685197426
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "ewc",
+      "strength_proxy_tasks": 10,
+      "placement": "tail",
+      "window_start": 43,
+      "window_end": 61,
+      "proxy_tasks": [
+        43,
+        45,
+        47,
+        49,
+        51,
+        53,
+        55,
+        57,
+        59,
+        61
+      ],
+      "proxy_sequences": 80,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.16393442622950818,
+      "window_end_old_delta_pp": {
+        "old_acc": -1.901041666666667,
+        "old_mf1": -1.8505577126940065
+      },
+      "worst_old_delta_pp": {
+        "acc": -2.34375,
+        "acc_task": 43,
+        "mf1": -1.8505577126940065,
+        "mf1_task": 61
+      },
+      "final_delta_pp": {
+        "final_old_acc": -1.901041666666667,
+        "final_old_mf1": -1.8505577126940065,
+        "final_seen_acc": -2.4487704918032844,
+        "final_seen_mf1": -2.5023476921658157
+      },
+      "final_absolute": {
+        "final_old_acc": 0.22630208333333332,
+        "final_old_mf1": 0.22253631794401596,
+        "final_seen_acc": 0.2406762295081967,
+        "final_seen_mf1": 0.19117555434376993
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "online_ewc",
+      "strength_proxy_tasks": 10,
+      "placement": "tail",
+      "window_start": 43,
+      "window_end": 61,
+      "proxy_tasks": [
+        43,
+        45,
+        47,
+        49,
+        51,
+        53,
+        55,
+        57,
+        59,
+        61
+      ],
+      "proxy_sequences": 80,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.16393442622950818,
+      "window_end_old_delta_pp": {
+        "old_acc": -2.057291666666666,
+        "old_mf1": -4.298239505299589
+      },
+      "worst_old_delta_pp": {
+        "acc": -3.4375000000000018,
+        "acc_task": 55,
+        "mf1": -5.103558469620628,
+        "mf1_task": 55
+      },
+      "final_delta_pp": {
+        "final_old_acc": -2.057291666666666,
+        "final_old_mf1": -4.298239505299589,
+        "final_seen_acc": -2.9303278688524586,
+        "final_seen_mf1": -4.027571172229333
+      },
+      "final_absolute": {
+        "final_old_acc": 0.22369791666666666,
+        "final_old_mf1": 0.19707862254553535,
+        "final_seen_acc": 0.23575819672131146,
+        "final_seen_mf1": 0.17577749352320185
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "si",
+      "strength_proxy_tasks": 10,
+      "placement": "tail",
+      "window_start": 43,
+      "window_end": 61,
+      "proxy_tasks": [
+        43,
+        45,
+        47,
+        49,
+        51,
+        53,
+        55,
+        57,
+        59,
+        61
+      ],
+      "proxy_sequences": 80,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.16393442622950818,
+      "window_end_old_delta_pp": {
+        "old_acc": -2.5781250000000004,
+        "old_mf1": -4.023093196156643
+      },
+      "worst_old_delta_pp": {
+        "acc": -3.7500000000000004,
+        "acc_task": 55,
+        "mf1": -4.88120112857357,
+        "mf1_task": 55
+      },
+      "final_delta_pp": {
+        "final_old_acc": -2.5781250000000004,
+        "final_old_mf1": -4.023093196156643,
+        "final_seen_acc": -2.8483606557377112,
+        "final_seen_mf1": -3.425159029649136
+      },
+      "final_absolute": {
+        "final_old_acc": 0.22161458333333334,
+        "final_old_mf1": 0.20211850289394237,
+        "final_seen_acc": 0.23678278688524587,
+        "final_seen_mf1": 0.18177099761910215
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "mas",
+      "strength_proxy_tasks": 10,
+      "placement": "tail",
+      "window_start": 43,
+      "window_end": 61,
+      "proxy_tasks": [
+        43,
+        45,
+        47,
+        49,
+        51,
+        53,
+        55,
+        57,
+        59,
+        61
+      ],
+      "proxy_sequences": 80,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.16393442622950818,
+      "window_end_old_delta_pp": {
+        "old_acc": -2.369791666666668,
+        "old_mf1": -3.834837506590155
+      },
+      "worst_old_delta_pp": {
+        "acc": -2.5520833333333326,
+        "acc_task": 55,
+        "mf1": -3.834837506590155,
+        "mf1_task": 61
+      },
+      "final_delta_pp": {
+        "final_old_acc": -2.369791666666668,
+        "final_old_mf1": -3.834837506590155,
+        "final_seen_acc": -2.161885245901635,
+        "final_seen_mf1": -2.466977126343692
+      },
+      "final_absolute": {
+        "final_old_acc": 0.22265625,
+        "final_old_mf1": 0.203142772809148,
+        "final_seen_acc": 0.24405737704918035,
+        "final_seen_mf1": 0.19181157424537143
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "full_spr",
+      "strength_proxy_tasks": 10,
+      "placement": "tail",
+      "window_start": 43,
+      "window_end": 61,
+      "proxy_tasks": [
+        43,
+        45,
+        47,
+        49,
+        51,
+        53,
+        55,
+        57,
+        59,
+        61
+      ],
+      "proxy_sequences": 80,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.16393442622950818,
+      "window_end_old_delta_pp": {
+        "old_acc": -0.4947916666666663,
+        "old_mf1": -0.3483427779805509
+      },
+      "worst_old_delta_pp": {
+        "acc": -1.4843750000000018,
+        "acc_task": 55,
+        "mf1": -1.3434735692877982,
+        "mf1_task": 55
+      },
+      "final_delta_pp": {
+        "final_old_acc": -0.4947916666666663,
+        "final_old_mf1": -0.3483427779805509,
+        "final_seen_acc": -0.1434426229508151,
+        "final_seen_mf1": -0.2447766398956247
+      },
+      "final_absolute": {
+        "final_old_acc": 0.20572916666666666,
+        "final_old_mf1": 0.20275686578161428,
+        "final_seen_acc": 0.2336065573770492,
+        "final_seen_mf1": 0.18175683108014845
+      },
+      "memory": {
+        "final_memory_proxy_epoch_fraction": 0.126,
+        "proxy_replay_fraction": 0.025625
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "full_puridiver",
+      "strength_proxy_tasks": 10,
+      "placement": "tail",
+      "window_start": 43,
+      "window_end": 61,
+      "proxy_tasks": [
+        43,
+        45,
+        47,
+        49,
+        51,
+        53,
+        55,
+        57,
+        59,
+        61
+      ],
+      "proxy_sequences": 80,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.16393442622950818,
+      "window_end_old_delta_pp": {
+        "old_acc": -0.5208333333333343,
+        "old_mf1": -0.8054297194270421
+      },
+      "worst_old_delta_pp": {
+        "acc": -2.2135416666666656,
+        "acc_task": 59,
+        "mf1": -2.5335047302544127,
+        "mf1_task": 59
+      },
+      "final_delta_pp": {
+        "final_old_acc": -0.5208333333333343,
+        "final_old_mf1": -0.8054297194270421,
+        "final_seen_acc": -0.5122950819672123,
+        "final_seen_mf1": -0.7074263300724304
+      },
+      "final_absolute": {
+        "final_old_acc": 0.221875,
+        "final_old_mf1": 0.21249435626854507,
+        "final_seen_acc": 0.23350409836065572,
+        "final_seen_mf1": 0.18394316836645316
+      },
+      "memory": {
+        "final_memory_proxy_epoch_fraction": 0.275,
+        "proxy_replay_fraction": 0.051666666666666666
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "finetune",
+      "strength_proxy_tasks": 20,
+      "placement": "front",
+      "window_start": 1,
+      "window_end": 39,
+      "proxy_tasks": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39
+      ],
+      "proxy_sequences": 160,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.32786885245901637,
+      "window_end_old_delta_pp": {
+        "old_acc": -2.708333333333332,
+        "old_mf1": -4.587595903129104
+      },
+      "worst_old_delta_pp": {
+        "acc": -8.41145833333333,
+        "acc_task": 15,
+        "mf1": -9.375990146517225,
+        "mf1_task": 27
+      },
+      "final_delta_pp": {
+        "final_old_acc": 0.13020833333333426,
+        "final_old_mf1": 0.05410854458653691,
+        "final_seen_acc": 0.04098360655738209,
+        "final_seen_mf1": 0.006685576967635498
+      },
+      "final_absolute": {
+        "final_old_acc": 0.24557291666666667,
+        "final_old_mf1": 0.24060451601882063,
+        "final_seen_acc": 0.26547131147540987,
+        "final_seen_mf1": 0.21611085271972363
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "ewc",
+      "strength_proxy_tasks": 20,
+      "placement": "front",
+      "window_start": 1,
+      "window_end": 39,
+      "proxy_tasks": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39
+      ],
+      "proxy_sequences": 160,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.32786885245901637,
+      "window_end_old_delta_pp": {
+        "old_acc": -2.682291666666667,
+        "old_mf1": -4.573379171616976
+      },
+      "worst_old_delta_pp": {
+        "acc": -8.541666666666666,
+        "acc_task": 15,
+        "mf1": -9.349038649523479,
+        "mf1_task": 7
+      },
+      "final_delta_pp": {
+        "final_old_acc": -0.13020833333333148,
+        "final_old_mf1": -0.19374869196970013,
+        "final_seen_acc": 0.051229508196720674,
+        "final_seen_mf1": 0.017790986828536415
+      },
+      "final_absolute": {
+        "final_old_acc": 0.24401041666666667,
+        "final_old_mf1": 0.23910440815125902,
+        "final_seen_acc": 0.26567622950819675,
+        "final_seen_mf1": 0.21637694113371345
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "online_ewc",
+      "strength_proxy_tasks": 20,
+      "placement": "front",
+      "window_start": 1,
+      "window_end": 39,
+      "proxy_tasks": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39
+      ],
+      "proxy_sequences": 160,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.32786885245901637,
+      "window_end_old_delta_pp": {
+        "old_acc": -2.734375,
+        "old_mf1": -4.481352256688231
+      },
+      "worst_old_delta_pp": {
+        "acc": -8.541666666666664,
+        "acc_task": 15,
+        "mf1": -9.468537545093591,
+        "mf1_task": 7
+      },
+      "final_delta_pp": {
+        "final_old_acc": 0.07812500000000111,
+        "final_old_mf1": -0.004792409933040975,
+        "final_seen_acc": 0.10245901639344135,
+        "final_seen_mf1": 0.08207693746193345
+      },
+      "final_absolute": {
+        "final_old_acc": 0.24505208333333334,
+        "final_old_mf1": 0.24001309349920083,
+        "final_seen_acc": 0.26608606557377046,
+        "final_seen_mf1": 0.2168739746201145
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "si",
+      "strength_proxy_tasks": 20,
+      "placement": "front",
+      "window_start": 1,
+      "window_end": 39,
+      "proxy_tasks": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39
+      ],
+      "proxy_sequences": 160,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.32786885245901637,
+      "window_end_old_delta_pp": {
+        "old_acc": -2.734375,
+        "old_mf1": -4.780034534439825
+      },
+      "worst_old_delta_pp": {
+        "acc": -8.671874999999998,
+        "acc_task": 15,
+        "mf1": -9.459547395699646,
+        "mf1_task": 27
+      },
+      "final_delta_pp": {
+        "final_old_acc": -0.05208333333333315,
+        "final_old_mf1": -0.09164828167759209,
+        "final_seen_acc": 0.030737704918026854,
+        "final_seen_mf1": 0.02667590624653715
+      },
+      "final_absolute": {
+        "final_old_acc": 0.246875,
+        "final_old_mf1": 0.24143295203873288,
+        "final_seen_acc": 0.26557377049180325,
+        "final_seen_mf1": 0.21628934697805888
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "mas",
+      "strength_proxy_tasks": 20,
+      "placement": "front",
+      "window_start": 1,
+      "window_end": 39,
+      "proxy_tasks": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39
+      ],
+      "proxy_sequences": 160,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.32786885245901637,
+      "window_end_old_delta_pp": {
+        "old_acc": -2.786458333333333,
+        "old_mf1": -4.631895371120881
+      },
+      "worst_old_delta_pp": {
+        "acc": -8.75,
+        "acc_task": 15,
+        "mf1": -9.829125477026643,
+        "mf1_task": 27
+      },
+      "final_delta_pp": {
+        "final_old_acc": 0.0,
+        "final_old_mf1": -0.05848980961590533,
+        "final_seen_acc": 1.1102230246251565e-14,
+        "final_seen_mf1": -0.04831625640826509
+      },
+      "final_absolute": {
+        "final_old_acc": 0.24635416666666668,
+        "final_old_mf1": 0.2409062497788905,
+        "final_seen_acc": 0.2656762295081968,
+        "final_seen_mf1": 0.2159981829447257
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "full_spr",
+      "strength_proxy_tasks": 20,
+      "placement": "front",
+      "window_start": 1,
+      "window_end": 39,
+      "proxy_tasks": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39
+      ],
+      "proxy_sequences": 160,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.32786885245901637,
+      "window_end_old_delta_pp": {
+        "old_acc": -1.3802083333333326,
+        "old_mf1": -2.6538375231513394
+      },
+      "worst_old_delta_pp": {
+        "acc": -5.390625000000002,
+        "acc_task": 3,
+        "mf1": -6.73805646928751,
+        "mf1_task": 7
+      },
+      "final_delta_pp": {
+        "final_old_acc": -2.005208333333333,
+        "final_old_mf1": -2.3249342383485,
+        "final_seen_acc": -0.8094262295081894,
+        "final_seen_mf1": -0.6681335942324867
+      },
+      "final_absolute": {
+        "final_old_acc": 0.190625,
+        "final_old_mf1": 0.1829909511779348,
+        "final_seen_acc": 0.22694672131147545,
+        "final_seen_mf1": 0.17752326153677983
+      },
+      "memory": {
+        "final_memory_proxy_epoch_fraction": 0.3,
+        "proxy_replay_fraction": 0.4775
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "full_puridiver",
+      "strength_proxy_tasks": 20,
+      "placement": "front",
+      "window_start": 1,
+      "window_end": 39,
+      "proxy_tasks": [
+        1,
+        3,
+        5,
+        7,
+        9,
+        11,
+        13,
+        15,
+        17,
+        19,
+        21,
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39
+      ],
+      "proxy_sequences": 160,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.32786885245901637,
+      "window_end_old_delta_pp": {
+        "old_acc": -5.677083333333336,
+        "old_mf1": -9.49978873469957
+      },
+      "worst_old_delta_pp": {
+        "acc": -7.604166666666668,
+        "acc_task": 11,
+        "mf1": -10.987844368449535,
+        "mf1_task": 61
+      },
+      "final_delta_pp": {
+        "final_old_acc": -7.057291666666665,
+        "final_old_mf1": -10.987844368449535,
+        "final_seen_acc": -5.922131147540982,
+        "final_seen_mf1": -8.487551215515213
+      },
+      "final_absolute": {
+        "final_old_acc": 0.15651041666666668,
+        "final_old_mf1": 0.11067020977832015,
+        "final_seen_acc": 0.17940573770491802,
+        "final_seen_mf1": 0.10614191951202534
+      },
+      "memory": {
+        "final_memory_proxy_epoch_fraction": 0.774,
+        "proxy_replay_fraction": 0.7334375
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "finetune",
+      "strength_proxy_tasks": 20,
+      "placement": "middle",
+      "window_start": 12,
+      "window_end": 50,
+      "proxy_tasks": [
+        12,
+        14,
+        16,
+        18,
+        20,
+        22,
+        24,
+        26,
+        28,
+        30,
+        32,
+        34,
+        36,
+        38,
+        40,
+        42,
+        44,
+        46,
+        48,
+        50
+      ],
+      "proxy_sequences": 160,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.32786885245901637,
+      "window_end_old_delta_pp": {
+        "old_acc": -3.489583333333332,
+        "old_mf1": -4.387561167372114
+      },
+      "worst_old_delta_pp": {
+        "acc": -7.526041666666666,
+        "acc_task": 30,
+        "mf1": -8.468779621397113,
+        "mf1_task": 30
+      },
+      "final_delta_pp": {
+        "final_old_acc": 0.026041666666667962,
+        "final_old_mf1": 0.04245001554152028,
+        "final_seen_acc": -0.07172131147540894,
+        "final_seen_mf1": 0.038265290857766865
+      },
+      "final_absolute": {
+        "final_old_acc": 0.24453125,
+        "final_old_mf1": 0.24048793072837046,
+        "final_seen_acc": 0.26434426229508196,
+        "final_seen_mf1": 0.21642664985862495
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "ewc",
+      "strength_proxy_tasks": 20,
+      "placement": "middle",
+      "window_start": 12,
+      "window_end": 50,
+      "proxy_tasks": [
+        12,
+        14,
+        16,
+        18,
+        20,
+        22,
+        24,
+        26,
+        28,
+        30,
+        32,
+        34,
+        36,
+        38,
+        40,
+        42,
+        44,
+        46,
+        48,
+        50
+      ],
+      "proxy_sequences": 160,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.32786885245901637,
+      "window_end_old_delta_pp": {
+        "old_acc": -1.0156249999999978,
+        "old_mf1": 0.14018361135433866
+      },
+      "worst_old_delta_pp": {
+        "acc": -3.984375000000001,
+        "acc_task": 30,
+        "mf1": -2.6916514605752755,
+        "mf1_task": 30
+      },
+      "final_delta_pp": {
+        "final_old_acc": -0.026041666666665186,
+        "final_old_mf1": -0.059919044057182846,
+        "final_seen_acc": -0.02049180327869382,
+        "final_seen_mf1": 0.014512437154168278
+      },
+      "final_absolute": {
+        "final_old_acc": 0.24505208333333334,
+        "final_old_mf1": 0.2404427046303842,
+        "final_seen_acc": 0.2649590163934426,
+        "final_seen_mf1": 0.21634415563696976
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "online_ewc",
+      "strength_proxy_tasks": 20,
+      "placement": "middle",
+      "window_start": 12,
+      "window_end": 50,
+      "proxy_tasks": [
+        12,
+        14,
+        16,
+        18,
+        20,
+        22,
+        24,
+        26,
+        28,
+        30,
+        32,
+        34,
+        36,
+        38,
+        40,
+        42,
+        44,
+        46,
+        48,
+        50
+      ],
+      "proxy_sequences": 160,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.32786885245901637,
+      "window_end_old_delta_pp": {
+        "old_acc": -4.036458333333334,
+        "old_mf1": -4.792883631078645
+      },
+      "worst_old_delta_pp": {
+        "acc": -7.187500000000002,
+        "acc_task": 30,
+        "mf1": -8.12384018258724,
+        "mf1_task": 30
+      },
+      "final_delta_pp": {
+        "final_old_acc": 0.15624999999999944,
+        "final_old_mf1": 0.06454061333444894,
+        "final_seen_acc": 0.09221311475410277,
+        "final_seen_mf1": 0.07723941852533778
+      },
+      "final_absolute": {
+        "final_old_acc": 0.24583333333333332,
+        "final_old_mf1": 0.24070642373187573,
+        "final_seen_acc": 0.2659836065573771,
+        "final_seen_mf1": 0.21682559943074856
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "si",
+      "strength_proxy_tasks": 20,
+      "placement": "middle",
+      "window_start": 12,
+      "window_end": 50,
+      "proxy_tasks": [
+        12,
+        14,
+        16,
+        18,
+        20,
+        22,
+        24,
+        26,
+        28,
+        30,
+        32,
+        34,
+        36,
+        38,
+        40,
+        42,
+        44,
+        46,
+        48,
+        50
+      ],
+      "proxy_sequences": 160,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.32786885245901637,
+      "window_end_old_delta_pp": {
+        "old_acc": -2.317708333333332,
+        "old_mf1": -2.9901928400760918
+      },
+      "worst_old_delta_pp": {
+        "acc": -5.390625000000002,
+        "acc_task": 30,
+        "mf1": -6.12629495117947,
+        "mf1_task": 30
+      },
+      "final_delta_pp": {
+        "final_old_acc": -0.1041666666666663,
+        "final_old_mf1": -0.1155331850590191,
+        "final_seen_acc": -0.08196721311475308,
+        "final_seen_mf1": -0.08564343480874093
+      },
+      "final_absolute": {
+        "final_old_acc": 0.24635416666666668,
+        "final_old_mf1": 0.24119410300491861,
+        "final_seen_acc": 0.26444672131147545,
+        "final_seen_mf1": 0.2151661535675061
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "mas",
+      "strength_proxy_tasks": 20,
+      "placement": "middle",
+      "window_start": 12,
+      "window_end": 50,
+      "proxy_tasks": [
+        12,
+        14,
+        16,
+        18,
+        20,
+        22,
+        24,
+        26,
+        28,
+        30,
+        32,
+        34,
+        36,
+        38,
+        40,
+        42,
+        44,
+        46,
+        48,
+        50
+      ],
+      "proxy_sequences": 160,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.32786885245901637,
+      "window_end_old_delta_pp": {
+        "old_acc": -2.6041666666666687,
+        "old_mf1": -3.8893901756829803
+      },
+      "worst_old_delta_pp": {
+        "acc": -5.286458333333332,
+        "acc_task": 30,
+        "mf1": -6.9355712011072574,
+        "mf1_task": 30
+      },
+      "final_delta_pp": {
+        "final_old_acc": -0.052083333333335924,
+        "final_old_mf1": -0.043462332536567394,
+        "final_seen_acc": -0.06147540983606481,
+        "final_seen_mf1": -0.04838347209561167
+      },
+      "final_absolute": {
+        "final_old_acc": 0.24583333333333332,
+        "final_old_mf1": 0.24105652454968388,
+        "final_seen_acc": 0.26506147540983604,
+        "final_seen_mf1": 0.21599751078785223
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "full_spr",
+      "strength_proxy_tasks": 20,
+      "placement": "middle",
+      "window_start": 12,
+      "window_end": 50,
+      "proxy_tasks": [
+        12,
+        14,
+        16,
+        18,
+        20,
+        22,
+        24,
+        26,
+        28,
+        30,
+        32,
+        34,
+        36,
+        38,
+        40,
+        42,
+        44,
+        46,
+        48,
+        50
+      ],
+      "proxy_sequences": 160,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.32786885245901637,
+      "window_end_old_delta_pp": {
+        "old_acc": -1.8229166666666656,
+        "old_mf1": -2.953897297995414
+      },
+      "worst_old_delta_pp": {
+        "acc": -2.2135416666666687,
+        "acc_task": 28,
+        "mf1": -3.107966352660024,
+        "mf1_task": 28
+      },
+      "final_delta_pp": {
+        "final_old_acc": -0.9635416666666646,
+        "final_old_mf1": -1.4963127666189986,
+        "final_seen_acc": -0.5020491803278626,
+        "final_seen_mf1": -0.8075540827089361
+      },
+      "final_absolute": {
+        "final_old_acc": 0.20104166666666667,
+        "final_old_mf1": 0.1912771658952298,
+        "final_seen_acc": 0.23002049180327871,
+        "final_seen_mf1": 0.17612905665201534
+      },
+      "memory": {
+        "final_memory_proxy_epoch_fraction": 0.221,
+        "proxy_replay_fraction": 0.25645833333333334
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "full_puridiver",
+      "strength_proxy_tasks": 20,
+      "placement": "middle",
+      "window_start": 12,
+      "window_end": 50,
+      "proxy_tasks": [
+        12,
+        14,
+        16,
+        18,
+        20,
+        22,
+        24,
+        26,
+        28,
+        30,
+        32,
+        34,
+        36,
+        38,
+        40,
+        42,
+        44,
+        46,
+        48,
+        50
+      ],
+      "proxy_sequences": 160,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.32786885245901637,
+      "window_end_old_delta_pp": {
+        "old_acc": -1.901041666666667,
+        "old_mf1": -3.8533520193115733
+      },
+      "worst_old_delta_pp": {
+        "acc": -3.6458333333333344,
+        "acc_task": 26,
+        "mf1": -5.166977868640185,
+        "mf1_task": 41
+      },
+      "final_delta_pp": {
+        "final_old_acc": -1.3281249999999996,
+        "final_old_mf1": -3.5892662286331922,
+        "final_seen_acc": -0.5430327868852475,
+        "final_seen_mf1": -1.6279605428882986
+      },
+      "final_absolute": {
+        "final_old_acc": 0.21380208333333334,
+        "final_old_mf1": 0.18465599117648357,
+        "final_seen_acc": 0.23319672131147537,
+        "final_seen_mf1": 0.17473782623829448
+      },
+      "memory": {
+        "final_memory_proxy_epoch_fraction": 0.737,
+        "proxy_replay_fraction": 0.5219791666666667
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "finetune",
+      "strength_proxy_tasks": 20,
+      "placement": "tail",
+      "window_start": 23,
+      "window_end": 61,
+      "proxy_tasks": [
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39,
+        41,
+        43,
+        45,
+        47,
+        49,
+        51,
+        53,
+        55,
+        57,
+        59,
+        61
+      ],
+      "proxy_sequences": 160,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.32786885245901637,
+      "window_end_old_delta_pp": {
+        "old_acc": -4.453124999999999,
+        "old_mf1": -9.982186936024545
+      },
+      "worst_old_delta_pp": {
+        "acc": -5.911458333333333,
+        "acc_task": 43,
+        "mf1": -10.295401601369674,
+        "mf1_task": 55
+      },
+      "final_delta_pp": {
+        "final_old_acc": -4.453124999999999,
+        "final_old_mf1": -9.982186936024545,
+        "final_seen_acc": -6.004098360655733,
+        "final_seen_mf1": -8.761603151908476
+      },
+      "final_absolute": {
+        "final_old_acc": 0.19973958333333333,
+        "final_old_mf1": 0.1402415612127098,
+        "final_seen_acc": 0.20502049180327872,
+        "final_seen_mf1": 0.12842796543096252
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "ewc",
+      "strength_proxy_tasks": 20,
+      "placement": "tail",
+      "window_start": 23,
+      "window_end": 61,
+      "proxy_tasks": [
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39,
+        41,
+        43,
+        45,
+        47,
+        49,
+        51,
+        53,
+        55,
+        57,
+        59,
+        61
+      ],
+      "proxy_sequences": 160,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.32786885245901637,
+      "window_end_old_delta_pp": {
+        "old_acc": -5.885416666666665,
+        "old_mf1": -11.746124550094553
+      },
+      "worst_old_delta_pp": {
+        "acc": -7.447916666666668,
+        "acc_task": 55,
+        "mf1": -12.487834021617765,
+        "mf1_task": 55
+      },
+      "final_delta_pp": {
+        "final_old_acc": -5.885416666666665,
+        "final_old_mf1": -11.746124550094553,
+        "final_seen_acc": -7.131147540983609,
+        "final_seen_mf1": -10.454289255770133
+      },
+      "final_absolute": {
+        "final_old_acc": 0.18645833333333334,
+        "final_old_mf1": 0.1235806495700105,
+        "final_seen_acc": 0.19385245901639345,
+        "final_seen_mf1": 0.11165613870772675
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "online_ewc",
+      "strength_proxy_tasks": 20,
+      "placement": "tail",
+      "window_start": 23,
+      "window_end": 61,
+      "proxy_tasks": [
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39,
+        41,
+        43,
+        45,
+        47,
+        49,
+        51,
+        53,
+        55,
+        57,
+        59,
+        61
+      ],
+      "proxy_sequences": 160,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.32786885245901637,
+      "window_end_old_delta_pp": {
+        "old_acc": -3.125,
+        "old_mf1": -6.819786624900654
+      },
+      "worst_old_delta_pp": {
+        "acc": -4.348958333333336,
+        "acc_task": 43,
+        "mf1": -7.183203013683912,
+        "mf1_task": 55
+      },
+      "final_delta_pp": {
+        "final_old_acc": -3.125,
+        "final_old_mf1": -6.819786624900654,
+        "final_seen_acc": -5.0819672131147495,
+        "final_seen_mf1": -6.889519033898258
+      },
+      "final_absolute": {
+        "final_old_acc": 0.21302083333333333,
+        "final_old_mf1": 0.1718631513495247,
+        "final_seen_acc": 0.21424180327868855,
+        "final_seen_mf1": 0.1471580149065126
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "si",
+      "strength_proxy_tasks": 20,
+      "placement": "tail",
+      "window_start": 23,
+      "window_end": 61,
+      "proxy_tasks": [
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39,
+        41,
+        43,
+        45,
+        47,
+        49,
+        51,
+        53,
+        55,
+        57,
+        59,
+        61
+      ],
+      "proxy_sequences": 160,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.32786885245901637,
+      "window_end_old_delta_pp": {
+        "old_acc": -5.494791666666668,
+        "old_mf1": -10.320612198739212
+      },
+      "worst_old_delta_pp": {
+        "acc": -6.953125000000002,
+        "acc_task": 55,
+        "mf1": -11.177314917854513,
+        "mf1_task": 27
+      },
+      "final_delta_pp": {
+        "final_old_acc": -5.494791666666668,
+        "final_old_mf1": -10.320612198739212,
+        "final_seen_acc": -6.16803278688525,
+        "final_seen_mf1": -8.87369250976564
+      },
+      "final_absolute": {
+        "final_old_acc": 0.19244791666666666,
+        "final_old_mf1": 0.13914331286811668,
+        "final_seen_acc": 0.20358606557377049,
+        "final_seen_mf1": 0.1272856628179371
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "mas",
+      "strength_proxy_tasks": 20,
+      "placement": "tail",
+      "window_start": 23,
+      "window_end": 61,
+      "proxy_tasks": [
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39,
+        41,
+        43,
+        45,
+        47,
+        49,
+        51,
+        53,
+        55,
+        57,
+        59,
+        61
+      ],
+      "proxy_sequences": 160,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.32786885245901637,
+      "window_end_old_delta_pp": {
+        "old_acc": -3.3333333333333353,
+        "old_mf1": -7.676575031066701
+      },
+      "worst_old_delta_pp": {
+        "acc": -4.557291666666669,
+        "acc_task": 43,
+        "mf1": -8.132470260962915,
+        "mf1_task": 55
+      },
+      "final_delta_pp": {
+        "final_old_acc": -3.3333333333333353,
+        "final_old_mf1": -7.676575031066701,
+        "final_seen_acc": -5.1536885245901605,
+        "final_seen_mf1": -7.429412251522935
+      },
+      "final_absolute": {
+        "final_old_acc": 0.21302083333333333,
+        "final_old_mf1": 0.16472539756438254,
+        "final_seen_acc": 0.21413934426229508,
+        "final_seen_mf1": 0.142187222993579
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "full_spr",
+      "strength_proxy_tasks": 20,
+      "placement": "tail",
+      "window_start": 23,
+      "window_end": 61,
+      "proxy_tasks": [
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39,
+        41,
+        43,
+        45,
+        47,
+        49,
+        51,
+        53,
+        55,
+        57,
+        59,
+        61
+      ],
+      "proxy_sequences": 160,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.32786885245901637,
+      "window_end_old_delta_pp": {
+        "old_acc": -1.4583333333333308,
+        "old_mf1": -1.6816889001791986
+      },
+      "worst_old_delta_pp": {
+        "acc": -1.4583333333333308,
+        "acc_task": 61,
+        "mf1": -1.6816889001791986,
+        "mf1_task": 61
+      },
+      "final_delta_pp": {
+        "final_old_acc": -1.4583333333333308,
+        "final_old_mf1": -1.6816889001791986,
+        "final_seen_acc": -0.9323770491803218,
+        "final_seen_mf1": -1.230911056776668
+      },
+      "final_absolute": {
+        "final_old_acc": 0.19609375,
+        "final_old_mf1": 0.1894234045596278,
+        "final_seen_acc": 0.22571721311475412,
+        "final_seen_mf1": 0.17189548691133802
+      },
+      "memory": {
+        "final_memory_proxy_epoch_fraction": 0.195,
+        "proxy_replay_fraction": 0.121875
+      }
+    },
+    {
+      "dataset": "FACED",
+      "method": "full_puridiver",
+      "strength_proxy_tasks": 20,
+      "placement": "tail",
+      "window_start": 23,
+      "window_end": 61,
+      "proxy_tasks": [
+        23,
+        25,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39,
+        41,
+        43,
+        45,
+        47,
+        49,
+        51,
+        53,
+        55,
+        57,
+        59,
+        61
+      ],
+      "proxy_sequences": 160,
+      "total_sequences": 488,
+      "proxy_sequence_fraction": 0.32786885245901637,
+      "window_end_old_delta_pp": {
+        "old_acc": -4.114583333333332,
+        "old_mf1": -6.121305934336779
+      },
+      "worst_old_delta_pp": {
+        "acc": -4.114583333333332,
+        "acc_task": 61,
+        "mf1": -6.121305934336779,
+        "mf1_task": 61
+      },
+      "final_delta_pp": {
+        "final_old_acc": -4.114583333333332,
+        "final_old_mf1": -6.121305934336779,
+        "final_seen_acc": -4.108606557377048,
+        "final_seen_mf1": -4.686752927896562
+      },
+      "final_absolute": {
+        "final_old_acc": 0.1859375,
+        "final_old_mf1": 0.1593355941194477,
+        "final_seen_acc": 0.19754098360655736,
+        "final_seen_mf1": 0.14414990238821185
+      },
+      "memory": {
+        "final_memory_proxy_epoch_fraction": 0.682,
+        "proxy_replay_fraction": 0.339375
+      }
+    }
+  ]
+}

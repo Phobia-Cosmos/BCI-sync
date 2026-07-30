@@ -71,6 +71,11 @@ from utils.util import fix_randomness  # noqa: E402
 STATE_SCHEMA = "full-puridiver-eeg-adapted-state-v1"
 
 
+def split_modalities(values: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+    split = 1 if values.shape[-2] == 32 else 2
+    return values[..., :split, :], values[..., split:, :]
+
+
 class CurrentPseudoDataset(Dataset):
     def __init__(self, paths: Sequence[Path], pseudo_labels: Sequence[np.ndarray]):
         if len(paths) != len(pseudo_labels):
@@ -89,9 +94,10 @@ class CurrentPseudoDataset(Dataset):
                 np.float32, copy=False
             )
         )
+        eog, eeg = split_modalities(values)
         return (
-            values[:, :2, :],
-            values[:, 2:, :],
+            eog,
+            eeg,
             torch.from_numpy(self.pseudo_labels[index]),
             index,
         )
@@ -111,9 +117,10 @@ class PuriRecordDataset(Dataset):
                 np.float32, copy=False
             )
         )
+        eog, eeg = split_modalities(values)
         return (
-            values[:, :2, :],
-            values[:, 2:, :],
+            eog,
+            eeg,
             torch.from_numpy(record.pseudo_labels.copy()),
             torch.from_numpy(record.epoch_mask.copy()),
             index,
@@ -134,9 +141,10 @@ class WeightedReplayDataset(Dataset):
                 np.float32, copy=False
             )
         )
+        eog, eeg = split_modalities(values)
         return (
-            values[:, :2, :],
-            values[:, 2:, :],
+            eog,
+            eeg,
             torch.from_numpy(record.pseudo_labels.copy()),
             torch.from_numpy(np.asarray(weights, dtype=np.float32)),
         )
@@ -165,9 +173,10 @@ class PartitionedMemoryDataset(Dataset):
                 np.float32, copy=False
             )
         )
+        eog, eeg = split_modalities(values)
         return (
-            values[:, :2, :],
-            values[:, 2:, :],
+            eog,
+            eeg,
             torch.from_numpy(record.pseudo_labels.copy()),
             torch.from_numpy(self.categories[index].copy()),
             torch.from_numpy(self.clean_probabilities[index].copy()),
@@ -178,7 +187,7 @@ class PartitionedMemoryDataset(Dataset):
 def serializable_args(args) -> dict[str, Any]:
     payload = vars(args).copy()
     payload["device"] = str(args.device)
-    payload["model_param"] = "ModelConfig(ISRUC)"
+    payload["model_param"] = f"ModelConfig({args.dataset})"
     for key, value in list(payload.items()):
         if isinstance(value, Path):
             payload[key] = str(value)
@@ -906,8 +915,7 @@ def run(args) -> dict[str, Any]:
             shuffle=True,
             seed=args.seed + 10_000 * task_index,
         )
-        if progressive_proxy is not None:
-            fix_randomness(task_phase_seed(args.seed, task_index, "guide"))
+        fix_randomness(task_phase_seed(args.seed, task_index, "guide"))
         guide, cpc_losses = adapt_guiding_model(
             student_blocks, guide_loader, args, task_index, subject
         )
@@ -925,6 +933,7 @@ def run(args) -> dict[str, Any]:
             else pseudo_diagnostics
         )
         del guide
+        fix_randomness(task_phase_seed(args.seed, task_index, "student"))
 
         online = online_train_subject(
             student_blocks,
@@ -1082,6 +1091,7 @@ def run(args) -> dict[str, Any]:
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset", choices=("ISRUC", "FACED"), default="ISRUC")
     parser.add_argument(
         "--data-root",
         type=Path,
@@ -1187,6 +1197,8 @@ def parse_args():
         args.resume_state = args.resume_state.resolve()
         if not args.resume_state.is_file():
             parser.error(f"Resume state does not exist: {args.resume_state}")
+    args.model_param = ModelConfig(args.dataset)
+    total_tasks = len(build_split(args)["new_order"])
     if args.progressive_proxy_mode != "none":
         if args.n2n_manifest is not None:
             parser.error("Progressive proxy mode cannot be combined with N-to-N manifest")
@@ -1197,7 +1209,7 @@ def parse_args():
         try:
             validate_progressive_proxy_args(
                 args,
-                49 if args.max_subjects <= 0 else args.max_subjects,
+                total_tasks,
             )
         except ValueError as error:
             parser.error(str(error))
@@ -1216,8 +1228,6 @@ def parse_args():
     }
     for name, value in progressive_defaults.items():
         setattr(args, name, value)
-    args.dataset = "ISRUC"
-    args.model_param = ModelConfig(args.dataset)
     args.device = torch.device(
         f"cuda:{args.gpu}"
         if args.gpu >= 0 and torch.cuda.is_available()

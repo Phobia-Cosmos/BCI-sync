@@ -201,7 +201,8 @@ def load_replay_batch(
             labels[~mask] = -100
         label_rows.append(labels)
     labels = torch.stack(label_rows)
-    return values[:, :, :2, :], values[:, :, 2:, :], labels
+    split = 1 if values.shape[2] == 32 else 2
+    return values[:, :, :split, :], values[:, :, split:, :], labels
 
 
 class _SignalSequenceDataset(Dataset):
@@ -215,7 +216,8 @@ class _SignalSequenceDataset(Dataset):
         values = torch.from_numpy(
             np.load(self.data_paths[index]).astype(np.float32)
         )
-        return values[:, :2, :], values[:, 2:, :]
+        split = 1 if values.shape[1] == 32 else 2
+        return values[:, :split, :], values[:, split:, :]
 
 
 def _block_outputs(

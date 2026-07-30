@@ -1,0 +1,504 @@
+{
+  "performance": {
+    "stability": {
+      "ACC": [
+        0.24088541666666666,
+        0.23802083333333332,
+        0.24427083333333333,
+        0.24791666666666667,
+        0.2359375,
+        0.23541666666666666,
+        0.24401041666666667,
+        0.24713541666666666,
+        0.23697916666666666,
+        0.2484375,
+        0.23411458333333332
+      ],
+      "MF1": [
+        0.23923074790577667,
+        0.23672099032869542,
+        0.23922646746547674,
+        0.23908378252695073,
+        0.22859947845196293,
+        0.2283104600138781,
+        0.23633533283077224,
+        0.2426544719734794,
+        0.2240955162205299,
+        0.24251288277559427,
+        0.2257366512908056
+      ],
+      "AAA": [
+        0.24088541666666666,
+        0.239453125,
+        0.24105902777777777,
+        0.2427734375,
+        0.24140625,
+        0.2404079861111111,
+        0.24092261904761905,
+        0.24169921875,
+        0.2411747685185185,
+        0.24190104166666665,
+        0.2411931818181818
+      ],
+      "AAF1": [
+        0.23923074790577667,
+        0.23797586911723606,
+        0.23839273523331628,
+        0.2385654970567249,
+        0.2365722933357725,
+        0.2351953211154568,
+        0.23535817993193042,
+        0.23627021643712404,
+        0.2349174719686136,
+        0.23567701304931168,
+        0.2347733437985384
+      ],
+      "FR": [
+        0.0,
+        0.011891891891891907,
+        0.014054054054054061,
+        0.02918918918918926,
+        0.020540540540540525,
+        0.02270270270270268,
+        0.012972972972973043,
+        0.02594594594594597,
+        0.016216216216216217,
+        0.03135135135135141,
+        0.028108108108108123
+      ]
+    },
+    "plasticity": {
+      "22": {
+        "ACC": [
+          0.2875,
+          0.2875,
+          0.31875
+        ],
+        "MF1": [
+          0.25256011736582135,
+          0.25256011736582135,
+          0.28418598145287355
+        ]
+      },
+      "100": {
+        "ACC": [
+          0.3375,
+          0.30625,
+          0.36875
+        ],
+        "MF1": [
+          0.31129937784972683,
+          0.30764604534425505,
+          0.368449322061854
+        ]
+      },
+      "61": {
+        "ACC": [
+          0.1875,
+          0.18125,
+          0.23125
+        ],
+        "MF1": [
+          0.1474025974025974,
+          0.13197451973314042,
+          0.17606803152165396
+        ]
+      },
+      "28": {
+        "ACC": [
+          0.18125,
+          0.1625,
+          0.225
+        ],
+        "MF1": [
+          0.1279158977484248,
+          0.08582597261527027,
+          0.19268772286312733
+        ]
+      },
+      "12": {
+        "ACC": [
+          0.33125,
+          0.36875,
+          0.4375
+        ],
+        "MF1": [
+          0.32525579254225184,
+          0.3731626203556028,
+          0.4249918838017846
+        ]
+      },
+      "99": {
+        "ACC": [
+          0.225,
+          0.23125,
+          0.3375
+        ],
+        "MF1": [
+          0.1602897592702226,
+          0.17231321205496242,
+          0.27383047159547796
+        ]
+      },
+      "46": {
+        "ACC": [
+          0.1875,
+          0.23125,
+          0.25625
+        ],
+        "MF1": [
+          0.16664073036622057,
+          0.17609399850376992,
+          0.19185240796351907
+        ]
+      },
+      "19": {
+        "ACC": [
+          0.225,
+          0.2625,
+          0.28125
+        ],
+        "MF1": [
+          0.13571428571428573,
+          0.16117703371224498,
+          0.2236244711801836
+        ]
+      },
+      "17": {
+        "ACC": [
+          0.20625,
+          0.20625,
+          0.2875
+        ],
+        "MF1": [
+          0.1461020371648391,
+          0.10878965089491405,
+          0.24824353097445467
+        ]
+      },
+      "0": {
+        "ACC": [
+          0.2,
+          0.2375,
+          0.25
+        ],
+        "MF1": [
+          0.13457065961425235,
+          0.14848305465003758,
+          0.1861013510994972
+        ]
+      }
+    },
+    "buffer": [
+      {
+        "step": 1,
+        "subject": 22,
+        "added": 4,
+        "length": 244,
+        "total_sequences": 8,
+        "candidate_sequences": 4,
+        "accepted_sequences": 4,
+        "rejected_sequences": 0,
+        "purifier_rejected_sequences": 0,
+        "acceptance_rate": 1.0,
+        "pseudo_label_error_before": 0.6375,
+        "pseudo_label_error_after": 0.6375
+      },
+      {
+        "step": 2,
+        "subject": 100,
+        "added": 5,
+        "length": 249,
+        "total_sequences": 8,
+        "candidate_sequences": 5,
+        "accepted_sequences": 5,
+        "rejected_sequences": 0,
+        "purifier_rejected_sequences": 0,
+        "acceptance_rate": 1.0,
+        "pseudo_label_error_before": 0.7,
+        "pseudo_label_error_after": 0.7
+      },
+      {
+        "step": 3,
+        "subject": 61,
+        "added": 3,
+        "length": 252,
+        "total_sequences": 8,
+        "candidate_sequences": 3,
+        "accepted_sequences": 3,
+        "rejected_sequences": 0,
+        "purifier_rejected_sequences": 0,
+        "acceptance_rate": 1.0,
+        "pseudo_label_error_before": 0.85,
+        "pseudo_label_error_after": 0.85
+      },
+      {
+        "step": 4,
+        "subject": 28,
+        "added": 5,
+        "length": 257,
+        "total_sequences": 8,
+        "candidate_sequences": 5,
+        "accepted_sequences": 5,
+        "rejected_sequences": 0,
+        "purifier_rejected_sequences": 0,
+        "acceptance_rate": 1.0,
+        "pseudo_label_error_before": 0.82,
+        "pseudo_label_error_after": 0.82
+      },
+      {
+        "step": 5,
+        "subject": 12,
+        "added": 1,
+        "length": 258,
+        "total_sequences": 8,
+        "candidate_sequences": 1,
+        "accepted_sequences": 1,
+        "rejected_sequences": 0,
+        "purifier_rejected_sequences": 0,
+        "acceptance_rate": 1.0,
+        "pseudo_label_error_before": 0.1,
+        "pseudo_label_error_after": 0.1
+      },
+      {
+        "step": 6,
+        "subject": 99,
+        "added": 4,
+        "length": 262,
+        "total_sequences": 8,
+        "candidate_sequences": 4,
+        "accepted_sequences": 4,
+        "rejected_sequences": 0,
+        "purifier_rejected_sequences": 0,
+        "acceptance_rate": 1.0,
+        "pseudo_label_error_before": 0.6625,
+        "pseudo_label_error_after": 0.6625
+      },
+      {
+        "step": 7,
+        "subject": 46,
+        "added": 3,
+        "length": 265,
+        "total_sequences": 8,
+        "candidate_sequences": 3,
+        "accepted_sequences": 3,
+        "rejected_sequences": 0,
+        "purifier_rejected_sequences": 0,
+        "acceptance_rate": 1.0,
+        "pseudo_label_error_before": 0.65,
+        "pseudo_label_error_after": 0.65
+      },
+      {
+        "step": 8,
+        "subject": 19,
+        "added": 2,
+        "length": 267,
+        "total_sequences": 8,
+        "candidate_sequences": 2,
+        "accepted_sequences": 2,
+        "rejected_sequences": 0,
+        "purifier_rejected_sequences": 0,
+        "acceptance_rate": 1.0,
+        "pseudo_label_error_before": 0.75,
+        "pseudo_label_error_after": 0.75
+      },
+      {
+        "step": 9,
+        "subject": 17,
+        "added": 4,
+        "length": 271,
+        "total_sequences": 8,
+        "candidate_sequences": 4,
+        "accepted_sequences": 4,
+        "rejected_sequences": 0,
+        "purifier_rejected_sequences": 0,
+        "acceptance_rate": 1.0,
+        "pseudo_label_error_before": 0.7625,
+        "pseudo_label_error_after": 0.7625
+      },
+      {
+        "step": 10,
+        "subject": 0,
+        "added": 0,
+        "length": 271,
+        "total_sequences": 8,
+        "candidate_sequences": 0,
+        "accepted_sequences": 0,
+        "rejected_sequences": 0,
+        "purifier_rejected_sequences": 0,
+        "acceptance_rate": 0.0,
+        "pseudo_label_error_before": null,
+        "pseudo_label_error_after": null
+      }
+    ],
+    "input_diagnostics": [],
+    "purification": [],
+    "uploaded_subjects": [],
+    "retention_snapshots": {
+      "10": {
+        "22": {
+          "acc": 0.24375,
+          "mf1": 0.1518538641345659,
+          "n_epochs": 160
+        },
+        "100": {
+          "acc": 0.2875,
+          "mf1": 0.2742927240578415,
+          "n_epochs": 160
+        },
+        "61": {
+          "acc": 0.23125,
+          "mf1": 0.16372270441123787,
+          "n_epochs": 160
+        },
+        "28": {
+          "acc": 0.19375,
+          "mf1": 0.1469367864104706,
+          "n_epochs": 160
+        },
+        "12": {
+          "acc": 0.325,
+          "mf1": 0.3180655085249648,
+          "n_epochs": 160
+        },
+        "99": {
+          "acc": 0.34375,
+          "mf1": 0.27884397898143604,
+          "n_epochs": 160
+        },
+        "46": {
+          "acc": 0.25,
+          "mf1": 0.16388088912702134,
+          "n_epochs": 160
+        },
+        "19": {
+          "acc": 0.3,
+          "mf1": 0.2416615769193049,
+          "n_epochs": 160
+        },
+        "17": {
+          "acc": 0.2125,
+          "mf1": 0.13636149852242072,
+          "n_epochs": 160
+        },
+        "0": {
+          "acc": 0.25,
+          "mf1": 0.1861013510994972,
+          "n_epochs": 160
+        }
+      }
+    },
+    "final": {
+      "old_generalization": {
+        "acc": 0.23411458333333332,
+        "mf1": 0.2257366512908056,
+        "n_epochs": 3840
+      },
+      "seen_subjects": {
+        "22": {
+          "acc": 0.24375,
+          "mf1": 0.1518538641345659,
+          "n_epochs": 160
+        },
+        "100": {
+          "acc": 0.2875,
+          "mf1": 0.2742927240578415,
+          "n_epochs": 160
+        },
+        "61": {
+          "acc": 0.23125,
+          "mf1": 0.16372270441123787,
+          "n_epochs": 160
+        },
+        "28": {
+          "acc": 0.19375,
+          "mf1": 0.1469367864104706,
+          "n_epochs": 160
+        },
+        "12": {
+          "acc": 0.325,
+          "mf1": 0.3180655085249648,
+          "n_epochs": 160
+        },
+        "99": {
+          "acc": 0.34375,
+          "mf1": 0.27884397898143604,
+          "n_epochs": 160
+        },
+        "46": {
+          "acc": 0.25,
+          "mf1": 0.16388088912702134,
+          "n_epochs": 160
+        },
+        "19": {
+          "acc": 0.3,
+          "mf1": 0.2416615769193049,
+          "n_epochs": 160
+        },
+        "17": {
+          "acc": 0.2125,
+          "mf1": 0.13636149852242072,
+          "n_epochs": 160
+        },
+        "0": {
+          "acc": 0.25,
+          "mf1": 0.1861013510994972,
+          "n_epochs": 160
+        }
+      }
+    },
+    "order": [
+      22,
+      100,
+      61,
+      28,
+      12,
+      99,
+      46,
+      19,
+      17,
+      0
+    ],
+    "input_condition": "standard_or_legacy",
+    "defense_mode": "none",
+    "protocol": {
+      "dataset": "FACED",
+      "replay": true,
+      "pseudo_labels": "confidence-filtered hard labels from the CPC guide",
+      "confidence_threshold": 0.9,
+      "cea_mode": "snapshot_same_batch",
+      "cea_interval": 2,
+      "external_proxy_noise": null,
+      "student_batch_norm_running_stats": "updated",
+      "true_target_labels_used_for_training": false,
+      "final_seen_evaluation": true
+    }
+  },
+  "summary": {
+    "initial_acc": 0.236875,
+    "before_acc": 0.24749999999999997,
+    "after_acc": 0.299375,
+    "initial_mf1": 0.19077512550386427,
+    "before_mf1": 0.19180262252300187,
+    "after_mf1": 0.25700351745144256,
+    "final_old_acc": 0.23411458333333332,
+    "final_old_mf1": 0.2257366512908056,
+    "old_aaa": 0.2411931818181818,
+    "old_aaf1": 0.2347733437985384,
+    "old_fr": 0.028108108108108123,
+    "mean_current_before_acc": 0.24749999999999997,
+    "mean_current_after_acc": 0.299375,
+    "mean_current_acc_gain": 0.05187500000000003,
+    "mean_current_before_mf1": 0.19180262252300187,
+    "mean_current_after_mf1": 0.25700351745144256,
+    "mean_current_mf1_gain": 0.0652008949284407,
+    "final_seen_acc": 0.26375,
+    "final_seen_mf1": 0.2061720882188761,
+    "bwt_acc": -0.035625,
+    "bwt_mf1": -0.05083142923256652,
+    "high_confidence_candidate_rate": 0.3875,
+    "candidate_acceptance_rate": 1.0,
+    "pseudo_sequence_coverage": 0.3875,
+    "final_buffer_sequences": 271
+  }
+}

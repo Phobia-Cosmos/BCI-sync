@@ -28,13 +28,18 @@ TensorPair = tuple[torch.Tensor, torch.Tensor]
 
 def _load_sequence(path: Path, device: torch.device) -> TensorPair:
     sequence = torch.from_numpy(np.load(path).astype(np.float32)).to(device)
-    return sequence[:, :2, :].unsqueeze(0), sequence[:, 2:, :].unsqueeze(0)
+    split = 1 if sequence.shape[1] == 32 else 2
+    return (
+        sequence[:, :split, :].unsqueeze(0),
+        sequence[:, split:, :].unsqueeze(0),
+    )
 
 
 def _stack_sequences(paths: Sequence[Path], device: torch.device) -> TensorPair:
     sequences = [torch.from_numpy(np.load(path).astype(np.float32)) for path in paths]
     batch = torch.stack(sequences).to(device)
-    return batch[:, :, :2, :], batch[:, :, 2:, :]
+    split = 1 if batch.shape[2] == 32 else 2
+    return batch[:, :, :split, :], batch[:, :, split:, :]
 
 
 def _attack_parameters(blocks, scope: str) -> list[nn.Parameter]:

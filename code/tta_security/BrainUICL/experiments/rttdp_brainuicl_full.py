@@ -31,7 +31,12 @@ if str(REPO_ROOT) not in sys.path:
 if str(Path(__file__).resolve().parent) not in sys.path:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from model.pretrain_net import FeatureExtractor, SleepMLP, TransformerEncoder  # noqa: E402
+from model.pretrain_net import (  # noqa: E402
+    FeatureExtractor,
+    FeatureExtractorFACED,
+    SleepMLP,
+    TransformerEncoder,
+)
 from model.regularization_cl import freeze_batch_norm_running_stats  # noqa: E402
 from model.spr_eeg import purify_eeg_sequences  # noqa: E402
 from utils.config import ModelConfig  # noqa: E402
@@ -57,7 +62,13 @@ class SequenceDataset(Dataset):
         y = np.load(self.label_paths[index]).astype(np.int64)
         x = torch.from_numpy(x)
         y = torch.from_numpy(y)
-        return x[:, :2, :], x[:, 2:, :], y
+        split = modality_split_index(x)
+        return x[:, :split, :], x[:, split:, :], y
+
+
+def modality_split_index(x: torch.Tensor) -> int:
+    """Map FACED to the shared 1/31 interface and ISRUC to 2/6."""
+    return 1 if x.shape[1] == 32 else 2
 
 
 class BufferDataset(Dataset):
@@ -96,15 +107,28 @@ class BufferDataset(Dataset):
         x_train = torch.from_numpy(np.load(self.train_data[train_idx]).astype(np.float32))
         y_train = torch.from_numpy(np.load(self.train_label[train_idx]).astype(np.int64))
 
-        eog = torch.cat((x_new[:, :2, :], x_train[:, :2, :]), dim=0)
-        eeg = torch.cat((x_new[:, 2:, :], x_train[:, 2:, :]), dim=0)
+        new_split = modality_split_index(x_new)
+        train_split = modality_split_index(x_train)
+        if new_split != train_split or x_new.shape[1] != x_train.shape[1]:
+            raise ValueError(
+                "Current and replay records must use the same channel layout"
+            )
+        eog = torch.cat(
+            (x_new[:, :new_split, :], x_train[:, :train_split, :]), dim=0
+        )
+        eeg = torch.cat(
+            (x_new[:, new_split:, :], x_train[:, train_split:, :]), dim=0
+        )
         label = torch.cat((y_new, y_train), dim=0)
         return eog, eeg, label
 
 
 def subject_paths(data_root: Path, subject: int) -> tuple[list[Path], list[Path]]:
-    data_dir = data_root / str(subject) / "data"
-    label_dir = data_root / str(subject) / "label"
+    subject_dir = data_root / str(subject)
+    if not subject_dir.is_dir():
+        subject_dir = data_root / f"sub-{int(subject):03d}"
+    data_dir = subject_dir / "data"
+    label_dir = subject_dir / "label"
     data_paths, label_paths = [], []
     idx = 0
     while (data_dir / f"{idx}.npy").exists():
@@ -163,6 +187,13 @@ def merge_subject_paths(data_root: Path, subjects: list[int]) -> tuple[list[Path
 
 
 def discover_subjects(data_root: Path) -> list[int]:
+    faced_subjects = sorted(
+        int(path.name.removeprefix("sub-"))
+        for path in data_root.glob("sub-*")
+        if (path / "data" / "0.npy").is_file()
+    )
+    if faced_subjects:
+        return faced_subjects
     subjects = []
     for sid in range(1, 101):
         if sid in (8, 40):
@@ -194,7 +225,11 @@ def split_subjects(subjects: list[int], seed: int):
 
 def build_blocks(args):
     return (
-        FeatureExtractor(args).float().to(args.device),
+        (
+            FeatureExtractorFACED(args)
+            if args.dataset == "FACED"
+            else FeatureExtractor(args)
+        ).float().to(args.device),
         TransformerEncoder(args).float().to(args.device),
         SleepMLP(args).float().to(args.device),
     )
@@ -254,6 +289,30 @@ def epoch_feature_embeddings(blocks, eog, eeg, args):
     return features.reshape(batch, args.model_param.SeqLength, -1)
 
 
+def same_batch_cea_loss(blocks, reference_blocks, eog, eeg, args):
+    """Align two temporal model states on the same replay batch."""
+    eog_flat = eog.contiguous().reshape(
+        -1,
+        args.model_param.EogNum,
+        args.model_param.EpochLength,
+    )
+    eeg_flat = eeg.contiguous().reshape(
+        -1,
+        args.model_param.EegNum,
+        args.model_param.EpochLength,
+    )
+    current_features = blocks[1](blocks[0](eeg_flat, eog_flat))
+    with torch.no_grad():
+        reference_features = reference_blocks[1](
+            reference_blocks[0](eeg_flat, eog_flat)
+        )
+    return F.kl_div(
+        F.log_softmax(current_features, dim=-1),
+        F.softmax(reference_features, dim=-1),
+        reduction="batchmean",
+    )
+
+
 def flat_logits(logits):
     return logits.permute(0, 2, 1).reshape(-1, logits.shape[1])
 
@@ -279,7 +338,15 @@ def evaluate(blocks, loader, args, max_batches=0):
         predictions.append(logits.detach().cpu())
     return {
         "acc": float(accuracy_score(y_true, y_pred)),
-        "mf1": float(f1_score(y_true, y_pred, average="macro", labels=[0, 1, 2, 3, 4], zero_division=0)),
+        "mf1": float(
+            f1_score(
+                y_true,
+                y_pred,
+                average="macro",
+                labels=list(range(args.model_param.NumClasses)),
+                zero_division=0,
+            )
+        ),
         "n_epochs": len(y_true),
         "predictions": torch.cat(predictions, dim=0) if predictions else None,
     }
@@ -1221,6 +1288,7 @@ def incremental_train(blocks, teacher_blocks, args, new_task_loader, new_task_id
             old_proxy_loader = make_loader(args.data_root, sorted(args.old_idx), args.batch, shuffle=True, num_workers=args.num_worker)
             old_proxy_iter = iter(old_proxy_loader)
     align_feature = []
+    alignment_reference = None
     tmp_blocks = blocks
     for epoch in range(args.incremental_epoch):
         set_train(blocks, True)
@@ -1228,7 +1296,7 @@ def incremental_train(blocks, teacher_blocks, args, new_task_loader, new_task_id
             freeze_batch_norm_running_stats(blocks)
         set_train(tmp_blocks_teacher, False)
         losses = []
-        if epoch % args.cross_epoch == 0:
+        if args.cea_mode == "cached_batch" and epoch % args.cross_epoch == 0:
             align_feature.append([])
         for batch_idx, batch_data in enumerate(buffer_loader):
             if args.defense_mode == "puridiver":
@@ -1297,9 +1365,13 @@ def incremental_train(blocks, teacher_blocks, args, new_task_loader, new_task_id
                     ascent_loss.backward()
                     stealth_ascent_optimizer.step()
                     loss += float(ascent_loss.detach().cpu())
-            if epoch % args.cross_epoch == 0:
+            if args.cea_mode == "cached_batch" and epoch % args.cross_epoch == 0:
                 align_feature[-1].append(feature_before)
-            if epoch % args.cross_epoch == 0 and epoch != 0:
+            if (
+                args.cea_mode == "cached_batch"
+                and epoch % args.cross_epoch == 0
+                and epoch != 0
+            ):
                 seq_len = args.model_param.SeqLength
                 eog_train = eog[:, seq_len:, :, :].contiguous().reshape(-1, args.model_param.EogNum, args.model_param.EpochLength)
                 eeg_train = eeg[:, seq_len:, :, :].contiguous().reshape(-1, args.model_param.EegNum, args.model_param.EpochLength)
@@ -1310,7 +1382,33 @@ def incremental_train(blocks, teacher_blocks, args, new_task_loader, new_task_id
                 loss_cea = F.kl_div(z1, z2, reduction="batchmean")
                 loss_cea.backward()
                 optimizer_cea.step()
+            elif (
+                args.cea_mode == "snapshot_same_batch"
+                and epoch % args.cross_epoch == 0
+                and epoch != 0
+            ):
+                if alignment_reference is None:
+                    raise RuntimeError("CEA snapshot was not initialized")
+                seq_len = args.model_param.SeqLength
+                optimizer_cea.zero_grad()
+                loss_cea = same_batch_cea_loss(
+                    blocks,
+                    alignment_reference,
+                    eog[:, seq_len:, :, :],
+                    eeg[:, seq_len:, :, :],
+                    args,
+                )
+                loss_cea.backward()
+                optimizer_cea.step()
             losses.append(loss)
+        if (
+            args.cea_mode == "snapshot_same_batch"
+            and epoch % args.cross_epoch == 0
+        ):
+            alignment_reference = clone_blocks(blocks, args)
+            set_train(alignment_reference, False)
+            for reference_block in alignment_reference:
+                reference_block.requires_grad_(False)
         print(f"[{args.variant}] Individual {num} Subject {new_task_id} Joint Epoch {epoch+1} Loss {np.mean(losses):.6f}", flush=True)
     if args.defense_mode == "puridiver":
         purification_summary.update(algorithm.last_diagnostics)
@@ -1680,9 +1778,12 @@ def run_variant(base_args, variant, attack_mode, new_order, defense_mode="none")
         "input_condition": "noise" if noise_run else "standard_or_legacy",
         "defense_mode": defense_mode,
         "protocol": {
+            "dataset": args.dataset,
             "replay": True,
             "pseudo_labels": "confidence-filtered hard labels from the CPC guide",
             "confidence_threshold": float(args.confidence),
+            "cea_mode": args.cea_mode,
+            "cea_interval": int(args.cross_epoch),
             "external_proxy_noise": (
                 str(args.noise_upload_root) if args.noise_upload_root is not None else None
             ),
@@ -1816,6 +1917,7 @@ def run_variant(base_args, variant, attack_mode, new_order, defense_mode="none")
 def write_comparison(output_root, clean_perf, attack_perf, clean_summary, attack_summary, args):
     report = {
         "config": {
+            "dataset": args.dataset,
             "seed": args.seed,
             "data_root": str(args.data_root),
             "input_checkpoint_root": str(args.input_checkpoint_root),
@@ -1885,6 +1987,7 @@ def write_comparison(output_root, clean_perf, attack_perf, clean_summary, attack
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset", choices=("ISRUC", "FACED"), default="ISRUC")
     parser.add_argument("--data-root", type=Path, default=Path("/home/undefined/Disk/ai-storage/BrainUICL/processed/isruc_group1_npy_float32"))
     parser.add_argument("--input-checkpoint-root", type=Path, default=Path("/home/undefined/Disk/ai-storage/BrainUICL/model_parameter"))
     parser.add_argument("--output-root", type=Path, default=REPO_ROOT / "experiments" / "rttdp_brainuicl_runs" / "latest")
@@ -1896,6 +1999,15 @@ def parse_args():
     parser.add_argument("--ssl-epoch", type=int, default=10)
     parser.add_argument("--incremental-epoch", type=int, default=10)
     parser.add_argument("--cross-epoch", type=int, default=2)
+    parser.add_argument(
+        "--cea-mode",
+        choices=("cached_batch", "snapshot_same_batch"),
+        default="cached_batch",
+        help=(
+            "cached_batch preserves the public implementation; "
+            "snapshot_same_batch applies Eq. (3) to the same replay batch."
+        ),
+    )
     parser.add_argument(
         "--attack-mode",
         choices=[
@@ -2070,7 +2182,6 @@ def main():
         )
     fix_randomness(args.seed)
     args.device = torch.device(f"cuda:{args.gpu}" if args.gpu >= 0 and torch.cuda.is_available() else "cpu")
-    args.dataset = "ISRUC"
     args.algorithm = "cpc"
     args.model_param = ModelConfig(args.dataset)
     args.alpha = args.initial_alpha
@@ -2088,6 +2199,8 @@ def main():
     args.new_order = new_order
     args.output_root.mkdir(parents=True, exist_ok=True)
     split_payload = {
+        "dataset": args.dataset,
+        "seed": args.seed,
         "train": sorted(int(x) for x in train_idx),
         "val": sorted(int(x) for x in val_idx),
         "old_generalization": sorted(int(x) for x in old_idx),

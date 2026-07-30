@@ -1,0 +1,571 @@
+{
+  "method": "full_spr_eeg_adapted",
+  "protocol": {
+    "backbone": "BrainUICL FeatureExtractor + TransformerEncoder + SleepMLP",
+    "initialization": "common source-supervised checkpoint",
+    "target_training_loader": "signal-only without annotation paths",
+    "pseudo_labels": "task-local CPC guide hard argmax for every epoch",
+    "confidence_filter": false,
+    "delayed_buffer_capacity_sequences": 32,
+    "purified_memory_capacity_epochs": 1000,
+    "expert_reset_per_flush": true,
+    "expert_object_shared_with_base": false,
+    "expert_object_shared_with_inference": false,
+    "expert_objective": "NT-Xent on D",
+    "base_objective": "persistent NT-Xent Self-Replay on D plus P",
+    "admission": "class-conditional stochastic SCF with Beta mixture and Bernoulli",
+    "inference_update": "masked pseudo-label CE on retained P epochs only",
+    "source_memory": false,
+    "true_target_labels_used_for_training": false,
+    "canonical_n2n_manifest": null,
+    "manifest_validation": null,
+    "progressive_feedback_proxy": {
+      "mode": "feedback",
+      "victim_parameters_visible": false,
+      "public_feedback": "post-task 9-class probabilities on owned uploads",
+      "source_pretrain_hard_labels_visible": true,
+      "incremental_clean_hard_labels_visible": false,
+      "clean_feedback_tasks": [],
+      "proxy_tasks": [
+        1
+      ],
+      "base_subject": 18,
+      "base_sequences": 8,
+      "upload_full_pool": true,
+      "active_sequences": 8,
+      "passive_sequences": 0,
+      "task_count_changed": false,
+      "subject_order_changed": false,
+      "step_relative_l2": 0.05,
+      "cumulative_relative_l2": 0.2,
+      "history_weight": 1.0,
+      "source_labeled_sequences": 240
+    }
+  },
+  "config": {
+    "dataset": "FACED",
+    "data_root": "/home/undefined/Disk/datasets/FACED_processed",
+    "input_checkpoint_root": "/home/undefined/Disk/ai-storage/BrainUICL/model_parameter",
+    "output_root": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/faced_aligned_method_smoke/full_spr_feedback",
+    "seed": 4321,
+    "gpu": 0,
+    "batch": 8,
+    "eval_batch": 32,
+    "num_worker": 0,
+    "max_subjects": 1,
+    "ssl_epoch": 10,
+    "lr": 0.0001,
+    "ssl_lr": 1e-06,
+    "beta1": 0.5,
+    "beta2": 0.99,
+    "weight_decay": 0.0003,
+    "grad_clip": 5.0,
+    "delayed_capacity_sequences": 32,
+    "memory_capacity_epochs": 1000,
+    "expert_epochs": 10,
+    "base_epochs": 10,
+    "ft_epochs": 10,
+    "spr_ssl_lr": 1e-06,
+    "ft_lr": 1e-06,
+    "temperature": 0.5,
+    "projection_hidden": 256,
+    "projection_dim": 128,
+    "jitter": 0.02,
+    "augmentation_scale": 0.1,
+    "mask_ratio": 0.05,
+    "channel_drop": 0.05,
+    "spr_ensembles": 5,
+    "spr_bmm_iters": 10,
+    "freeze_spr_bn_stats": true,
+    "max_ssl_batches": 0,
+    "max_ft_batches": 0,
+    "eval_max_batches": 0,
+    "retention_milestones": [
+      10,
+      25,
+      61
+    ],
+    "n2n_manifest": null,
+    "n2n_verify": "selected",
+    "skip_n2n_prevalidation": false,
+    "resume_state": null,
+    "state_path": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/faced_aligned_method_smoke/full_spr_feedback/latest_state.pt",
+    "no_save_state": true,
+    "stop_after_tasks": 0,
+    "progressive_proxy_mode": "feedback",
+    "progressive_proxy_tasks": "odd",
+    "progressive_clean_feedback_tasks": "even",
+    "progressive_base_subject": 18,
+    "progressive_proxy_lr": 1e-06,
+    "progressive_feedback_steps": 4,
+    "progressive_feedback_batch": 4,
+    "progressive_guide_epochs": 1,
+    "progressive_generation_steps": 20,
+    "progressive_generation_attempts": 8,
+    "progressive_generation_batch": 4,
+    "progressive_reference_batch": 16,
+    "progressive_step_relative_l2": 0.05,
+    "progressive_step_linf_std": 0.25,
+    "progressive_cumulative_relative_l2": 0.2,
+    "progressive_cumulative_linf_std": 0.5,
+    "progressive_history_weight": 1.0,
+    "progressive_history_decay": 0.8,
+    "progressive_input_cone_residual": 0.2,
+    "progressive_source_weight": 0.5,
+    "progressive_feedback_weight": 1.0,
+    "progressive_feedback_decay": 0.95,
+    "progressive_feedback_capacity": 2500,
+    "progressive_upload_full_pool": true,
+    "progressive_active_fraction": 1.0,
+    "progressive_passive_step_scale": 1.0,
+    "progressive_passive_cumulative_relative_l2": -1.0,
+    "progressive_passive_cumulative_linf_std": -1.0,
+    "progressive_fill_step_budget": true,
+    "progressive_history_refresh_count": 16,
+    "progressive_target_weight": 200.0,
+    "progressive_conflict_weight": 20.0,
+    "progressive_gradient_norm_weight": 1.0,
+    "progressive_virtual_old_weight": 5.0,
+    "progressive_virtual_new_weight": 5.0,
+    "progressive_confidence_weight": 0.0,
+    "progressive_l2_weight": 0.0,
+    "progressive_max_source_gradient_cosine": 0.1,
+    "progressive_source_gate_samples": 64,
+    "progressive_require_source_conflict": true,
+    "model_param": "ModelConfig(FACED)",
+    "freeze_bn_stats": true,
+    "attack_inner_lr": 0.0001,
+    "attack_target_weight": 1.0,
+    "attack_conflict_weight": 1.0,
+    "attack_gradient_norm_weight": 0.1,
+    "attack_virtual_old_weight": 1.0,
+    "attack_virtual_new_weight": 1.0,
+    "attack_new_proxy_weight": 1.0,
+    "attack_min_confidence": 0.0,
+    "attack_confidence_weight": 0.0,
+    "attack_l2_weight": 0.0,
+    "device": "cuda:0"
+  },
+  "initial": {
+    "old_generalization": {
+      "acc": 0.24088541666666666,
+      "mf1": 0.23923074790577667,
+      "n_epochs": 3840
+    },
+    "source_train": {
+      "acc": 0.82875,
+      "mf1": 0.8251485397745666,
+      "n_epochs": 4800
+    },
+    "validation": {
+      "acc": 0.28984375,
+      "mf1": 0.293152533089177,
+      "n_epochs": 1280
+    }
+  },
+  "stability": {
+    "acc": [
+      0.24088541666666666,
+      0.23333333333333334
+    ],
+    "mf1": [
+      0.23923074790577667,
+      0.22917033393104835
+    ]
+  },
+  "tasks": [
+    {
+      "task": 1,
+      "subject": 22,
+      "current_before": {
+        "acc": 0.2875,
+        "mf1": 0.25256011736582135,
+        "n_epochs": 160
+      },
+      "current_after": {
+        "acc": 0.25625,
+        "mf1": 0.18149227315893982,
+        "n_epochs": 160
+      },
+      "old_generalization_after": {
+        "acc": 0.23333333333333334,
+        "mf1": 0.22917033393104835,
+        "n_epochs": 3840
+      },
+      "pseudo_labels": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.025,
+        "mf1_diagnostic_only": 0.020811287477954146,
+        "mean_confidence_diagnostic_only": 0.9537480287253857,
+        "pseudo_class_counts": [
+          27,
+          23,
+          25,
+          11,
+          9,
+          21,
+          16,
+          16,
+          12
+        ],
+        "n_epochs": 160
+      },
+      "pseudo_labels_on_clean_current": {
+        "coverage": 1.0,
+        "acc_diagnostic_only": 0.20625,
+        "mf1_diagnostic_only": 0.1660060401407375,
+        "mean_confidence_diagnostic_only": 0.8637594180181623,
+        "pseudo_class_counts": [
+          4,
+          0,
+          7,
+          4,
+          3,
+          19,
+          43,
+          13,
+          67
+        ],
+        "n_epochs": 160
+      },
+      "guiding_cpc_losses": [
+        198.7678680419922,
+        157.6082000732422,
+        158.9254913330078,
+        88.6328125,
+        84.7919921875,
+        144.30844116210938,
+        59.50413513183594,
+        51.583465576171875,
+        45.23041534423828,
+        68.4403076171875
+      ],
+      "proxy_upload": {
+        "kind": "progressive_proxy",
+        "task": 1,
+        "subject": 22,
+        "proxy_sequences": 8,
+        "base_subject": 18,
+        "guiding_cpc_losses": [
+          227.04454040527344
+        ],
+        "generation": {
+          "epsilon_eog": 0.25,
+          "epsilon_eeg": 0.2493239864706993,
+          "linf_eog": 0.19909147918224335,
+          "linf_eeg": 0.2014520764350891,
+          "relative_l2_eog": 0.05000000074505806,
+          "relative_l2_eeg": 0.05000000447034836,
+          "objective_initial": 1970.9683227539062,
+          "objective_final": 52.78834342956543,
+          "gradient_conflict_final": -0.089662816375494,
+          "history_alignment_final": 0.0,
+          "virtual_old_loss_final": 1.061560183763504,
+          "virtual_new_loss_final": 0.11892284825444221,
+          "target_shift": 2.5,
+          "target_shift_conflict": -0.09589149616658688,
+          "target_hit_rate": 0.9500000178813934,
+          "pseudo_label_preservation": 0.012500000186264515,
+          "guiding_confidence": 0.9596197605133057
+        },
+        "mean_step_relative_l2": 0.04994674772024155,
+        "max_step_relative_l2": 0.04999770596623421,
+        "mean_cumulative_relative_l2": 0.04994674772024155,
+        "max_cumulative_relative_l2": 0.04999770596623421,
+        "input_direction_cosine": null,
+        "history_gradient_cosine": null,
+        "source_gradient_cosine": -0.08919678628444672,
+        "source_conflict_accepted": true,
+        "mean_active_step_relative_l2": 0.04994674772024155,
+        "mean_active_cumulative_relative_l2": 0.04994674772024155,
+        "mean_passive_step_relative_l2": null,
+        "mean_passive_cumulative_relative_l2": null,
+        "generation_attempts": 2,
+        "feedback_visible": true,
+        "feedback_kind": "proxy",
+        "feedback_sequences": 8,
+        "labeled_buffer_sequences": 240,
+        "feedback_buffer_sequences": 8,
+        "response_kl_before": 0.9948156774044037,
+        "response_kl_after": 0.40350696444511414,
+        "mean_distillation_loss": 4.966720700263977,
+        "mean_feedback_loss": 4.439982831478119,
+        "mean_supervised_loss": 1.053475633263588
+      },
+      "progressive_proxy": {
+        "kind": "progressive_proxy",
+        "task": 1,
+        "subject": 22,
+        "proxy_sequences": 8,
+        "base_subject": 18,
+        "guiding_cpc_losses": [
+          227.04454040527344
+        ],
+        "generation": {
+          "epsilon_eog": 0.25,
+          "epsilon_eeg": 0.2493239864706993,
+          "linf_eog": 0.19909147918224335,
+          "linf_eeg": 0.2014520764350891,
+          "relative_l2_eog": 0.05000000074505806,
+          "relative_l2_eeg": 0.05000000447034836,
+          "objective_initial": 1970.9683227539062,
+          "objective_final": 52.78834342956543,
+          "gradient_conflict_final": -0.089662816375494,
+          "history_alignment_final": 0.0,
+          "virtual_old_loss_final": 1.061560183763504,
+          "virtual_new_loss_final": 0.11892284825444221,
+          "target_shift": 2.5,
+          "target_shift_conflict": -0.09589149616658688,
+          "target_hit_rate": 0.9500000178813934,
+          "pseudo_label_preservation": 0.012500000186264515,
+          "guiding_confidence": 0.9596197605133057
+        },
+        "mean_step_relative_l2": 0.04994674772024155,
+        "max_step_relative_l2": 0.04999770596623421,
+        "mean_cumulative_relative_l2": 0.04994674772024155,
+        "max_cumulative_relative_l2": 0.04999770596623421,
+        "input_direction_cosine": null,
+        "history_gradient_cosine": null,
+        "source_gradient_cosine": -0.08919678628444672,
+        "source_conflict_accepted": true,
+        "mean_active_step_relative_l2": 0.04994674772024155,
+        "mean_active_cumulative_relative_l2": 0.04994674772024155,
+        "mean_passive_step_relative_l2": null,
+        "mean_passive_cumulative_relative_l2": null,
+        "generation_attempts": 2,
+        "feedback_visible": true,
+        "feedback_kind": "proxy",
+        "feedback_sequences": 8,
+        "labeled_buffer_sequences": 240,
+        "feedback_buffer_sequences": 8,
+        "response_kl_before": 0.9948156774044037,
+        "response_kl_after": 0.40350696444511414,
+        "mean_distillation_loss": 4.966720700263977,
+        "mean_feedback_loss": 4.439982831478119,
+        "mean_supervised_loss": 1.053475633263588
+      },
+      "flushes": [
+        {
+          "flush": 1,
+          "trigger": "subject_end_residual",
+          "expert_reset": true,
+          "expert_training": {
+            "epochs": 10,
+            "steps": 10,
+            "mean_ntxent": 4.945331859588623
+          },
+          "base_self_replay": {
+            "epochs": 10,
+            "steps": 10,
+            "mean_ntxent": 4.99936089515686,
+            "replay_sequences": 0
+          },
+          "admission": {
+            "delayed_sequences": 8,
+            "delayed_epochs": 160,
+            "accepted_epochs": 95,
+            "acceptance_rate": 0.59375,
+            "mean_clean_probability": 0.5929179452133867,
+            "pseudo_class_counts": [
+              27,
+              23,
+              25,
+              11,
+              9,
+              21,
+              16,
+              16,
+              12
+            ]
+          },
+          "memory_update": {
+            "retained_before": 0,
+            "accepted_epochs": 95,
+            "retained_after": 95,
+            "evicted_epochs": 0,
+            "class_counts": [
+              21,
+              14,
+              15,
+              9,
+              2,
+              8,
+              9,
+              10,
+              7
+            ]
+          },
+          "memory_after": {
+            "capacity_epochs": 1000,
+            "retained_epochs": 95,
+            "sequences": 8,
+            "class_counts": [
+              21,
+              14,
+              15,
+              9,
+              2,
+              8,
+              9,
+              10,
+              7
+            ],
+            "proxy_epochs": 95,
+            "proxy_epoch_fraction": 1.0,
+            "total_replay_draws": 0,
+            "proxy_replay_draws": 0,
+            "proxy_replay_fraction": 0.0
+          },
+          "inference_finetune": {
+            "epochs": 10,
+            "steps": 10,
+            "mean_ce": 0.16830248311161994,
+            "supervised_retained_epochs": 95
+          }
+        }
+      ],
+      "memory": {
+        "capacity_epochs": 1000,
+        "retained_epochs": 95,
+        "sequences": 8,
+        "class_counts": [
+          21,
+          14,
+          15,
+          9,
+          2,
+          8,
+          9,
+          10,
+          7
+        ],
+        "proxy_epochs": 95,
+        "proxy_epoch_fraction": 1.0,
+        "total_replay_draws": 0,
+        "proxy_replay_draws": 0,
+        "proxy_replay_fraction": 0.0
+      },
+      "training": {
+        "flush_count": 1,
+        "expert_resets": 1,
+        "delayed_buffer_empty_after_subject": true
+      }
+    }
+  ],
+  "retention_snapshots": {
+    "1": {
+      "22": {
+        "acc": 0.25625,
+        "mf1": 0.18149227315893982,
+        "n_epochs": 160
+      }
+    }
+  },
+  "final": {
+    "old_generalization": {
+      "acc": 0.23333333333333334,
+      "mf1": 0.22917033393104835,
+      "n_epochs": 3840
+    },
+    "source_train": {
+      "acc": 0.843125,
+      "mf1": 0.8416626930519383,
+      "n_epochs": 4800
+    },
+    "validation": {
+      "acc": 0.27109375,
+      "mf1": 0.2567193937352211,
+      "n_epochs": 1280
+    },
+    "seen_subjects": {
+      "22": {
+        "acc": 0.25625,
+        "mf1": 0.18149227315893982,
+        "n_epochs": 160
+      }
+    },
+    "initial_model_seen_subjects": {
+      "22": {
+        "acc": 0.2875,
+        "mf1": 0.25256011736582135,
+        "n_epochs": 160
+      }
+    },
+    "memory": {
+      "capacity_epochs": 1000,
+      "retained_epochs": 95,
+      "sequences": 8,
+      "class_counts": [
+        21,
+        14,
+        15,
+        9,
+        2,
+        8,
+        9,
+        10,
+        7
+      ],
+      "proxy_epochs": 95,
+      "proxy_epoch_fraction": 1.0,
+      "total_replay_draws": 0,
+      "proxy_replay_draws": 0,
+      "proxy_replay_fraction": 0.0
+    },
+    "progressive_proxy": {
+      "protocol": {
+        "mode": "feedback",
+        "victim_parameters_visible": false,
+        "public_feedback": "post-task 9-class probabilities on owned uploads",
+        "source_pretrain_hard_labels_visible": true,
+        "incremental_clean_hard_labels_visible": false,
+        "clean_feedback_tasks": [],
+        "proxy_tasks": [
+          1
+        ],
+        "base_subject": 18,
+        "base_sequences": 8,
+        "upload_full_pool": true,
+        "active_sequences": 8,
+        "passive_sequences": 0,
+        "task_count_changed": false,
+        "subject_order_changed": false,
+        "step_relative_l2": 0.05,
+        "cumulative_relative_l2": 0.2,
+        "history_weight": 1.0,
+        "source_labeled_sequences": 240
+      },
+      "proxy_tasks_completed": 1,
+      "clean_feedback_tasks_completed": 0,
+      "proxy_sequences_uploaded": 8,
+      "final_mean_cumulative_relative_l2": 0.04994674772024155,
+      "feedback_buffer_sequences": 8,
+      "labeled_buffer_sequences": 240,
+      "transcript": "/home/undefined/Desktop/bci/code/tta_security/BrainUICL/experiments/faced_aligned_method_smoke/full_spr_feedback/progressive_proxy/transcript.json"
+    }
+  },
+  "summary": {
+    "final_old_acc": 0.23333333333333334,
+    "final_old_mf1": 0.22917033393104835,
+    "old_aaa": 0.237109375,
+    "old_aaf1": 0.23420054091841253,
+    "old_fr": 0.0313513513513513,
+    "mean_current_before_acc": 0.2875,
+    "mean_current_after_acc": 0.25625,
+    "mean_current_acc_gain": -0.03125,
+    "mean_current_before_mf1": 0.25256011736582135,
+    "mean_current_after_mf1": 0.18149227315893982,
+    "mean_current_mf1_gain": -0.07106784420688153,
+    "final_seen_acc": 0.25625,
+    "final_seen_mf1": 0.18149227315893982,
+    "bwt_acc": 0.0,
+    "bwt_mf1": 0.0,
+    "mean_pseudo_acc_diagnostic_only": 0.025,
+    "mean_pseudo_mf1_diagnostic_only": 0.020811287477954146,
+    "pseudo_label_coverage": 1.0,
+    "final_memory_epochs": 95,
+    "final_memory_proxy_epoch_fraction": 1.0,
+    "proxy_replay_fraction": 0.0,
+    "total_flushes": 1
+  }
+}

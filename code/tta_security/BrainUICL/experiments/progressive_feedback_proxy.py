@@ -81,6 +81,12 @@ def add_progressive_proxy_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--progressive-feedback-batch", type=int, default=4)
     parser.add_argument("--progressive-guide-epochs", type=int, default=2)
     parser.add_argument("--progressive-generation-steps", type=int, default=3)
+    parser.add_argument(
+        "--progressive-generation-attempts",
+        type=int,
+        default=1,
+        help="Regenerate a rejected candidate without relaxing the source gate.",
+    )
     parser.add_argument("--progressive-generation-batch", type=int, default=4)
     parser.add_argument("--progressive-reference-batch", type=int, default=4)
     parser.add_argument("--progressive-step-relative-l2", type=float, default=0.01)
@@ -102,6 +108,22 @@ def add_progressive_proxy_args(parser: argparse.ArgumentParser) -> None:
         "--progressive-upload-full-pool",
         action="store_true",
         help="Upload all fixed-subject sequences at each proxy task.",
+    )
+    parser.add_argument(
+        "--progressive-match-task-sequence-count",
+        action="store_true",
+        help=(
+            "Upload exactly as many Proxy sequences as the clean subject at "
+            "the corresponding task."
+        ),
+    )
+    parser.add_argument(
+        "--progressive-require-all-sequences-modified",
+        action="store_true",
+        help=(
+            "Fail a feedback Proxy task unless every uploaded sequence differs "
+            "from its initial clean sequence."
+        ),
     )
     parser.add_argument("--progressive-active-fraction", type=float, default=1.0)
     parser.add_argument("--progressive-passive-step-scale", type=float, default=1.0)
@@ -147,6 +169,8 @@ def validate_progressive_proxy_args(args, total_tasks: int) -> None:
             raise ValueError(f"--{name.replace('_', '-')} must be positive")
     if args.progressive_feedback_steps < 0 or args.progressive_guide_epochs < 0:
         raise ValueError("Progressive feedback/guide epochs cannot be negative")
+    if getattr(args, "progressive_generation_attempts", 1) < 1:
+        raise ValueError("Progressive generation attempts must be positive")
     if not 0.0 <= args.progressive_history_decay <= 1.0:
         raise ValueError("Progressive history decay must be in [0, 1]")
     if not 0.0 < args.progressive_feedback_decay <= 1.0:
@@ -171,6 +195,24 @@ def validate_progressive_proxy_args(args, total_tasks: int) -> None:
     overlap = proxy_tasks & clean_tasks
     if overlap:
         raise ValueError(f"Progressive proxy/clean-feedback tasks overlap: {sorted(overlap)}")
+    if args.progressive_proxy_mode == "feedback":
+        full_pool = getattr(args, "progressive_upload_full_pool", False)
+        match_task = getattr(
+            args,
+            "progressive_match_task_sequence_count",
+            False,
+        )
+        if full_pool == match_task:
+            raise ValueError(
+                "Feedback Proxy requires exactly one upload-cardinality mode: "
+                "--progressive-upload-full-pool or "
+                "--progressive-match-task-sequence-count"
+            )
+        if getattr(args, "progressive_active_fraction", 1.0) != 1.0:
+            raise ValueError(
+                "Feedback Proxy requires --progressive-active-fraction 1 so every "
+                "uploaded sequence is actively modified"
+            )
 
 
 def resolve_task_spec(value: str, total_tasks: int) -> set[int]:
@@ -198,7 +240,8 @@ class ArrayUnlabeledDataset(Dataset):
     def __getitem__(self, index: int):
         tensor = torch.from_numpy(np.asarray(self.arrays[index], dtype=np.float32))
         dummy = torch.zeros(tensor.shape[0], dtype=torch.long)
-        return tensor[:, :2, :], tensor[:, 2:, :], dummy
+        split = 1 if tensor.shape[1] == 32 else 2
+        return tensor[:, :split, :], tensor[:, split:, :], dummy
 
 
 @torch.no_grad()
@@ -237,7 +280,8 @@ def _load_arrays(items: Sequence[Path | np.ndarray]) -> np.ndarray:
 
 def _split_modalities(arrays: np.ndarray, device: torch.device):
     tensor = torch.from_numpy(np.asarray(arrays, dtype=np.float32)).to(device)
-    return tensor[:, :, :2, :], tensor[:, :, 2:, :]
+    split = 1 if tensor.shape[2] == 32 else 2
+    return tensor[:, :, :split, :], tensor[:, :, split:, :]
 
 
 def _relative_l2(delta: np.ndarray, base: np.ndarray) -> np.ndarray:
@@ -454,7 +498,10 @@ class ProgressiveFeedbackProxy:
         return {
             "mode": self.mode,
             "victim_parameters_visible": False,
-            "public_feedback": "post-task five-class probabilities on owned uploads",
+            "public_feedback": (
+                f"post-task {self.args.model_param.NumClasses}-class "
+                "probabilities on owned uploads"
+            ),
             "source_pretrain_hard_labels_visible": True,
             "incremental_clean_hard_labels_visible": False,
             "clean_feedback_tasks": sorted(self.clean_feedback_tasks),
@@ -464,8 +511,22 @@ class ProgressiveFeedbackProxy:
             "upload_full_pool": bool(
                 getattr(self.args, "progressive_upload_full_pool", False)
             ),
+            "match_task_sequence_count": bool(
+                getattr(
+                    self.args,
+                    "progressive_match_task_sequence_count",
+                    False,
+                )
+            ),
             "active_sequences": int(self.active_mask.sum()),
             "passive_sequences": int((~self.active_mask).sum()),
+            "require_all_sequences_modified": bool(
+                getattr(
+                    self.args,
+                    "progressive_require_all_sequences_modified",
+                    False,
+                )
+            ),
             "task_count_changed": False,
             "subject_order_changed": False,
             "step_relative_l2": self.args.progressive_step_relative_l2,
@@ -479,6 +540,28 @@ class ProgressiveFeedbackProxy:
 
     def is_clean_feedback_task(self, task_index: int) -> bool:
         return int(task_index) in self.clean_feedback_tasks
+
+    def _ensure_pool_capacity(self, count: int) -> None:
+        if count <= len(self.current_pool):
+            return
+        original_count = len(self.current_pool)
+        if original_count == 0:
+            raise ValueError("Cannot expand an empty progressive Proxy pool")
+        extra_indices = np.arange(count - original_count) % original_count
+        extra_initial = self.initial_pool[extra_indices].copy()
+        extra_current = self.current_pool[extra_indices].copy()
+        self.initial_pool = np.concatenate((self.initial_pool, extra_initial), axis=0)
+        self.current_pool = np.concatenate((self.current_pool, extra_current), axis=0)
+        self.active_mask = np.concatenate(
+            (self.active_mask, self.active_mask[extra_indices]),
+            axis=0,
+        )
+        if self.input_direction is not None:
+            extra_direction = extra_current - extra_initial
+            self.input_direction = np.concatenate(
+                (self.input_direction, extra_direction),
+                axis=0,
+            )
 
     def _array_loader(self, arrays: np.ndarray, *, shuffle: bool) -> DataLoader:
         generator = torch.Generator()
@@ -694,9 +777,6 @@ class ProgressiveFeedbackProxy:
                 max_relative_l2=passive_cumulative_l2,
                 max_linf_over_std=passive_cumulative_linf,
             )
-        if self.input_direction is None:
-            self.input_direction = candidate_pool - self.initial_pool
-
         gradient_rows: list[tuple[list[torch.Tensor | None], int]] = []
         for start in range(0, len(candidate_pool), generation_batch):
             arrays = candidate_pool[start : start + generation_batch]
@@ -733,6 +813,8 @@ class ProgressiveFeedbackProxy:
                 f"Task {task_index} proxy/source gradient cosine "
                 f"{source_gradient_cosine} exceeds {max_source_cosine}"
             )
+        if self.input_direction is None:
+            self.input_direction = candidate_pool - self.initial_pool
         if current_gradients is not None:
             current_cpu = [
                 None if value is None else value.detach().cpu()
@@ -764,6 +846,20 @@ class ProgressiveFeedbackProxy:
             cumulative_delta,
             self.initial_pool,
         )
+        modified_mask = cumulative_relative > 1e-8
+        if (
+            getattr(
+                self.args,
+                "progressive_require_all_sequences_modified",
+                False,
+            )
+            and not modified_mask.all()
+        ):
+            raise RuntimeError(
+                f"Task {task_index} left "
+                f"{int((~modified_mask).sum())}/{len(modified_mask)} uploaded "
+                "Proxy sequences unchanged"
+            )
         self.current_pool = candidate_pool
         del guide
         if torch.cuda.is_available():
@@ -775,6 +871,9 @@ class ProgressiveFeedbackProxy:
             "max_step_relative_l2": float(step_relative.max()),
             "mean_cumulative_relative_l2": float(cumulative_relative.mean()),
             "max_cumulative_relative_l2": float(cumulative_relative.max()),
+            "min_cumulative_relative_l2": float(cumulative_relative.min()),
+            "modified_sequences": int(modified_mask.sum()),
+            "unmodified_sequences": int((~modified_mask).sum()),
             "input_direction_cosine": input_cosine,
             "history_gradient_cosine": history_cosine,
             "source_gradient_cosine": source_gradient_cosine,
@@ -813,17 +912,32 @@ class ProgressiveFeedbackProxy:
             }
             return list(clean_data_paths), set(), None
         count = (
-            len(self.current_pool)
-            if getattr(self.args, "progressive_upload_full_pool", False)
-            else len(clean_data_paths)
-        )
-        if count > len(self.current_pool):
-            raise ValueError(
-                f"Fixed subject has {len(self.current_pool)} sequences but task "
-                f"{task_index} requires {count}"
+            len(clean_data_paths)
+            if getattr(
+                self.args,
+                "progressive_match_task_sequence_count",
+                False,
             )
+            else len(self.current_pool)
+        )
+        self._ensure_pool_capacity(count)
         if self.mode == "feedback":
-            diagnostics = self._generate_progressive_pool(task_index)
+            last_error = None
+            for attempt in range(1, self.args.progressive_generation_attempts + 1):
+                try:
+                    diagnostics = self._generate_progressive_pool(task_index)
+                    diagnostics["generation_attempts"] = attempt
+                    break
+                except RuntimeError as error:
+                    if "proxy/source gradient cosine" not in str(error):
+                        raise
+                    last_error = error
+            else:
+                raise RuntimeError(
+                    f"Task {task_index} exhausted "
+                    f"{self.args.progressive_generation_attempts} source-gated "
+                    "candidate attempts"
+                ) from last_error
         else:
             self.current_pool = self.initial_pool.copy()
             diagnostics = {
@@ -842,6 +956,48 @@ class ProgressiveFeedbackProxy:
                 "mean_passive_step_relative_l2": 0.0,
                 "mean_passive_cumulative_relative_l2": 0.0,
             }
+        uploaded_relative = _relative_l2(
+            self.current_pool[:count] - self.initial_pool[:count],
+            self.initial_pool[:count],
+        )
+        uploaded_modified = uploaded_relative > 1e-8
+        if (
+            getattr(
+                self.args,
+                "progressive_require_all_sequences_modified",
+                False,
+            )
+            and not uploaded_modified.all()
+        ):
+            raise RuntimeError(
+                f"Task {task_index} left "
+                f"{int((~uploaded_modified).sum())}/{count} uploaded Proxy "
+                "sequences unchanged"
+            )
+        diagnostics.update(
+            {
+                "generated_pool_sequences": len(self.current_pool),
+                "pool_modified_sequences": diagnostics.get(
+                    "modified_sequences",
+                    0,
+                ),
+                "pool_unmodified_sequences": diagnostics.get(
+                    "unmodified_sequences",
+                    len(self.current_pool),
+                ),
+                "modified_sequences": int(uploaded_modified.sum()),
+                "unmodified_sequences": int((~uploaded_modified).sum()),
+                "min_uploaded_cumulative_relative_l2": float(
+                    uploaded_relative.min()
+                ),
+                "mean_uploaded_cumulative_relative_l2": float(
+                    uploaded_relative.mean()
+                ),
+                "max_uploaded_cumulative_relative_l2": float(
+                    uploaded_relative.max()
+                ),
+            }
+        )
         task_dir = self.payload_root / f"task_{task_index}_subject_{subject}"
         task_dir.mkdir(parents=True, exist_ok=True)
         output_paths: list[Path] = []
@@ -868,11 +1024,18 @@ class ProgressiveFeedbackProxy:
     ) -> list[Path]:
         if task_index in self.proxy_tasks:
             count = (
-                len(self.base_label_paths)
-                if getattr(self.args, "progressive_upload_full_pool", False)
-                else len(clean_label_paths)
+                len(clean_label_paths)
+                if getattr(
+                    self.args,
+                    "progressive_match_task_sequence_count",
+                    False,
+                )
+                else len(self.base_label_paths)
             )
-            return list(self.base_label_paths[:count])
+            return [
+                self.base_label_paths[index % len(self.base_label_paths)]
+                for index in range(count)
+            ]
         return list(clean_label_paths)
 
     def _sample_feedback_records(self, count: int) -> list[dict[str, Any]]:

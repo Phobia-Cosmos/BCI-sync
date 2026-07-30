@@ -68,6 +68,42 @@ class FeatureExtractor(nn.Module):
         return x
 
 
+class FeatureExtractorFACED(nn.Module):
+    """Single-branch 32-channel FACED frontend."""
+
+    def __init__(self, args):
+        super().__init__()
+        self.ModelParam = ModelConfig(args.dataset)
+        self.features = nn.Sequential(
+            nn.Conv1d(32, 64, kernel_size=50, stride=6, bias=False),
+            nn.BatchNorm1d(64),
+            nn.GELU(),
+            nn.MaxPool1d(kernel_size=8, stride=8),
+            nn.Dropout(0.1),
+            nn.Conv1d(64, 128, kernel_size=8),
+            nn.BatchNorm1d(128),
+            nn.GELU(),
+            nn.Conv1d(128, 256, kernel_size=8),
+            nn.BatchNorm1d(256),
+            nn.GELU(),
+            nn.Conv1d(256, 512, kernel_size=8),
+            nn.BatchNorm1d(512),
+            nn.GELU(),
+            nn.MaxPool1d(kernel_size=4, stride=4),
+        )
+        self.avg = nn.AdaptiveAvgPool1d(1)
+
+    def forward(self, eeg, eog):
+        batch = eeg.shape[0] // self.ModelParam.SeqLength
+        values = torch.cat((eog, eeg), dim=1)
+        values = self.avg(self.features(values))
+        return values.reshape(
+            batch,
+            self.ModelParam.SeqLength,
+            self.ModelParam.EncoderParam.d_model,
+        )
+
+
 class TransformerEncoder(torch.nn.Module):
     def __init__(self, args):
         super(TransformerEncoder, self).__init__()
@@ -96,8 +132,11 @@ class SleepMLP(nn.Module):
             nn.Dropout(self.dropout_rate),
             nn.GELU(),
         )
-        self.sleep_stage_classifier = nn.Linear(self.ModelParam.SleepMlpParam.out_linear[0],
-                                                self.ModelParam.SleepMlpParam.out_linear[1], bias=False)
+        self.sleep_stage_classifier = nn.Linear(
+            self.ModelParam.SleepMlpParam.out_linear[0],
+            self.ModelParam.NumClasses,
+            bias=False,
+        )
 
     def forward(self, x):
         x = self.sleep_stage_mlp(x)

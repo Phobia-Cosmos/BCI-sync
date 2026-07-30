@@ -916,6 +916,7 @@ def run(args) -> dict:
 
 def parse_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset", choices=("ISRUC", "FACED"), default="ISRUC")
     parser.add_argument("--method", choices=REPLAY_METHODS, default="plain_er")
     parser.add_argument(
         "--data-root",
@@ -1040,7 +1041,6 @@ def parse_args():
     if args.attack_mode != "none" and not args.attack_tasks.strip():
         parser.error("A non-none attack mode requires --attack-tasks")
 
-    args.dataset = "ISRUC"
     args.model_param = ModelConfig(args.dataset)
     args.device = torch.device(
         f"cuda:{args.gpu}"
@@ -1048,7 +1048,8 @@ def parse_args():
         else "cpu"
     )
     args.retention_milestones = parse_int_set(args.retention_milestones)
-    validate_progressive_proxy_args(args, 49 if args.max_subjects <= 0 else args.max_subjects)
+    total_tasks = len(build_split(args)["new_order"])
+    validate_progressive_proxy_args(args, total_tasks)
     if args.progressive_proxy_mode != "none" and (
         args.attack_mode != "none"
         or args.attack_tasks.strip()

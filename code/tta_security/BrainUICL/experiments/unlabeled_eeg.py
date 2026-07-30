@@ -29,7 +29,8 @@ class UnlabeledSequenceDataset(Dataset):
             )
         values = torch.from_numpy(values.astype(np.float32, copy=False))
         dummy = torch.zeros(self.sequence_length, dtype=torch.long)
-        return values[:, :2, :], values[:, 2:, :], dummy
+        split = 1 if values.shape[1] == 32 else 2
+        return values[:, :split, :], values[:, split:, :], dummy
 
 
 __all__ = ["UnlabeledSequenceDataset"]
