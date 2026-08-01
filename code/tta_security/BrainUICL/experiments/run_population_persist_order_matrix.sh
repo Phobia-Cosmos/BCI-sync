@@ -14,6 +14,12 @@ METHODS="${METHODS:-ewc,plain_er}"
 GPUS="${GPUS:-0,1,2,3}"
 DATASETS="${DATASETS:-ISRUC,FACED}"
 
+PYTHON_SITE="$(${PYTHON} -c 'import site; print(site.getsitepackages()[0])')"
+if [[ -d "${PYTHON_SITE}/nvidia" ]]; then
+  NVIDIA_LIBRARY_PATH="$(find "${PYTHON_SITE}/nvidia" -mindepth 2 -maxdepth 2 -type d -name lib -print | paste -sd: -)"
+  export LD_LIBRARY_PATH="${NVIDIA_LIBRARY_PATH}:${LD_LIBRARY_PATH:-}"
+fi
+
 mkdir -p "${RUN_ROOT}/logs" "${RUN_ROOT}/runs"
 
 PROXY_COMMON=(
@@ -98,6 +104,7 @@ for dataset in "${dataset_list[@]}"; do
 done
 
 cd "${REPO_ROOT}"
+pids=()
 for lane in "${!gpu_list[@]}"; do
   (
     for ((index=lane; index<${#jobs[@]}; index+=${#gpu_list[@]})); do
@@ -105,8 +112,22 @@ for lane in "${!gpu_list[@]}"; do
       run_one "${gpu_list[lane]}" "${dataset}" "${data_root}" "${total}" "${method}" "${seed}" "${schedule}"
     done
   ) &
+  pids+=("$!")
 done
-wait
+status=0
+for pid in "${pids[@]}"; do
+  wait "${pid}" || status=1
+done
+if [[ "${status}" -ne 0 ]]; then
+  printf 'At least one population Proxy lane failed; see %s/logs.\n' "${RUN_ROOT}" >&2
+  exit 1
+fi
+expected_runs=$((${#dataset_list[@]} * ${#seed_list[@]} * ${#schedule_list[@]} * ${#method_list[@]}))
+completed_runs=$(find "${RUN_ROOT}/runs" -type f -name summary.json | wc -l)
+if [[ "${completed_runs}" -lt "${expected_runs}" ]]; then
+  printf 'Expected at least %d completed runs, found %d.\n' "${expected_runs}" "${completed_runs}" >&2
+  exit 1
+fi
 touch "${RUN_ROOT}/_EXECUTION_COMPLETE"
 "${PYTHON}" "${REPO_ROOT}/experiments/summarize_population_persist_order_matrix.py" \
   --run-root "${RUN_ROOT}" --clean-root "${CLEAN_ROOT}"
