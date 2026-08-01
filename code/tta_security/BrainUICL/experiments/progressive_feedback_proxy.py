@@ -54,12 +54,19 @@ except ImportError:  # Direct runner execution from experiments/.
     from unlabeled_eeg import UnlabeledSequenceDataset
 
 from model.regularization_cl import freeze_batch_norm_running_stats
+try:
+    from .persist_eeg import DirectionBank, ProbabilityStateFilter, proxy_information_score
+except ImportError:
+    from persist_eeg import DirectionBank, ProbabilityStateFilter, proxy_information_score
 
 
-PROGRESSIVE_PROXY_MODES = ("none", "static", "feedback")
+PROGRESSIVE_PROXY_MODES = ("none", "static", "feedback", "population_feedback")
 
 
 def add_progressive_proxy_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--progressive-persist", action="store_true", help="Enable auditable PERSIST-EEG state diagnostics.")
+    parser.add_argument("--progressive-direction-bank-capacity", type=int, default=4)
+    parser.add_argument("--progressive-direction-bank-decay", type=float, default=0.8)
     parser.add_argument(
         "--progressive-proxy-mode",
         choices=PROGRESSIVE_PROXY_MODES,
@@ -76,6 +83,13 @@ def add_progressive_proxy_args(parser: argparse.ArgumentParser) -> None:
         help="Clean tasks whose owned signals and returned scores are visible.",
     )
     parser.add_argument("--progressive-base-subject", type=int, default=18)
+    parser.add_argument(
+        "--progressive-population-refresh-mix",
+        type=float,
+        default=0.20,
+        help="Blend fraction of the current class/subject-balanced buffer pool at each Proxy task.",
+    )
+    parser.add_argument("--progressive-population-candidates-per-class", type=int, default=4)
     parser.add_argument("--progressive-proxy-lr", type=float, default=1e-6)
     parser.add_argument("--progressive-feedback-steps", type=int, default=4)
     parser.add_argument("--progressive-feedback-batch", type=int, default=4)
@@ -147,11 +161,18 @@ def add_progressive_proxy_args(parser: argparse.ArgumentParser) -> None:
     )
     parser.add_argument("--progressive-source-gate-samples", type=int, default=0)
     parser.add_argument("--progressive-require-source-conflict", action="store_true")
+    parser.add_argument("--progressive-survival-trajectories", type=int, default=0)
+    parser.add_argument("--progressive-survival-steps", type=int, default=0)
+    parser.add_argument("--progressive-survival-batch", type=int, default=4)
+    parser.add_argument("--progressive-survival-weight", type=float, default=0.0)
+    parser.add_argument("--progressive-survival-temperature", type=float, default=0.25)
 
 
 def validate_progressive_proxy_args(args, total_tasks: int) -> None:
     if args.progressive_proxy_mode == "none":
         return
+    if getattr(args, "progressive_direction_bank_capacity", 4) < 1:
+        raise ValueError("Progressive direction bank capacity must be positive")
     positive_names = (
         "progressive_proxy_lr",
         "progressive_feedback_batch",
@@ -183,6 +204,37 @@ def validate_progressive_proxy_args(args, total_tasks: int) -> None:
         raise ValueError("Progressive passive step scale must be in [0, 1]")
     if getattr(args, "progressive_history_refresh_count", 0) < 0:
         raise ValueError("Progressive history refresh count cannot be negative")
+    if not 0.0 <= getattr(args, "progressive_population_refresh_mix", 0.20) <= 1.0:
+        raise ValueError("Population refresh mix must be in [0, 1]")
+    if getattr(args, "progressive_population_candidates_per_class", 4) < 2:
+        raise ValueError("Population candidates per class must be at least two")
+    survival_values = (
+        getattr(args, "progressive_survival_trajectories", 0),
+        getattr(args, "progressive_survival_steps", 0),
+        getattr(args, "progressive_survival_batch", 4),
+    )
+    if any(value < 0 for value in survival_values):
+        raise ValueError("Progressive survival counts cannot be negative")
+    survival_weight = getattr(args, "progressive_survival_weight", 0.0)
+    survival_enabled = survival_weight > 0.0
+    if survival_enabled and (
+        survival_values[0] <= 0
+        or survival_values[1] <= 0
+        or survival_values[2] <= 0
+    ):
+        raise ValueError(
+            "Positive progressive survival weight requires positive "
+            "trajectories, steps, and batch"
+        )
+    if not survival_enabled and (
+        survival_values[0] > 0
+        or survival_values[1] > 0
+    ):
+        raise ValueError(
+            "Progressive survival trajectories/steps require a positive weight"
+        )
+    if getattr(args, "progressive_survival_temperature", 0.25) <= 0.0:
+        raise ValueError("Progressive survival temperature must be positive")
     if getattr(args, "progressive_source_gate_samples", 0) < 0:
         raise ValueError("Progressive source gate samples cannot be negative")
     if not -1.0 <= getattr(args, "progressive_max_source_gradient_cosine", 1.0) <= 1.0:
@@ -195,7 +247,7 @@ def validate_progressive_proxy_args(args, total_tasks: int) -> None:
     overlap = proxy_tasks & clean_tasks
     if overlap:
         raise ValueError(f"Progressive proxy/clean-feedback tasks overlap: {sorted(overlap)}")
-    if args.progressive_proxy_mode == "feedback":
+    if args.progressive_proxy_mode in ("feedback", "population_feedback"):
         full_pool = getattr(args, "progressive_upload_full_pool", False)
         match_task = getattr(
             args,
@@ -276,6 +328,104 @@ def _load_arrays(items: Sequence[Path | np.ndarray]) -> np.ndarray:
         for item in items
     ]
     return np.stack(arrays)
+
+
+def _eeg_invariant_descriptor(array: np.ndarray) -> np.ndarray:
+    """Compact class/subject descriptor without retaining waveform phase."""
+    signal = np.asarray(array, dtype=np.float32)
+    downsampled = signal[..., ::8]
+    centered = downsampled - downsampled.mean(axis=-1, keepdims=True)
+    spectrum = np.fft.rfft(centered, axis=-1)
+    power = np.abs(spectrum).astype(np.float64) ** 2
+    frequency_count = power.shape[-1] - 1
+    frequency_bins = np.array_split(
+        power[..., 1:], min(6, max(frequency_count, 1)), axis=-1
+    )
+    bandpower = np.asarray(
+        [float(local.mean()) for local in frequency_bins],
+        dtype=np.float64,
+    )
+    if len(bandpower) < 6:
+        bandpower = np.pad(bandpower, (0, 6 - len(bandpower)))
+    bandpower = np.log1p(bandpower)
+    bandpower -= bandpower.mean()
+    bandpower /= max(float(np.linalg.norm(bandpower)), 1e-12)
+
+    channels = centered.transpose(1, 0, 2).reshape(centered.shape[1], -1)
+    covariance = channels @ channels.T / max(channels.shape[1] - 1, 1)
+    eigenvalues = np.maximum(np.linalg.eigvalsh(covariance), 0.0)[::-1]
+    eigenvalues = eigenvalues[: min(6, len(eigenvalues))]
+    eigenvalues /= max(float(eigenvalues.sum()), 1e-12)
+    if len(eigenvalues) < 6:
+        eigenvalues = np.pad(eigenvalues, (0, 6 - len(eigenvalues)))
+
+    autocorrelation: list[float] = []
+    variance = float(np.mean(centered * centered)) + 1e-12
+    for lag in (1, 4, 16):
+        if centered.shape[-1] <= lag:
+            autocorrelation.append(0.0)
+        else:
+            autocorrelation.append(
+                float(np.mean(centered[..., :-lag] * centered[..., lag:]) / variance)
+            )
+    return np.concatenate((bandpower, eigenvalues, np.asarray(autocorrelation)))
+
+
+def _match_channel_covariance(
+    signal: np.ndarray,
+    first: np.ndarray,
+    second: np.ndarray,
+    alpha: float,
+) -> np.ndarray:
+    channels = signal.shape[1]
+    sample_matrix = signal.transpose(1, 0, 2).reshape(channels, -1).astype(np.float64)
+    first_matrix = first.transpose(1, 0, 2).reshape(channels, -1).astype(np.float64)
+    second_matrix = second.transpose(1, 0, 2).reshape(channels, -1).astype(np.float64)
+    sample_mean = sample_matrix.mean(axis=1, keepdims=True)
+    first_mean = first_matrix.mean(axis=1, keepdims=True)
+    second_mean = second_matrix.mean(axis=1, keepdims=True)
+    sample_centered = sample_matrix - sample_mean
+    first_centered = first_matrix - first_mean
+    second_centered = second_matrix - second_mean
+    denominator = max(sample_matrix.shape[1] - 1, 1)
+    sample_covariance = sample_centered @ sample_centered.T / denominator
+    target_covariance = (
+        alpha * (first_centered @ first_centered.T / denominator)
+        + (1.0 - alpha) * (second_centered @ second_centered.T / denominator)
+    )
+    sample_values, sample_vectors = np.linalg.eigh(sample_covariance)
+    target_values, target_vectors = np.linalg.eigh(target_covariance)
+    whitening = sample_vectors @ np.diag(1.0 / np.sqrt(np.maximum(sample_values, 1e-8))) @ sample_vectors.T
+    coloring = target_vectors @ np.diag(np.sqrt(np.maximum(target_values, 1e-8))) @ target_vectors.T
+    target_mean = alpha * first_mean + (1.0 - alpha) * second_mean
+    matched = coloring @ whitening @ sample_centered + target_mean
+    return matched.reshape(channels, signal.shape[0], signal.shape[2]).transpose(1, 0, 2).astype(np.float32)
+
+
+def _fit_eeg_invariants(first: np.ndarray, second: np.ndarray, alpha: float) -> np.ndarray:
+    """Fit spectral magnitude and cross-channel covariance from two EEG sequences."""
+    outputs: list[np.ndarray] = []
+    split = 1 if first.shape[1] == 32 else 2
+    for channel_slice in (slice(0, split), slice(split, None)):
+        left = np.asarray(first[:, channel_slice, :], dtype=np.float32)
+        right = np.asarray(second[:, channel_slice, :], dtype=np.float32)
+        left_spectrum = np.fft.rfft(left, axis=-1)
+        right_spectrum = np.fft.rfft(right, axis=-1)
+        log_magnitude = (
+            alpha * np.log(np.abs(left_spectrum) + 1e-8)
+            + (1.0 - alpha) * np.log(np.abs(right_spectrum) + 1e-8)
+        )
+        phase = np.angle(left_spectrum)
+        fitted = np.fft.irfft(
+            np.exp(log_magnitude + 1j * phase),
+            n=left.shape[-1],
+            axis=-1,
+        ).astype(np.float32)
+        outputs.append(_match_channel_covariance(fitted, left, right, alpha))
+    result = np.concatenate(outputs, axis=1)
+    if not np.isfinite(result).all():
+        raise RuntimeError("Population EEG invariant fit produced non-finite values")
+    return result.astype(np.float32, copy=False)
 
 
 def _split_modalities(arrays: np.ndarray, device: torch.device):
@@ -458,33 +608,52 @@ class ProgressiveFeedbackProxy:
             source_data.extend(data_paths)
             source_labels.extend(label_paths)
         self.labeled_records = list(zip(source_data, source_labels))
-        base_data, base_labels = subject_paths(
-            args.data_root,
-            args.progressive_base_subject,
-        )
-        if not base_data:
-            raise FileNotFoundError(
-                f"No fixed proxy data for subject {args.progressive_base_subject}"
-            )
-        self.base_paths = list(base_data)
-        self.base_label_paths = list(base_labels)
-        self.initial_pool = _load_arrays(self.base_paths)
-        self.current_pool = self.initial_pool.copy()
-        active_fraction = getattr(args, "progressive_active_fraction", 1.0)
-        active_count = max(1, int(math.ceil(active_fraction * len(self.base_paths))))
-        if active_count < len(self.base_paths):
-            base_probabilities = public_probabilities(
-                self.proxy_blocks,
-                self.base_paths,
-                args,
-            )
-            confidence = base_probabilities.max(axis=2).mean(axis=1)
-            active_indices = np.argsort(confidence, kind="stable")[:active_count]
+        self.population_mode = self.mode == "population_feedback"
+        if self.population_mode:
+            self.base_paths = []
+            self.base_label_paths = []
+            self.initial_pool = None
+            self.current_pool = None
         else:
-            active_indices = np.arange(len(self.base_paths))
-        self.active_mask = np.zeros(len(self.base_paths), dtype=bool)
-        self.active_mask[active_indices] = True
+            base_data, base_labels = subject_paths(
+                args.data_root,
+                args.progressive_base_subject,
+            )
+            if not base_data:
+                raise FileNotFoundError(
+                    f"No fixed proxy data for subject {args.progressive_base_subject}"
+                )
+            self.base_paths = list(base_data)
+            self.base_label_paths = list(base_labels)
+            self.initial_pool = _load_arrays(self.base_paths)
+            self.current_pool = self.initial_pool.copy()
+        active_fraction = getattr(args, "progressive_active_fraction", 1.0)
+        if self.population_mode:
+            self.active_mask = np.zeros(0, dtype=bool)
+        else:
+            active_count = max(1, int(math.ceil(active_fraction * len(self.base_paths))))
+            if active_count < len(self.base_paths):
+                base_probabilities = public_probabilities(
+                    self.proxy_blocks,
+                    self.base_paths,
+                    args,
+                )
+                confidence = base_probabilities.max(axis=2).mean(axis=1)
+                active_indices = np.argsort(confidence, kind="stable")[:active_count]
+            else:
+                active_indices = np.arange(len(self.base_paths))
+            self.active_mask = np.zeros(len(self.base_paths), dtype=bool)
+            self.active_mask[active_indices] = True
         self.input_direction: np.ndarray | None = None
+        self.persist_state = ProbabilityStateFilter() if getattr(args, "progressive_persist", False) else None
+        self.direction_bank = (
+            DirectionBank(
+                capacity=args.progressive_direction_bank_capacity,
+                decay=args.progressive_direction_bank_decay,
+            )
+            if getattr(args, "progressive_persist", False)
+            else None
+        )
         self.history_gradients: list[torch.Tensor | None] | None = None
         self.feedback_records: list[dict[str, Any]] = []
         self.task_rows: dict[int, dict[str, Any]] = {}
@@ -493,6 +662,10 @@ class ProgressiveFeedbackProxy:
         self.output_root.mkdir(parents=True, exist_ok=True)
         self.retain_payloads_for_replay = retain_payloads_for_replay
         self.generated_task_dirs: list[Path] = []
+        self.population_class_counts: list[int] = []
+        self.population_subject_count = 0
+        self.population_build_count = 0
+        self.population_record_kind_counts: dict[str, int] = {}
 
     def protocol(self) -> dict[str, Any]:
         return {
@@ -506,8 +679,19 @@ class ProgressiveFeedbackProxy:
             "incremental_clean_hard_labels_visible": False,
             "clean_feedback_tasks": sorted(self.clean_feedback_tasks),
             "proxy_tasks": sorted(self.proxy_tasks),
-            "base_subject": int(self.args.progressive_base_subject),
-            "base_sequences": len(self.base_paths),
+            "base_subject": None if self.population_mode else int(self.args.progressive_base_subject),
+            "base_sequences": len(self.base_paths) if not self.population_mode else 0,
+            "population_mode": self.population_mode,
+            "population_refresh_mix": float(getattr(self.args, "progressive_population_refresh_mix", 0.20)),
+            "population_class_counts": self.population_class_counts,
+            "population_subject_count": int(self.population_subject_count),
+            "population_record_kind_counts": self.population_record_kind_counts,
+            "population_invariants": [
+                "class_distribution",
+                "relative_bandpower",
+                "channel_covariance_spectrum",
+                "temporal_autocorrelation",
+            ] if self.population_mode else [],
             "upload_full_pool": bool(
                 getattr(self.args, "progressive_upload_full_pool", False)
             ),
@@ -532,7 +716,20 @@ class ProgressiveFeedbackProxy:
             "step_relative_l2": self.args.progressive_step_relative_l2,
             "cumulative_relative_l2": self.args.progressive_cumulative_relative_l2,
             "history_weight": self.args.progressive_history_weight,
+            "persist_eeg": bool(getattr(self.args, "progressive_persist", False)),
+            "persist_state_source": "owned_epoch_probabilities_and_proxy_input_directions_only",
+            "direction_bank_capacity": int(getattr(self.args, "progressive_direction_bank_capacity", 4)),
             "source_labeled_sequences": len(self.labeled_records),
+            "survival_objective": {
+                "enabled": self.args.progressive_survival_weight > 0.0,
+                "trajectories": self.args.progressive_survival_trajectories,
+                "steps_per_trajectory": self.args.progressive_survival_steps,
+                "batch_sequences": self.args.progressive_survival_batch,
+                "weight": self.args.progressive_survival_weight,
+                "softmin_temperature": self.args.progressive_survival_temperature,
+                "repair_data": "source_pretrain_hard_labels_only",
+                "future_incremental_data_visible": False,
+            },
         }
 
     def is_proxy_task(self, task_index: int) -> bool:
@@ -541,7 +738,144 @@ class ProgressiveFeedbackProxy:
     def is_clean_feedback_task(self, task_index: int) -> bool:
         return int(task_index) in self.clean_feedback_tasks
 
+    def _record_distribution(self, labels_or_probabilities: np.ndarray) -> np.ndarray:
+        values = np.asarray(labels_or_probabilities)
+        if values.ndim == 1:
+            classes = self.args.model_param.NumClasses
+            histogram = np.bincount(values.astype(np.int64), minlength=classes).astype(np.float32)
+            return histogram / max(float(histogram.sum()), 1.0)
+        probabilities = values.astype(np.float32)
+        probabilities = probabilities.reshape(-1, probabilities.shape[-1])
+        distribution = probabilities.mean(axis=0)
+        return distribution / max(float(distribution.sum()), 1e-8)
+
+    def _population_records(self) -> list[dict[str, Any]]:
+        records: list[dict[str, Any]] = []
+        for data_path, label_path in self.labeled_records:
+            labels = np.load(label_path, allow_pickle=False)
+            subject_name = data_path.parent.parent.name
+            subject_digits = "".join(character for character in subject_name if character.isdigit())
+            records.append({
+                "data": data_path,
+                "distribution": self._record_distribution(labels),
+                "subject": int(subject_digits) if subject_digits else -1,
+                "kind": "source",
+            })
+        if getattr(self.args, "progressive_feedback_weight", 1.0) >= 0.0:
+            for row in self.feedback_records:
+                records.append({
+                    "data": row["data"],
+                    "distribution": self._record_distribution(row["probabilities"]),
+                    "subject": int(row["subject"]),
+                    "kind": str(row["kind"]),
+                })
+        return records
+
+    def _load_population_record(self, record: dict[str, Any]) -> np.ndarray:
+        data = record["data"]
+        if isinstance(data, np.ndarray):
+            return data.astype(np.float32, copy=False)
+        return np.load(data, allow_pickle=False).astype(np.float32, copy=False)
+
+    def _build_population_pool(self, count: int) -> np.ndarray:
+        records = self._population_records()
+        if not records:
+            raise RuntimeError("Population Proxy requires source or feedback records")
+        classes = self.args.model_param.NumClasses
+        buckets: list[list[int]] = [[] for _ in range(classes)]
+        for index, record in enumerate(records):
+            buckets[int(np.argmax(record["distribution"]))].append(index)
+        nonempty = [index for index, bucket in enumerate(buckets) if bucket]
+        if not nonempty:
+            raise RuntimeError("Population Proxy has no class-labelled records")
+        representative_buckets: dict[int, list[tuple[int, np.ndarray]]] = {}
+        candidates_per_class = int(
+            getattr(self.args, "progressive_population_candidates_per_class", 4)
+        )
+        for class_index in nonempty:
+            bucket = buckets[class_index]
+            proxy_indices = [index for index in bucket if records[index]["kind"] == "proxy"]
+            clean_indices = [index for index in bucket if records[index]["kind"] == "clean"]
+            source_indices = [index for index in bucket if records[index]["kind"] == "source"]
+            candidate_indices: list[int] = []
+            if proxy_indices:
+                proxy_quota = min(len(proxy_indices), max(1, candidates_per_class // 2))
+                candidate_indices.extend(
+                    int(index) for index in self.rng.choice(proxy_indices, size=proxy_quota, replace=False)
+                )
+            for candidates in (clean_indices, source_indices, bucket):
+                remaining = candidates_per_class - len(candidate_indices)
+                available = [index for index in candidates if index not in candidate_indices]
+                if remaining <= 0 or not available:
+                    continue
+                candidate_indices.extend(
+                    int(index) for index in self.rng.choice(
+                        available,
+                        size=min(remaining, len(available)),
+                        replace=False,
+                    )
+                )
+            candidates = [
+                (int(index), self._load_population_record(records[int(index)]))
+                for index in candidate_indices
+            ]
+            descriptors = np.stack(
+                [_eeg_invariant_descriptor(array) for _index, array in candidates]
+            )
+            centroid = descriptors.mean(axis=0)
+            distances = np.linalg.norm(descriptors - centroid, axis=1)
+            representative_buckets[class_index] = [
+                candidates[int(index)] for index in np.argsort(distances, kind="stable")
+            ]
+        selected: list[np.ndarray] = []
+        selected_classes: list[int] = []
+        selected_subjects: set[int] = set()
+        selected_kinds: list[str] = []
+        class_offset = getattr(self, "population_build_count", 0) % len(nonempty)
+        self.population_build_count = getattr(self, "population_build_count", 0) + 1
+        for position in range(count):
+            class_index = nonempty[(position + class_offset) % len(nonempty)]
+            representatives = representative_buckets[class_index]
+            first_index, first = representatives[position % len(representatives)]
+            first_record = records[first_index]
+            second_candidates = [
+                (index, array) for index, array in representatives
+                if records[index]["subject"] != first_record["subject"]
+            ] or representatives
+            second_index, second = second_candidates[
+                int(self.rng.integers(0, len(second_candidates)))
+            ]
+            alpha = float(self.rng.uniform(0.35, 0.65))
+            mixed = _fit_eeg_invariants(first, second, alpha)
+            selected.append(mixed.astype(np.float32, copy=False))
+            selected_classes.append(class_index)
+            selected_subjects.add(int(first_record["subject"]))
+            selected_kinds.append(str(first_record["kind"]))
+        self.population_class_counts = [selected_classes.count(index) for index in range(classes)]
+        self.population_subject_count = len(selected_subjects)
+        self.population_record_kind_counts = {
+            kind: selected_kinds.count(kind) for kind in ("source", "clean", "proxy")
+        }
+        return np.stack(selected, axis=0)
+
+    def _initialize_population_pool(self, count: int) -> None:
+        pool = self._build_population_pool(count)
+        self.initial_pool = pool.copy()
+        self.current_pool = pool.copy()
+        self.active_mask = np.ones(count, dtype=bool)
+        self.input_direction = None
+
+    def _refresh_population_reference(self) -> None:
+        if not self.population_mode or self.current_pool is None:
+            return
+        reference = self._build_population_pool(len(self.current_pool))
+        mix = float(getattr(self.args, "progressive_population_refresh_mix", 0.20))
+        self.current_pool = ((1.0 - mix) * self.current_pool + mix * reference).astype(np.float32)
+
     def _ensure_pool_capacity(self, count: int) -> None:
+        if getattr(self, "population_mode", False) and self.current_pool is None:
+            self._initialize_population_pool(count)
+            return
         if count <= len(self.current_pool):
             return
         original_count = len(self.current_pool)
@@ -618,6 +952,12 @@ class ProgressiveFeedbackProxy:
         generation_args.attack_curvature_scale = 0.0
         generation_args.attack_random_start = False
         generation_args.progressive_history_weight = self.args.progressive_history_weight
+        generation_args.attack_survival_weight = (
+            self.args.progressive_survival_weight
+        )
+        generation_args.attack_survival_temperature = (
+            self.args.progressive_survival_temperature
+        )
         overrides = {
             "attack_target_weight": "progressive_target_weight",
             "attack_conflict_weight": "progressive_conflict_weight",
@@ -632,6 +972,21 @@ class ProgressiveFeedbackProxy:
             if value >= 0.0:
                 setattr(generation_args, attack_name, value)
         return generation_args
+
+    def _sample_survival_trajectories(self):
+        trajectories = self.args.progressive_survival_trajectories
+        steps = self.args.progressive_survival_steps
+        if self.args.progressive_survival_weight <= 0.0:
+            return None
+        return [
+            [
+                self._sample_labeled_reference(
+                    self.args.progressive_survival_batch
+                )
+                for _step in range(steps)
+            ]
+            for _trajectory in range(trajectories)
+        ]
 
     def _refresh_history_gradients(self, guide, generation_args) -> None:
         count = getattr(self.args, "progressive_history_refresh_count", 0)
@@ -686,9 +1041,11 @@ class ProgressiveFeedbackProxy:
         return _gradient_average(rows)
 
     def _generate_progressive_pool(self, task_index: int):
+        self._refresh_population_reference()
         guide, cpc_losses = self._adapt_guide(task_index, self.current_pool)
         generation_args = self._generation_args()
         self._refresh_history_gradients(guide, generation_args)
+        survival_trajectories = self._sample_survival_trajectories()
         candidate_batches: list[np.ndarray] = []
         diagnostic_rows: list[tuple[dict[str, float], int]] = []
         history_device = (
@@ -719,6 +1076,7 @@ class ProgressiveFeedbackProxy:
                 strategy=None,
                 reference_targets=reference_targets,
                 history_gradients=history_device,
+                survival_trajectories=survival_trajectories,
             )
             candidate = torch.cat((eog_adv, eeg_adv), dim=2).cpu().numpy()
             candidate_batches.append(candidate.astype(np.float32, copy=False))
@@ -726,10 +1084,17 @@ class ProgressiveFeedbackProxy:
         candidate_pool = np.concatenate(candidate_batches, axis=0)
         step = candidate_pool - self.current_pool
         input_cosine = None
-        if self.input_direction is not None:
+        direction_reference = self.input_direction
+        if self.direction_bank is not None and self.direction_bank.mean() is not None:
+            shared_direction = self.direction_bank.mean()
+            direction_reference = np.broadcast_to(
+                shared_direction[None, ...],
+                step.shape,
+            )
+        if direction_reference is not None:
             step, input_cosine = _constrain_step_to_direction(
                 step,
-                self.input_direction,
+                direction_reference,
                 self.args.progressive_input_cone_residual,
             )
         if getattr(self.args, "progressive_fill_step_budget", False):
@@ -815,6 +1180,11 @@ class ProgressiveFeedbackProxy:
             )
         if self.input_direction is None:
             self.input_direction = candidate_pool - self.initial_pool
+        persist_diagnostics = {}
+        if self.direction_bank is not None:
+            current_direction = candidate_pool - self.initial_pool
+            persist_diagnostics = self.direction_bank.update(current_direction)
+            persist_diagnostics["direction_bank_cosine"] = self.direction_bank.cosine(current_direction)
         if current_gradients is not None:
             current_cpu = [
                 None if value is None else value.detach().cpu()
@@ -878,6 +1248,7 @@ class ProgressiveFeedbackProxy:
             "history_gradient_cosine": history_cosine,
             "source_gradient_cosine": source_gradient_cosine,
             "source_conflict_accepted": source_conflict_accepted,
+            **persist_diagnostics,
             "mean_active_step_relative_l2": float(
                 step_relative[self.active_mask].mean()
             ),
@@ -921,7 +1292,7 @@ class ProgressiveFeedbackProxy:
             else len(self.current_pool)
         )
         self._ensure_pool_capacity(count)
-        if self.mode == "feedback":
+        if self.mode in ("feedback", "population_feedback"):
             last_error = None
             for attempt in range(1, self.args.progressive_generation_attempts + 1):
                 try:
@@ -996,6 +1367,9 @@ class ProgressiveFeedbackProxy:
                 "max_uploaded_cumulative_relative_l2": float(
                     uploaded_relative.max()
                 ),
+                "population_class_counts": list(self.population_class_counts),
+                "population_subject_count": int(self.population_subject_count),
+                "population_record_kind_counts": dict(self.population_record_kind_counts),
             }
         )
         task_dir = self.payload_root / f"task_{task_index}_subject_{subject}"
@@ -1007,11 +1381,12 @@ class ProgressiveFeedbackProxy:
             output_paths.append(path.resolve())
         self.generated_task_dirs.append(task_dir)
         row = {
-            "kind": "progressive_proxy" if self.mode == "feedback" else "static_proxy",
+            "kind": "progressive_proxy" if self.mode in ("feedback", "population_feedback") else "static_proxy",
             "task": int(task_index),
             "subject": int(subject),
             "proxy_sequences": count,
-            "base_subject": int(self.args.progressive_base_subject),
+            "base_subject": None if self.population_mode else int(self.args.progressive_base_subject),
+            "population_mode": self.population_mode,
             **diagnostics,
         }
         self.task_rows[task_index] = row
@@ -1032,6 +1407,8 @@ class ProgressiveFeedbackProxy:
                 )
                 else len(self.base_label_paths)
             )
+            if getattr(self, "population_mode", False):
+                return list(clean_label_paths)
             return [
                 self.base_label_paths[index % len(self.base_label_paths)]
                 for index in range(count)
@@ -1180,6 +1557,9 @@ class ProgressiveFeedbackProxy:
         if len(uploaded_data_paths) != victim_probabilities.shape[0]:
             raise ValueError("Victim response count does not match uploaded sequences")
         kind = "proxy" if task_index in self.proxy_tasks else "clean"
+        state_diagnostics = {}
+        if self.persist_state is not None:
+            state_diagnostics = self.persist_state.update(victim_probabilities)
         current_records: list[dict[str, Any]] = []
         for index, (path, probabilities) in enumerate(
             zip(uploaded_data_paths, victim_probabilities)
@@ -1205,7 +1585,7 @@ class ProgressiveFeedbackProxy:
             ]
         feedback = (
             self._distill(current_records)
-            if self.mode == "feedback"
+            if self.mode in ("feedback", "population_feedback")
             else {
                 "response_kl_before": self._mean_feedback_kl(current_records),
                 "response_kl_after": None,
@@ -1221,6 +1601,7 @@ class ProgressiveFeedbackProxy:
                 "feedback_sequences": len(current_records),
                 "labeled_buffer_sequences": len(self.labeled_records),
                 "feedback_buffer_sequences": len(self.feedback_records),
+                **state_diagnostics,
                 **feedback,
             }
         )
@@ -1247,6 +1628,8 @@ class ProgressiveFeedbackProxy:
                     row["kind"] == "proxy" for row in self.feedback_records
                 ),
             },
+            "persist_state": self.persist_state.state() if self.persist_state is not None else None,
+            "direction_bank": self.direction_bank.state() if self.direction_bank is not None else None,
         }
         (self.output_root / "transcript.json").write_text(
             json.dumps(payload, indent=2, ensure_ascii=False),

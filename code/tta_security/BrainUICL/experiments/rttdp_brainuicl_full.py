@@ -238,9 +238,10 @@ def build_blocks(args):
 def load_pretrained(args):
     blocks = build_blocks(args)
     ckpt_dir = args.input_checkpoint_root / args.dataset / "Pretrain"
-    blocks[0].load_state_dict(torch.load(ckpt_dir / f"feature_extractor_parameter_{args.seed}.pkl", map_location=args.device))
-    blocks[1].load_state_dict(torch.load(ckpt_dir / f"feature_encoder_parameter_{args.seed}.pkl", map_location=args.device))
-    blocks[2].load_state_dict(torch.load(ckpt_dir / f"sleep_classifier_parameter_{args.seed}.pkl", map_location=args.device))
+    pretrain_seed = getattr(args, "pretrain_seed", None) or args.seed
+    blocks[0].load_state_dict(torch.load(ckpt_dir / f"feature_extractor_parameter_{pretrain_seed}.pkl", map_location=args.device))
+    blocks[1].load_state_dict(torch.load(ckpt_dir / f"feature_encoder_parameter_{pretrain_seed}.pkl", map_location=args.device))
+    blocks[2].load_state_dict(torch.load(ckpt_dir / f"sleep_classifier_parameter_{pretrain_seed}.pkl", map_location=args.device))
     return blocks
 
 

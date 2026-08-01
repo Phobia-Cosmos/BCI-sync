@@ -271,6 +271,43 @@ class RegularizationCLEEGTest(unittest.TestCase):
         self.assertLessEqual(diagnostics["relative_l2_eog"], 0.2 + 1e-6)
         self.assertLessEqual(diagnostics["relative_l2_eeg"], 0.2 + 1e-6)
 
+    def test_proxy_dual_harm_can_unroll_future_clean_repairs(self):
+        torch.manual_seed(11)
+        student = tiny_proxy_blocks()
+        guide = tiny_proxy_blocks()
+        guide[2].load_state_dict(student[2].state_dict())
+        args = tiny_proxy_args(
+            attack_survival_weight=1.0,
+            attack_survival_temperature=0.25,
+        )
+        eog = torch.tensor(
+            [[[[0.1, 0.4]], [[0.3, -0.2]]]], dtype=torch.float32
+        )
+        eeg = torch.tensor(
+            [[[[0.5, -0.1]], [[-0.3, 0.2]]]], dtype=torch.float32
+        )
+        repair_eog = eog.flip(1)
+        repair_eeg = eeg.flip(1)
+        repair_targets = torch.tensor([[0, 1]], dtype=torch.long)
+
+        _eog_adv, _eeg_adv, diagnostics = proxy_dual_harm_batch(
+            student,
+            guide,
+            eog,
+            eeg,
+            repair_eog,
+            repair_eeg,
+            args,
+            survival_trajectories=[
+                [(repair_eog, repair_eeg, repair_targets)],
+                [(eog, eeg, repair_targets)],
+            ],
+        )
+
+        self.assertIn("survival_harm_final", diagnostics)
+        self.assertTrue(np.isfinite(diagnostics["survival_harm_final"]))
+        self.assertGreater(diagnostics["survival_harm_final"], 0.0)
+
     def test_batched_materialization_weights_partial_batch_and_aligns_paths(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)

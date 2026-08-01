@@ -10,7 +10,9 @@ import numpy as np
 from experiments.progressive_feedback_proxy import (
     ProgressiveFeedbackProxy,
     _constrain_step_to_direction,
+    _eeg_invariant_descriptor,
     _fill_step_relative_l2,
+    _fit_eeg_invariants,
     _project_numpy,
     resolve_task_spec,
     validate_progressive_proxy_args,
@@ -189,6 +191,46 @@ class ProgressiveFeedbackProxyTests(unittest.TestCase):
         )
 
         self.assertEqual(labels, [Path("0.npy"), Path("1.npy"), Path("0.npy"), Path("1.npy"), Path("0.npy")])
+
+    def test_population_pool_is_class_balanced_and_cross_subject(self):
+        proxy = ProgressiveFeedbackProxy.__new__(ProgressiveFeedbackProxy)
+        proxy.args = SimpleNamespace(
+            model_param=SimpleNamespace(NumClasses=3),
+            progressive_feedback_weight=1.0,
+        )
+        proxy.rng = np.random.default_rng(123)
+        proxy.feedback_records = []
+        proxy.labeled_records = []
+        proxy.population_class_counts = []
+        proxy.population_subject_count = 0
+        for subject, class_index in enumerate((0, 1, 2, 0, 1, 2)):
+            data = np.full((2, 8, 64), float(subject + 1), dtype=np.float32)
+            probabilities = np.zeros((2, 3), dtype=np.float32)
+            probabilities[:, class_index] = 1.0
+            proxy.feedback_records.append({
+                "data": data,
+                "probabilities": probabilities,
+                "subject": subject,
+                "kind": "proxy",
+            })
+        pool = proxy._build_population_pool(6)
+        self.assertEqual(pool.shape, (6, 2, 8, 64))
+        self.assertEqual(pool.dtype, np.float32)
+        self.assertEqual(proxy.population_class_counts, [2, 2, 2])
+        self.assertGreaterEqual(proxy.population_subject_count, 3)
+        self.assertEqual(proxy.population_record_kind_counts["proxy"], 6)
+
+    def test_invariant_fit_is_finite_nontrivial_eeg_shape(self):
+        rng = np.random.default_rng(321)
+        first = rng.normal(size=(20, 8, 128)).astype(np.float32)
+        second = rng.normal(size=(20, 8, 128)).astype(np.float32)
+        fitted = _fit_eeg_invariants(first, second, 0.55)
+        self.assertEqual(fitted.shape, first.shape)
+        self.assertTrue(np.isfinite(fitted).all())
+        self.assertFalse(np.allclose(fitted, first))
+        descriptor = _eeg_invariant_descriptor(fitted)
+        self.assertEqual(descriptor.shape, (15,))
+        self.assertTrue(np.isfinite(descriptor).all())
 
     def test_controller_interface_receives_scores_not_victim_blocks(self):
         prepare = set(inspect.signature(ProgressiveFeedbackProxy.prepare_task).parameters)

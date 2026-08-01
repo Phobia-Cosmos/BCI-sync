@@ -622,6 +622,10 @@ def _proxy_dual_harm_terms(
     harmful_gradients: Sequence[torch.Tensor | None],
     harmful_norm: torch.Tensor,
     history_gradients: Sequence[torch.Tensor | None] | None,
+    survival_trajectories: Sequence[
+        Sequence[tuple[torch.Tensor, torch.Tensor]]
+    ]
+    | None,
     curvature_weights: Sequence[torch.Tensor],
     eps_eog: torch.Tensor,
     eps_eeg: torch.Tensor,
@@ -688,6 +692,59 @@ def _proxy_dual_harm_terms(
     )
     virtual_old_loss = F.cross_entropy(virtual_old_logits, source_labels)
     virtual_new_loss = F.cross_entropy(virtual_new_logits, clean_pseudo_labels)
+    survival_harm = inner_loss.new_zeros(())
+    if survival_trajectories:
+        trajectory_harms: list[torch.Tensor] = []
+        for trajectory in survival_trajectories:
+            future_parameters = dict(updated_parameters)
+            for repair_features, repair_targets in trajectory:
+                repair_logits = flat_logits(
+                    functional_call(
+                        student_blocks[2],
+                        future_parameters,
+                        (repair_features,),
+                        strict=False,
+                    )
+                )
+                repair_loss = F.cross_entropy(repair_logits, repair_targets)
+                names = list(future_parameters)
+                repair_gradients = torch.autograd.grad(
+                    repair_loss,
+                    [future_parameters[name] for name in names],
+                    create_graph=create_graph,
+                    retain_graph=create_graph,
+                )
+                future_parameters = {
+                    name: future_parameters[name]
+                    - args.attack_inner_lr * gradient
+                    for name, gradient in zip(names, repair_gradients)
+                }
+            future_old_logits = flat_logits(
+                functional_call(
+                    student_blocks[2],
+                    future_parameters,
+                    (reference_features,),
+                    strict=False,
+                )
+            )
+            future_new_logits = flat_logits(
+                functional_call(
+                    student_blocks[2],
+                    future_parameters,
+                    (clean_current_features,),
+                    strict=False,
+                )
+            )
+            trajectory_harms.append(
+                F.cross_entropy(future_old_logits, source_labels)
+                + F.cross_entropy(future_new_logits, clean_pseudo_labels)
+            )
+        harms = torch.stack(trajectory_harms)
+        temperature = getattr(args, "attack_survival_temperature", 0.25)
+        survival_harm = (
+            -temperature * torch.logsumexp(-harms / temperature, dim=0)
+            + temperature * math.log(len(trajectory_harms))
+        )
     target_loss = F.cross_entropy(guiding_logits, target_labels)
     confidence_loss = F.relu(args.attack_min_confidence - guiding_confidence).mean()
     l2_loss = (
@@ -703,6 +760,7 @@ def _proxy_dual_harm_terms(
         / harmful_norm.clamp_min(1e-12)
         - args.attack_virtual_old_weight * virtual_old_loss
         - args.attack_virtual_new_weight * virtual_new_loss
+        - getattr(args, "attack_survival_weight", 0.0) * survival_harm
         + args.attack_confidence_weight * confidence_loss
         + args.attack_l2_weight * l2_loss
     )
@@ -712,6 +770,7 @@ def _proxy_dual_harm_terms(
         "history_alignment": history_alignment,
         "virtual_old_loss": virtual_old_loss,
         "virtual_new_loss": virtual_new_loss,
+        "survival_harm": survival_harm,
         "guiding_logits": guiding_logits,
         "guiding_confidence": guiding_confidence,
     }
@@ -729,6 +788,10 @@ def proxy_dual_harm_batch(
     strategy=None,
     reference_targets: torch.Tensor | None = None,
     history_gradients: Sequence[torch.Tensor | None] | None = None,
+    survival_trajectories: Sequence[
+        Sequence[tuple[torch.Tensor, torch.Tensor, torch.Tensor]]
+    ]
+    | None = None,
 ) -> tuple[torch.Tensor, torch.Tensor, dict[str, float]]:
     """State-aware white-box input poisoning for regularization CL.
 
@@ -787,6 +850,25 @@ def proxy_dual_harm_batch(
             eeg_base,
             args,
         ).detach()
+        survival_feature_trajectories = (
+            [
+                [
+                    (
+                        _encoded_features(
+                            student_blocks,
+                            repair_eog,
+                            repair_eeg,
+                            args,
+                        ).detach(),
+                        repair_targets.reshape(-1).long(),
+                    )
+                    for repair_eog, repair_eeg, repair_targets in trajectory
+                ]
+                for trajectory in survival_trajectories
+            ]
+            if survival_trajectories
+            else None
+        )
 
     old_logits = flat_logits(
         forward_blocks(student_blocks, reference_eog, reference_eeg, args)
@@ -912,6 +994,7 @@ def proxy_dual_harm_batch(
             harmful_gradients=harmful_gradients,
             harmful_norm=harmful_norm,
             history_gradients=history_gradients,
+            survival_trajectories=survival_feature_trajectories,
             curvature_weights=curvature_weights,
             eps_eog=eps_eog,
             eps_eeg=eps_eeg,
@@ -961,6 +1044,7 @@ def proxy_dual_harm_batch(
         harmful_gradients=harmful_gradients,
         harmful_norm=harmful_norm,
         history_gradients=history_gradients,
+        survival_trajectories=survival_feature_trajectories,
         curvature_weights=curvature_weights,
         eps_eog=eps_eog,
         eps_eeg=eps_eeg,
@@ -997,6 +1081,9 @@ def proxy_dual_harm_batch(
             ),
             "virtual_new_loss_final": float(
                 final_terms["virtual_new_loss"].detach().cpu()
+            ),
+            "survival_harm_final": float(
+                final_terms["survival_harm"].detach().cpu()
             ),
             "target_shift": float(target_shift),
             "target_shift_conflict": float(target_conflict),
