@@ -1,0 +1,73 @@
+{
+  "rows": [
+    {
+      "dataset": "isruc",
+      "schedule": "uniform_random",
+      "method": "ewc",
+      "seed": 4321,
+      "delta_pp": {
+        "final_old_acc": 1.1796407185628799,
+        "final_old_mf1": 1.0776767816669808,
+        "final_seen_acc": 3.0004979104996443,
+        "final_seen_mf1": 1.6168133785175898
+      },
+      "all_four_negative": false
+    }
+  ],
+  "aggregates": [
+    {
+      "dataset": "isruc",
+      "schedule": "uniform_random",
+      "method": "ewc",
+      "runs": 1,
+      "mean_delta_pp": {
+        "final_old_acc": 1.1796407185628799,
+        "final_old_mf1": 1.0776767816669808,
+        "final_seen_acc": 3.0004979104996443,
+        "final_seen_mf1": 1.6168133785175898
+      },
+      "sample_std_pp": {
+        "final_old_acc": 0.0,
+        "final_old_mf1": 0.0,
+        "final_seen_acc": 0.0,
+        "final_seen_mf1": 0.0
+      },
+      "all_four_negative_runs": 0
+    }
+  ],
+  "audits": [
+    {
+      "dataset": "isruc",
+      "schedule": "uniform_random",
+      "method": "ewc",
+      "seed": 4321,
+      "base_subject_is_none": true,
+      "population_mode": true,
+      "victim_parameters_hidden": true,
+      "proxy_task_count": 5,
+      "all_sequences_modified": true,
+      "balanced_classes_per_task": true,
+      "all_classes_observed_across_proxy_tasks": true,
+      "minimum_population_subjects": 11,
+      "max_cumulative_relative_l2": 0.08540631085634232,
+      "population_invariants": [
+        "class_distribution",
+        "relative_bandpower",
+        "channel_covariance_spectrum",
+        "temporal_autocorrelation"
+      ]
+    }
+  ],
+  "audit_summary": {
+    "runs": 1,
+    "all_population_mode": true,
+    "all_without_fixed_subject": true,
+    "all_victim_parameters_hidden": true,
+    "all_have_five_proxy_tasks": true,
+    "all_sequences_modified": true,
+    "all_tasks_class_balanced": true,
+    "all_classes_observed_across_proxy_tasks": true,
+    "minimum_population_subjects": 11,
+    "max_cumulative_relative_l2": 0.08540631085634232
+  }
+}

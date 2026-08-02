@@ -27,6 +27,7 @@ from experiments.regularization_cl_attacks import (
     proxy_dual_harm_batch,
 )
 from experiments.regularization_cl_eeg import (
+    build_split,
     delete_generated_inputs,
     resolve_attack_tasks,
     resolve_n2n_subject_paths,
@@ -91,6 +92,45 @@ def tiny_proxy_args(**overrides):
 
 
 class RegularizationCLEEGTest(unittest.TestCase):
+    @patch("experiments.regularization_cl_eeg.discover_subjects", return_value=list(range(98)))
+    @patch(
+        "experiments.regularization_cl_eeg.split_subjects",
+        return_value=([1], [2], [3], [10, 11, 12]),
+    )
+    def test_subject_order_manifest_only_reorders_fixed_partition(self, _split, _discover):
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest = Path(tmp) / "order.json"
+            manifest.write_text(json.dumps({
+                "dataset": "ISRUC",
+                "partition_seed": 4321,
+                "order_name": "easy_to_hard",
+                "new_order": [12, 10, 11],
+            }))
+            args = SimpleNamespace(
+                data_root=Path(tmp), dataset="ISRUC", seed=4321,
+                subject_order_manifest=manifest, max_subjects=0,
+            )
+            split = build_split(args)
+            self.assertEqual(split["new_order"], [12, 10, 11])
+            self.assertEqual(split["full_new_order"], [10, 11, 12])
+            self.assertEqual(split["order_name"], "easy_to_hard")
+
+    @patch("experiments.regularization_cl_eeg.discover_subjects", return_value=list(range(98)))
+    @patch(
+        "experiments.regularization_cl_eeg.split_subjects",
+        return_value=([1], [2], [3], [10, 11, 12]),
+    )
+    def test_subject_order_manifest_rejects_partition_change(self, _split, _discover):
+        with tempfile.TemporaryDirectory() as tmp:
+            manifest = Path(tmp) / "order.json"
+            manifest.write_text(json.dumps({"new_order": [10, 11, 99]}))
+            args = SimpleNamespace(
+                data_root=Path(tmp), dataset="ISRUC", seed=4321,
+                subject_order_manifest=manifest, max_subjects=0,
+            )
+            with self.assertRaisesRegex(ValueError, "fixed incremental partition"):
+                build_split(args)
+
     def test_task_phase_seeds_are_deterministic_and_isolated(self):
         self.assertEqual(task_phase_seed(4321, 26, "setup"), 30321)
         self.assertEqual(task_phase_seed(4321, 26, "guide"), 30322)

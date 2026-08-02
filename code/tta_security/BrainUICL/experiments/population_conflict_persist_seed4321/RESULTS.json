@@ -1,0 +1,656 @@
+{
+  "rows": [
+    {
+      "dataset": "faced",
+      "schedule": "late_random",
+      "method": "ewc",
+      "seed": 4321,
+      "delta_pp": {
+        "final_old_acc": -0.13020833333333148,
+        "final_old_mf1": -0.22145723907892045,
+        "final_seen_acc": -0.6147540983606592,
+        "final_seen_mf1": -0.4481420206205372
+      },
+      "all_four_negative": true
+    },
+    {
+      "dataset": "faced",
+      "schedule": "late_random",
+      "method": "plain_er",
+      "seed": 4321,
+      "delta_pp": {
+        "final_old_acc": -0.20833333333333537,
+        "final_old_mf1": -0.2038565954960242,
+        "final_seen_acc": 5.551115123125783e-15,
+        "final_seen_mf1": 0.0137144844288839
+      },
+      "all_four_negative": false
+    },
+    {
+      "dataset": "faced",
+      "schedule": "stratified_random",
+      "method": "ewc",
+      "seed": 4321,
+      "delta_pp": {
+        "final_old_acc": -0.05208333333333315,
+        "final_old_mf1": -0.09976497697428144,
+        "final_seen_acc": -0.12295081967214072,
+        "final_seen_mf1": -0.15045014696793702
+      },
+      "all_four_negative": true
+    },
+    {
+      "dataset": "faced",
+      "schedule": "stratified_random",
+      "method": "plain_er",
+      "seed": 4321,
+      "delta_pp": {
+        "final_old_acc": 0.15624999999999944,
+        "final_old_mf1": 0.1254004838724232,
+        "final_seen_acc": 0.051229508196726226,
+        "final_seen_mf1": 0.05749680957678471
+      },
+      "all_four_negative": false
+    },
+    {
+      "dataset": "faced",
+      "schedule": "uniform_random",
+      "method": "ewc",
+      "seed": 4321,
+      "delta_pp": {
+        "final_old_acc": -0.05208333333333315,
+        "final_old_mf1": -0.07365181733265669,
+        "final_seen_acc": -0.07172131147540894,
+        "final_seen_mf1": -0.06077214488420801
+      },
+      "all_four_negative": true
+    },
+    {
+      "dataset": "faced",
+      "schedule": "uniform_random",
+      "method": "plain_er",
+      "seed": 4321,
+      "delta_pp": {
+        "final_old_acc": 0.0,
+        "final_old_mf1": -0.03822469579489729,
+        "final_seen_acc": 0.051229508196726226,
+        "final_seen_mf1": 0.06151248307829371
+      },
+      "all_four_negative": false
+    },
+    {
+      "dataset": "isruc",
+      "schedule": "late_random",
+      "method": "ewc",
+      "seed": 4321,
+      "delta_pp": {
+        "final_old_acc": 2.2514970059880235,
+        "final_old_mf1": 1.538337286782454,
+        "final_seen_acc": 4.402402470414435,
+        "final_seen_mf1": 2.9538579897183226
+      },
+      "all_four_negative": false
+    },
+    {
+      "dataset": "isruc",
+      "schedule": "late_random",
+      "method": "plain_er",
+      "seed": 4321,
+      "delta_pp": {
+        "final_old_acc": -0.041916167664668436,
+        "final_old_mf1": -1.0716244068605496,
+        "final_seen_acc": -0.009005932708261444,
+        "final_seen_mf1": -0.8043990731673389
+      },
+      "all_four_negative": true
+    },
+    {
+      "dataset": "isruc",
+      "schedule": "stratified_random",
+      "method": "ewc",
+      "seed": 4321,
+      "delta_pp": {
+        "final_old_acc": -0.08982035928143395,
+        "final_old_mf1": -0.1302729905881872,
+        "final_seen_acc": -0.1043769898575686,
+        "final_seen_mf1": -0.08877282767448813
+      },
+      "all_four_negative": true
+    },
+    {
+      "dataset": "isruc",
+      "schedule": "stratified_random",
+      "method": "plain_er",
+      "seed": 4321,
+      "delta_pp": {
+        "final_old_acc": 0.06586826347305674,
+        "final_old_mf1": 0.0696497008489061,
+        "final_seen_acc": 0.3758730079512662,
+        "final_seen_mf1": 0.4066403078251568
+      },
+      "all_four_negative": false
+    },
+    {
+      "dataset": "isruc",
+      "schedule": "uniform_random",
+      "method": "ewc",
+      "seed": 4321,
+      "delta_pp": {
+        "final_old_acc": 1.1796407185628799,
+        "final_old_mf1": 1.0776767816669808,
+        "final_seen_acc": 3.0004979104996443,
+        "final_seen_mf1": 1.6168133785175898
+      },
+      "all_four_negative": false
+    },
+    {
+      "dataset": "isruc",
+      "schedule": "uniform_random",
+      "method": "plain_er",
+      "seed": 4321,
+      "delta_pp": {
+        "final_old_acc": 1.485029940119753,
+        "final_old_mf1": 0.5359010877386994,
+        "final_seen_acc": 2.278075923814238,
+        "final_seen_mf1": 1.4407530565341164
+      },
+      "all_four_negative": false
+    }
+  ],
+  "aggregates": [
+    {
+      "dataset": "faced",
+      "schedule": "late_random",
+      "method": "ewc",
+      "runs": 1,
+      "mean_delta_pp": {
+        "final_old_acc": -0.13020833333333148,
+        "final_old_mf1": -0.22145723907892045,
+        "final_seen_acc": -0.6147540983606592,
+        "final_seen_mf1": -0.4481420206205372
+      },
+      "sample_std_pp": {
+        "final_old_acc": 0.0,
+        "final_old_mf1": 0.0,
+        "final_seen_acc": 0.0,
+        "final_seen_mf1": 0.0
+      },
+      "all_four_negative_runs": 1
+    },
+    {
+      "dataset": "faced",
+      "schedule": "late_random",
+      "method": "plain_er",
+      "runs": 1,
+      "mean_delta_pp": {
+        "final_old_acc": -0.20833333333333537,
+        "final_old_mf1": -0.2038565954960242,
+        "final_seen_acc": 5.551115123125783e-15,
+        "final_seen_mf1": 0.0137144844288839
+      },
+      "sample_std_pp": {
+        "final_old_acc": 0.0,
+        "final_old_mf1": 0.0,
+        "final_seen_acc": 0.0,
+        "final_seen_mf1": 0.0
+      },
+      "all_four_negative_runs": 0
+    },
+    {
+      "dataset": "faced",
+      "schedule": "stratified_random",
+      "method": "ewc",
+      "runs": 1,
+      "mean_delta_pp": {
+        "final_old_acc": -0.05208333333333315,
+        "final_old_mf1": -0.09976497697428144,
+        "final_seen_acc": -0.12295081967214072,
+        "final_seen_mf1": -0.15045014696793702
+      },
+      "sample_std_pp": {
+        "final_old_acc": 0.0,
+        "final_old_mf1": 0.0,
+        "final_seen_acc": 0.0,
+        "final_seen_mf1": 0.0
+      },
+      "all_four_negative_runs": 1
+    },
+    {
+      "dataset": "faced",
+      "schedule": "stratified_random",
+      "method": "plain_er",
+      "runs": 1,
+      "mean_delta_pp": {
+        "final_old_acc": 0.15624999999999944,
+        "final_old_mf1": 0.1254004838724232,
+        "final_seen_acc": 0.051229508196726226,
+        "final_seen_mf1": 0.05749680957678471
+      },
+      "sample_std_pp": {
+        "final_old_acc": 0.0,
+        "final_old_mf1": 0.0,
+        "final_seen_acc": 0.0,
+        "final_seen_mf1": 0.0
+      },
+      "all_four_negative_runs": 0
+    },
+    {
+      "dataset": "faced",
+      "schedule": "uniform_random",
+      "method": "ewc",
+      "runs": 1,
+      "mean_delta_pp": {
+        "final_old_acc": -0.05208333333333315,
+        "final_old_mf1": -0.07365181733265669,
+        "final_seen_acc": -0.07172131147540894,
+        "final_seen_mf1": -0.06077214488420801
+      },
+      "sample_std_pp": {
+        "final_old_acc": 0.0,
+        "final_old_mf1": 0.0,
+        "final_seen_acc": 0.0,
+        "final_seen_mf1": 0.0
+      },
+      "all_four_negative_runs": 1
+    },
+    {
+      "dataset": "faced",
+      "schedule": "uniform_random",
+      "method": "plain_er",
+      "runs": 1,
+      "mean_delta_pp": {
+        "final_old_acc": 0.0,
+        "final_old_mf1": -0.03822469579489729,
+        "final_seen_acc": 0.051229508196726226,
+        "final_seen_mf1": 0.06151248307829371
+      },
+      "sample_std_pp": {
+        "final_old_acc": 0.0,
+        "final_old_mf1": 0.0,
+        "final_seen_acc": 0.0,
+        "final_seen_mf1": 0.0
+      },
+      "all_four_negative_runs": 0
+    },
+    {
+      "dataset": "isruc",
+      "schedule": "late_random",
+      "method": "ewc",
+      "runs": 1,
+      "mean_delta_pp": {
+        "final_old_acc": 2.2514970059880235,
+        "final_old_mf1": 1.538337286782454,
+        "final_seen_acc": 4.402402470414435,
+        "final_seen_mf1": 2.9538579897183226
+      },
+      "sample_std_pp": {
+        "final_old_acc": 0.0,
+        "final_old_mf1": 0.0,
+        "final_seen_acc": 0.0,
+        "final_seen_mf1": 0.0
+      },
+      "all_four_negative_runs": 0
+    },
+    {
+      "dataset": "isruc",
+      "schedule": "late_random",
+      "method": "plain_er",
+      "runs": 1,
+      "mean_delta_pp": {
+        "final_old_acc": -0.041916167664668436,
+        "final_old_mf1": -1.0716244068605496,
+        "final_seen_acc": -0.009005932708261444,
+        "final_seen_mf1": -0.8043990731673389
+      },
+      "sample_std_pp": {
+        "final_old_acc": 0.0,
+        "final_old_mf1": 0.0,
+        "final_seen_acc": 0.0,
+        "final_seen_mf1": 0.0
+      },
+      "all_four_negative_runs": 1
+    },
+    {
+      "dataset": "isruc",
+      "schedule": "stratified_random",
+      "method": "ewc",
+      "runs": 1,
+      "mean_delta_pp": {
+        "final_old_acc": -0.08982035928143395,
+        "final_old_mf1": -0.1302729905881872,
+        "final_seen_acc": -0.1043769898575686,
+        "final_seen_mf1": -0.08877282767448813
+      },
+      "sample_std_pp": {
+        "final_old_acc": 0.0,
+        "final_old_mf1": 0.0,
+        "final_seen_acc": 0.0,
+        "final_seen_mf1": 0.0
+      },
+      "all_four_negative_runs": 1
+    },
+    {
+      "dataset": "isruc",
+      "schedule": "stratified_random",
+      "method": "plain_er",
+      "runs": 1,
+      "mean_delta_pp": {
+        "final_old_acc": 0.06586826347305674,
+        "final_old_mf1": 0.0696497008489061,
+        "final_seen_acc": 0.3758730079512662,
+        "final_seen_mf1": 0.4066403078251568
+      },
+      "sample_std_pp": {
+        "final_old_acc": 0.0,
+        "final_old_mf1": 0.0,
+        "final_seen_acc": 0.0,
+        "final_seen_mf1": 0.0
+      },
+      "all_four_negative_runs": 0
+    },
+    {
+      "dataset": "isruc",
+      "schedule": "uniform_random",
+      "method": "ewc",
+      "runs": 1,
+      "mean_delta_pp": {
+        "final_old_acc": 1.1796407185628799,
+        "final_old_mf1": 1.0776767816669808,
+        "final_seen_acc": 3.0004979104996443,
+        "final_seen_mf1": 1.6168133785175898
+      },
+      "sample_std_pp": {
+        "final_old_acc": 0.0,
+        "final_old_mf1": 0.0,
+        "final_seen_acc": 0.0,
+        "final_seen_mf1": 0.0
+      },
+      "all_four_negative_runs": 0
+    },
+    {
+      "dataset": "isruc",
+      "schedule": "uniform_random",
+      "method": "plain_er",
+      "runs": 1,
+      "mean_delta_pp": {
+        "final_old_acc": 1.485029940119753,
+        "final_old_mf1": 0.5359010877386994,
+        "final_seen_acc": 2.278075923814238,
+        "final_seen_mf1": 1.4407530565341164
+      },
+      "sample_std_pp": {
+        "final_old_acc": 0.0,
+        "final_old_mf1": 0.0,
+        "final_seen_acc": 0.0,
+        "final_seen_mf1": 0.0
+      },
+      "all_four_negative_runs": 0
+    }
+  ],
+  "audits": [
+    {
+      "dataset": "faced",
+      "schedule": "late_random",
+      "method": "ewc",
+      "seed": 4321,
+      "base_subject_is_none": true,
+      "population_mode": true,
+      "victim_parameters_hidden": true,
+      "proxy_task_count": 5,
+      "all_sequences_modified": true,
+      "balanced_classes_per_task": true,
+      "all_classes_observed_across_proxy_tasks": true,
+      "minimum_population_subjects": 6,
+      "max_cumulative_relative_l2": 0.07807163894176483,
+      "population_invariants": [
+        "class_distribution",
+        "relative_bandpower",
+        "channel_covariance_spectrum",
+        "temporal_autocorrelation"
+      ]
+    },
+    {
+      "dataset": "faced",
+      "schedule": "late_random",
+      "method": "plain_er",
+      "seed": 4321,
+      "base_subject_is_none": true,
+      "population_mode": true,
+      "victim_parameters_hidden": true,
+      "proxy_task_count": 5,
+      "all_sequences_modified": true,
+      "balanced_classes_per_task": true,
+      "all_classes_observed_across_proxy_tasks": true,
+      "minimum_population_subjects": 6,
+      "max_cumulative_relative_l2": 0.07871591299772263,
+      "population_invariants": [
+        "class_distribution",
+        "relative_bandpower",
+        "channel_covariance_spectrum",
+        "temporal_autocorrelation"
+      ]
+    },
+    {
+      "dataset": "faced",
+      "schedule": "stratified_random",
+      "method": "ewc",
+      "seed": 4321,
+      "base_subject_is_none": true,
+      "population_mode": true,
+      "victim_parameters_hidden": true,
+      "proxy_task_count": 5,
+      "all_sequences_modified": true,
+      "balanced_classes_per_task": true,
+      "all_classes_observed_across_proxy_tasks": true,
+      "minimum_population_subjects": 4,
+      "max_cumulative_relative_l2": 0.09604056179523468,
+      "population_invariants": [
+        "class_distribution",
+        "relative_bandpower",
+        "channel_covariance_spectrum",
+        "temporal_autocorrelation"
+      ]
+    },
+    {
+      "dataset": "faced",
+      "schedule": "stratified_random",
+      "method": "plain_er",
+      "seed": 4321,
+      "base_subject_is_none": true,
+      "population_mode": true,
+      "victim_parameters_hidden": true,
+      "proxy_task_count": 5,
+      "all_sequences_modified": true,
+      "balanced_classes_per_task": true,
+      "all_classes_observed_across_proxy_tasks": true,
+      "minimum_population_subjects": 6,
+      "max_cumulative_relative_l2": 0.09261534363031387,
+      "population_invariants": [
+        "class_distribution",
+        "relative_bandpower",
+        "channel_covariance_spectrum",
+        "temporal_autocorrelation"
+      ]
+    },
+    {
+      "dataset": "faced",
+      "schedule": "uniform_random",
+      "method": "ewc",
+      "seed": 4321,
+      "base_subject_is_none": true,
+      "population_mode": true,
+      "victim_parameters_hidden": true,
+      "proxy_task_count": 5,
+      "all_sequences_modified": true,
+      "balanced_classes_per_task": true,
+      "all_classes_observed_across_proxy_tasks": true,
+      "minimum_population_subjects": 6,
+      "max_cumulative_relative_l2": 0.09077604115009308,
+      "population_invariants": [
+        "class_distribution",
+        "relative_bandpower",
+        "channel_covariance_spectrum",
+        "temporal_autocorrelation"
+      ]
+    },
+    {
+      "dataset": "faced",
+      "schedule": "uniform_random",
+      "method": "plain_er",
+      "seed": 4321,
+      "base_subject_is_none": true,
+      "population_mode": true,
+      "victim_parameters_hidden": true,
+      "proxy_task_count": 5,
+      "all_sequences_modified": true,
+      "balanced_classes_per_task": true,
+      "all_classes_observed_across_proxy_tasks": true,
+      "minimum_population_subjects": 5,
+      "max_cumulative_relative_l2": 0.08066699653863907,
+      "population_invariants": [
+        "class_distribution",
+        "relative_bandpower",
+        "channel_covariance_spectrum",
+        "temporal_autocorrelation"
+      ]
+    },
+    {
+      "dataset": "isruc",
+      "schedule": "late_random",
+      "method": "ewc",
+      "seed": 4321,
+      "base_subject_is_none": true,
+      "population_mode": true,
+      "victim_parameters_hidden": true,
+      "proxy_task_count": 5,
+      "all_sequences_modified": true,
+      "balanced_classes_per_task": true,
+      "all_classes_observed_across_proxy_tasks": true,
+      "minimum_population_subjects": 10,
+      "max_cumulative_relative_l2": 0.08400822430849075,
+      "population_invariants": [
+        "class_distribution",
+        "relative_bandpower",
+        "channel_covariance_spectrum",
+        "temporal_autocorrelation"
+      ]
+    },
+    {
+      "dataset": "isruc",
+      "schedule": "late_random",
+      "method": "plain_er",
+      "seed": 4321,
+      "base_subject_is_none": true,
+      "population_mode": true,
+      "victim_parameters_hidden": true,
+      "proxy_task_count": 5,
+      "all_sequences_modified": true,
+      "balanced_classes_per_task": true,
+      "all_classes_observed_across_proxy_tasks": true,
+      "minimum_population_subjects": 9,
+      "max_cumulative_relative_l2": 0.08246681839227676,
+      "population_invariants": [
+        "class_distribution",
+        "relative_bandpower",
+        "channel_covariance_spectrum",
+        "temporal_autocorrelation"
+      ]
+    },
+    {
+      "dataset": "isruc",
+      "schedule": "stratified_random",
+      "method": "ewc",
+      "seed": 4321,
+      "base_subject_is_none": true,
+      "population_mode": true,
+      "victim_parameters_hidden": true,
+      "proxy_task_count": 5,
+      "all_sequences_modified": true,
+      "balanced_classes_per_task": true,
+      "all_classes_observed_across_proxy_tasks": true,
+      "minimum_population_subjects": 8,
+      "max_cumulative_relative_l2": 0.07811062037944794,
+      "population_invariants": [
+        "class_distribution",
+        "relative_bandpower",
+        "channel_covariance_spectrum",
+        "temporal_autocorrelation"
+      ]
+    },
+    {
+      "dataset": "isruc",
+      "schedule": "stratified_random",
+      "method": "plain_er",
+      "seed": 4321,
+      "base_subject_is_none": true,
+      "population_mode": true,
+      "victim_parameters_hidden": true,
+      "proxy_task_count": 5,
+      "all_sequences_modified": true,
+      "balanced_classes_per_task": true,
+      "all_classes_observed_across_proxy_tasks": true,
+      "minimum_population_subjects": 7,
+      "max_cumulative_relative_l2": 0.07870767265558243,
+      "population_invariants": [
+        "class_distribution",
+        "relative_bandpower",
+        "channel_covariance_spectrum",
+        "temporal_autocorrelation"
+      ]
+    },
+    {
+      "dataset": "isruc",
+      "schedule": "uniform_random",
+      "method": "ewc",
+      "seed": 4321,
+      "base_subject_is_none": true,
+      "population_mode": true,
+      "victim_parameters_hidden": true,
+      "proxy_task_count": 5,
+      "all_sequences_modified": true,
+      "balanced_classes_per_task": true,
+      "all_classes_observed_across_proxy_tasks": true,
+      "minimum_population_subjects": 11,
+      "max_cumulative_relative_l2": 0.08540631085634232,
+      "population_invariants": [
+        "class_distribution",
+        "relative_bandpower",
+        "channel_covariance_spectrum",
+        "temporal_autocorrelation"
+      ]
+    },
+    {
+      "dataset": "isruc",
+      "schedule": "uniform_random",
+      "method": "plain_er",
+      "seed": 4321,
+      "base_subject_is_none": true,
+      "population_mode": true,
+      "victim_parameters_hidden": true,
+      "proxy_task_count": 5,
+      "all_sequences_modified": true,
+      "balanced_classes_per_task": true,
+      "all_classes_observed_across_proxy_tasks": true,
+      "minimum_population_subjects": 9,
+      "max_cumulative_relative_l2": 0.08831428736448288,
+      "population_invariants": [
+        "class_distribution",
+        "relative_bandpower",
+        "channel_covariance_spectrum",
+        "temporal_autocorrelation"
+      ]
+    }
+  ],
+  "audit_summary": {
+    "runs": 12,
+    "all_population_mode": true,
+    "all_without_fixed_subject": true,
+    "all_victim_parameters_hidden": true,
+    "all_have_five_proxy_tasks": true,
+    "all_sequences_modified": true,
+    "all_tasks_class_balanced": true,
+    "all_classes_observed_across_proxy_tasks": true,
+    "minimum_population_subjects": 4,
+    "max_cumulative_relative_l2": 0.09604056179523468
+  }
+}

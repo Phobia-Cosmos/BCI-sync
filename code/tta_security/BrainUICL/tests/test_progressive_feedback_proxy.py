@@ -13,6 +13,9 @@ from experiments.progressive_feedback_proxy import (
     _eeg_invariant_descriptor,
     _fill_step_relative_l2,
     _fit_eeg_invariants,
+    _limit_invariant_drift,
+    invariant_drift,
+    physiological_eeg_descriptor,
     _project_numpy,
     resolve_task_spec,
     validate_progressive_proxy_args,
@@ -20,6 +23,22 @@ from experiments.progressive_feedback_proxy import (
 
 
 class ProgressiveFeedbackProxyTests(unittest.TestCase):
+    def test_physiological_descriptor_is_amplitude_scale_invariant(self):
+        rng = np.random.default_rng(91)
+        signal = rng.normal(size=(20, 8, 3000)).astype(np.float32)
+        first = physiological_eeg_descriptor(signal, "ISRUC")
+        second = physiological_eeg_descriptor(signal * np.float32(3.5), "ISRUC")
+        np.testing.assert_allclose(first, second, rtol=1e-5, atol=1e-6)
+
+    def test_invariant_limiter_enforces_requested_tolerance(self):
+        rng = np.random.default_rng(92)
+        reference = rng.normal(size=(20, 8, 3000)).astype(np.float32)
+        candidate = reference + rng.normal(scale=0.5, size=reference.shape).astype(np.float32)
+        limited, measured = _limit_invariant_drift(candidate, reference, "ISRUC", 0.01)
+        self.assertLessEqual(measured, 0.01001)
+        self.assertLessEqual(invariant_drift(limited, reference, "ISRUC"), 0.01001)
+        self.assertGreater(np.linalg.norm(limited - reference), 0.0)
+
     def test_odd_even_schedule_preserves_all_tasks_without_overlap(self):
         odd = resolve_task_spec("odd", 49)
         even = resolve_task_spec("even", 49)
@@ -197,6 +216,7 @@ class ProgressiveFeedbackProxyTests(unittest.TestCase):
         proxy.args = SimpleNamespace(
             model_param=SimpleNamespace(NumClasses=3),
             progressive_feedback_weight=1.0,
+            progressive_population_cross_class_mix=0.30,
         )
         proxy.rng = np.random.default_rng(123)
         proxy.feedback_records = []
@@ -219,6 +239,7 @@ class ProgressiveFeedbackProxyTests(unittest.TestCase):
         self.assertEqual(proxy.population_class_counts, [2, 2, 2])
         self.assertGreaterEqual(proxy.population_subject_count, 3)
         self.assertEqual(proxy.population_record_kind_counts["proxy"], 6)
+        self.assertTrue(all(index != target for index, target in enumerate(proxy.population_conflict_map)))
 
     def test_invariant_fit_is_finite_nontrivial_eeg_shape(self):
         rng = np.random.default_rng(321)

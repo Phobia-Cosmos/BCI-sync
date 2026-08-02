@@ -955,6 +955,7 @@ def parse_args():
     )
     parser.add_argument("--seed", type=int, default=4321)
     parser.add_argument("--pretrain-seed", type=int, default=None)
+    parser.add_argument("--subject-order-manifest", type=Path, default=None)
     parser.add_argument("--gpu", type=int, default=0)
     parser.add_argument("--batch", type=int, default=16)
     parser.add_argument("--num-worker", type=int, default=0)

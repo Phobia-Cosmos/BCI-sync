@@ -13,6 +13,8 @@ SCHEDULES="${SCHEDULES:-uniform_random,stratified_random,late_random}"
 METHODS="${METHODS:-ewc,plain_er}"
 GPUS="${GPUS:-0,1,2,3}"
 DATASETS="${DATASETS:-ISRUC,FACED}"
+POPULATION_CROSS_CLASS_MIX="${POPULATION_CROSS_CLASS_MIX:-0.35}"
+REQUIRE_SOURCE_CONFLICT="${REQUIRE_SOURCE_CONFLICT:-0}"
 
 PYTHON_SITE="$(${PYTHON} -c 'import site; print(site.getsitepackages()[0])')"
 if [[ -d "${PYTHON_SITE}/nvidia" ]]; then
@@ -26,6 +28,7 @@ PROXY_COMMON=(
   --progressive-proxy-mode population_feedback --progressive-persist
   --progressive-population-refresh-mix 0.20
   --progressive-population-candidates-per-class 4
+  --progressive-population-cross-class-mix "${POPULATION_CROSS_CLASS_MIX}"
   --progressive-direction-bank-capacity 4 --progressive-direction-bank-decay 0.8
   --progressive-proxy-lr 1e-6 --progressive-feedback-steps 4
   --progressive-feedback-batch 4 --progressive-guide-epochs 1
@@ -48,6 +51,9 @@ PROXY_COMMON=(
   --progressive-survival-steps 2 --progressive-survival-batch 2
   --progressive-survival-weight 10 --progressive-survival-temperature 0.25
 )
+if [[ "${REQUIRE_SOURCE_CONFLICT}" == "1" ]]; then
+  PROXY_COMMON+=(--progressive-require-source-conflict)
+fi
 
 run_one() {
   local gpu="$1" dataset="$2" data_root="$3" total_tasks="$4"

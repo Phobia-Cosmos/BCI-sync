@@ -90,6 +90,19 @@ def add_progressive_proxy_args(parser: argparse.ArgumentParser) -> None:
         help="Blend fraction of the current class/subject-balanced buffer pool at each Proxy task.",
     )
     parser.add_argument("--progressive-population-candidates-per-class", type=int, default=4)
+    parser.add_argument(
+        "--progressive-population-cross-class-mix",
+        type=float,
+        default=0.0,
+        help="Fraction of invariant statistics fitted from the most confusable class.",
+    )
+    parser.add_argument("--progressive-preserve-eeg-invariants", action="store_true")
+    parser.add_argument(
+        "--progressive-invariant-drift-tolerance",
+        type=float,
+        default=0.02,
+        help="Maximum relative drift of the physiological EEG descriptor.",
+    )
     parser.add_argument("--progressive-proxy-lr", type=float, default=1e-6)
     parser.add_argument("--progressive-feedback-steps", type=int, default=4)
     parser.add_argument("--progressive-feedback-batch", type=int, default=4)
@@ -208,6 +221,10 @@ def validate_progressive_proxy_args(args, total_tasks: int) -> None:
         raise ValueError("Population refresh mix must be in [0, 1]")
     if getattr(args, "progressive_population_candidates_per_class", 4) < 2:
         raise ValueError("Population candidates per class must be at least two")
+    if not 0.0 <= getattr(args, "progressive_population_cross_class_mix", 0.0) < 0.5:
+        raise ValueError("Population cross-class mix must be in [0, 0.5)")
+    if not 0.0 < getattr(args, "progressive_invariant_drift_tolerance", 0.02) < 1.0:
+        raise ValueError("Population invariant drift tolerance must be in (0, 1)")
     survival_values = (
         getattr(args, "progressive_survival_trajectories", 0),
         getattr(args, "progressive_survival_steps", 0),
@@ -369,6 +386,84 @@ def _eeg_invariant_descriptor(array: np.ndarray) -> np.ndarray:
                 float(np.mean(centered[..., :-lag] * centered[..., lag:]) / variance)
             )
     return np.concatenate((bandpower, eigenvalues, np.asarray(autocorrelation)))
+
+
+def physiological_eeg_descriptor(array: np.ndarray, dataset: str) -> np.ndarray:
+    """Dataset-calibrated EEG statistics shared by ISRUC and FACED."""
+    signal = np.asarray(array, dtype=np.float64)
+    signal = signal if dataset == "FACED" else signal[:, 2:, :]
+    sampling_rate = 250.0 if dataset == "FACED" else 100.0
+    centered = signal - signal.mean(axis=-1, keepdims=True)
+    spectrum = np.fft.rfft(centered, axis=-1)
+    power = np.abs(spectrum) ** 2
+    frequencies = np.fft.rfftfreq(centered.shape[-1], d=1.0 / sampling_rate)
+    bands = ((0.5, 4.0), (4.0, 8.0), (8.0, 13.0), (13.0, 30.0), (30.0, 45.0))
+    bandpower = np.asarray([
+        float(power[..., (frequencies >= low) & (frequencies < high)].mean())
+        for low, high in bands
+    ])
+    bandpower /= max(float(bandpower.sum()), 1e-12)
+    channels = centered.transpose(1, 0, 2).reshape(centered.shape[1], -1)
+    covariance = channels @ channels.T / max(channels.shape[1] - 1, 1)
+    eigenvalues = np.maximum(np.linalg.eigvalsh(covariance), 0.0)[::-1][:6]
+    eigenvalues /= max(float(eigenvalues.sum()), 1e-12)
+    eigenvalues = np.pad(eigenvalues, (0, 6 - len(eigenvalues)))
+    variance = float(np.mean(centered * centered)) + 1e-12
+    autocorrelation = []
+    for seconds in (0.01, 0.04, 0.16):
+        lag = max(1, int(round(seconds * sampling_rate)))
+        autocorrelation.append(
+            float(np.mean(centered[..., :-lag] * centered[..., lag:]) / variance)
+        )
+    return np.concatenate((bandpower, eigenvalues, np.asarray(autocorrelation)))
+
+
+def invariant_drift(candidate: np.ndarray, reference: np.ndarray, dataset: str) -> float:
+    candidate_descriptor = physiological_eeg_descriptor(candidate, dataset)
+    reference_descriptor = physiological_eeg_descriptor(reference, dataset)
+    return float(
+        np.linalg.norm(candidate_descriptor - reference_descriptor)
+        / max(np.linalg.norm(reference_descriptor), 1e-12)
+    )
+
+
+def _limit_invariant_drift(
+    candidate: np.ndarray,
+    reference: np.ndarray,
+    dataset: str,
+    tolerance: float,
+) -> tuple[np.ndarray, float]:
+    drift = invariant_drift(candidate, reference, dataset)
+    if drift <= tolerance:
+        return candidate.astype(np.float32, copy=False), drift
+    low, high = 0.0, 1.0
+    best = np.asarray(reference, dtype=np.float32)
+    best_drift = 0.0
+    delta = np.asarray(candidate, dtype=np.float64) - np.asarray(reference, dtype=np.float64)
+    for _iteration in range(14):
+        scale = (low + high) / 2.0
+        trial = (np.asarray(reference, dtype=np.float64) + scale * delta).astype(np.float32)
+        trial_drift = invariant_drift(trial, reference, dataset)
+        if trial_drift <= tolerance:
+            low = scale
+            best, best_drift = trial, trial_drift
+        else:
+            high = scale
+    return best, best_drift
+
+
+def _limit_batch_invariant_drift(
+    candidates: np.ndarray,
+    references: np.ndarray,
+    dataset: str,
+    tolerance: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    rows, drifts = [], []
+    for candidate, reference in zip(candidates, references):
+        row, drift = _limit_invariant_drift(candidate, reference, dataset, tolerance)
+        rows.append(row)
+        drifts.append(drift)
+    return np.stack(rows), np.asarray(drifts, dtype=np.float64)
 
 
 def _match_channel_covariance(
@@ -666,6 +761,8 @@ class ProgressiveFeedbackProxy:
         self.population_subject_count = 0
         self.population_build_count = 0
         self.population_record_kind_counts: dict[str, int] = {}
+        self.population_conflict_map: list[int] = []
+        self.population_seed_invariant_drifts: list[float] = []
 
     def protocol(self) -> dict[str, Any]:
         return {
@@ -686,6 +783,16 @@ class ProgressiveFeedbackProxy:
             "population_class_counts": self.population_class_counts,
             "population_subject_count": int(self.population_subject_count),
             "population_record_kind_counts": self.population_record_kind_counts,
+            "population_cross_class_mix": float(
+                getattr(self.args, "progressive_population_cross_class_mix", 0.0)
+            ),
+            "population_conflict_map": self.population_conflict_map,
+            "preserve_eeg_invariants": bool(
+                getattr(self.args, "progressive_preserve_eeg_invariants", False)
+            ),
+            "invariant_drift_tolerance": float(
+                getattr(self.args, "progressive_invariant_drift_tolerance", 0.02)
+            ),
             "population_invariants": [
                 "class_distribution",
                 "relative_bandpower",
@@ -789,6 +896,7 @@ class ProgressiveFeedbackProxy:
         if not nonempty:
             raise RuntimeError("Population Proxy has no class-labelled records")
         representative_buckets: dict[int, list[tuple[int, np.ndarray]]] = {}
+        invariant_centroids: dict[int, np.ndarray] = {}
         candidates_per_class = int(
             getattr(self.args, "progressive_population_candidates_per_class", 4)
         )
@@ -823,10 +931,36 @@ class ProgressiveFeedbackProxy:
                 [_eeg_invariant_descriptor(array) for _index, array in candidates]
             )
             centroid = descriptors.mean(axis=0)
+            invariant_centroids[class_index] = centroid
             distances = np.linalg.norm(descriptors - centroid, axis=1)
             representative_buckets[class_index] = [
                 candidates[int(index)] for index in np.argsort(distances, kind="stable")
             ]
+        confusion = np.zeros((classes, classes), dtype=np.float64)
+        for record in records:
+            if record["kind"] == "source":
+                continue
+            distribution = np.asarray(record["distribution"], dtype=np.float64)
+            source_class = int(np.argmax(distribution))
+            confusion[source_class] += distribution
+        np.fill_diagonal(confusion, 0.0)
+        conflict_map: list[int] = []
+        for class_index in range(classes):
+            available_targets = [target for target in nonempty if target != class_index]
+            if not available_targets or class_index not in invariant_centroids:
+                conflict_map.append(class_index)
+                continue
+            feedback_scores = confusion[class_index, available_targets]
+            if float(feedback_scores.max()) > 0.0:
+                conflict_map.append(available_targets[int(np.argmax(feedback_scores))])
+                continue
+            source_centroid = invariant_centroids[class_index]
+            distances = [
+                float(np.linalg.norm(source_centroid - invariant_centroids[target]))
+                for target in available_targets
+            ]
+            conflict_map.append(available_targets[int(np.argmin(distances))])
+        self.population_conflict_map = conflict_map
         selected: list[np.ndarray] = []
         selected_classes: list[int] = []
         selected_subjects: set[int] = set()
@@ -838,16 +972,46 @@ class ProgressiveFeedbackProxy:
             representatives = representative_buckets[class_index]
             first_index, first = representatives[position % len(representatives)]
             first_record = records[first_index]
+            cross_class_mix = float(
+                getattr(self.args, "progressive_population_cross_class_mix", 0.0)
+            )
+            second_class = (
+                conflict_map[class_index] if cross_class_mix > 0.0 else class_index
+            )
+            second_representatives = representative_buckets.get(
+                second_class,
+                representatives,
+            )
             second_candidates = [
-                (index, array) for index, array in representatives
+                (index, array) for index, array in second_representatives
                 if records[index]["subject"] != first_record["subject"]
-            ] or representatives
+            ] or second_representatives
             second_index, second = second_candidates[
                 int(self.rng.integers(0, len(second_candidates)))
             ]
-            alpha = float(self.rng.uniform(0.35, 0.65))
+            alpha = (
+                float(np.clip(1.0 - cross_class_mix + self.rng.uniform(-0.025, 0.025), 0.51, 0.99))
+                if cross_class_mix > 0.0
+                else float(self.rng.uniform(0.35, 0.65))
+            )
             mixed = _fit_eeg_invariants(first, second, alpha)
+            invariant_dataset = getattr(
+                self.args,
+                "dataset",
+                "FACED" if first.shape[1] == 32 else "ISRUC",
+            )
+            seed_drift = invariant_drift(mixed, first, invariant_dataset)
+            if getattr(self.args, "progressive_preserve_eeg_invariants", False):
+                mixed, seed_drift = _limit_invariant_drift(
+                    mixed,
+                    first,
+                    invariant_dataset,
+                    self.args.progressive_invariant_drift_tolerance,
+                )
             selected.append(mixed.astype(np.float32, copy=False))
+            if not hasattr(self, "population_seed_invariant_drifts"):
+                self.population_seed_invariant_drifts = []
+            self.population_seed_invariant_drifts.append(float(seed_drift))
             selected_classes.append(class_index)
             selected_subjects.add(int(first_record["subject"]))
             selected_kinds.append(str(first_record["kind"]))
@@ -868,9 +1032,23 @@ class ProgressiveFeedbackProxy:
     def _refresh_population_reference(self) -> None:
         if not self.population_mode or self.current_pool is None:
             return
+        current_before = self.current_pool.copy()
         reference = self._build_population_pool(len(self.current_pool))
         mix = float(getattr(self.args, "progressive_population_refresh_mix", 0.20))
         self.current_pool = ((1.0 - mix) * self.current_pool + mix * reference).astype(np.float32)
+        if getattr(self.args, "progressive_preserve_eeg_invariants", False):
+            self.current_pool = _project_numpy(
+                self.current_pool,
+                current_before,
+                max_relative_l2=self.args.progressive_step_relative_l2,
+                max_linf_over_std=self.args.progressive_step_linf_std,
+            )
+            self.current_pool, _drift = _limit_batch_invariant_drift(
+                self.current_pool,
+                self.initial_pool,
+                self.args.dataset,
+                self.args.progressive_invariant_drift_tolerance,
+            )
 
     def _ensure_pool_capacity(self, count: int) -> None:
         if getattr(self, "population_mode", False) and self.current_pool is None:
@@ -1142,6 +1320,35 @@ class ProgressiveFeedbackProxy:
                 max_relative_l2=passive_cumulative_l2,
                 max_linf_over_std=passive_cumulative_linf,
             )
+        invariant_drifts = None
+        if getattr(self.args, "progressive_preserve_eeg_invariants", False):
+            for _iteration in range(10):
+                candidate_pool = _project_numpy(
+                    candidate_pool,
+                    self.current_pool,
+                    max_relative_l2=self.args.progressive_step_relative_l2,
+                    max_linf_over_std=self.args.progressive_step_linf_std,
+                )
+                candidate_pool = _project_numpy(
+                    candidate_pool,
+                    self.initial_pool,
+                    max_relative_l2=self.args.progressive_cumulative_relative_l2,
+                    max_linf_over_std=self.args.progressive_cumulative_linf_std,
+                )
+                candidate_pool, invariant_drifts = _limit_batch_invariant_drift(
+                    candidate_pool,
+                    self.initial_pool,
+                    self.args.dataset,
+                    self.args.progressive_invariant_drift_tolerance,
+                )
+            final_step = _relative_l2(candidate_pool - self.current_pool, self.current_pool)
+            final_cumulative = _relative_l2(candidate_pool - self.initial_pool, self.initial_pool)
+            if float(final_step.max()) > self.args.progressive_step_relative_l2 + 1e-3:
+                raise RuntimeError("Invariant-preserving Proxy violated the step L2 constraint")
+            if float(final_cumulative.max()) > self.args.progressive_cumulative_relative_l2 + 1e-3:
+                raise RuntimeError("Invariant-preserving Proxy violated the cumulative L2 constraint")
+            if float(invariant_drifts.max()) > self.args.progressive_invariant_drift_tolerance + 1e-5:
+                raise RuntimeError("Invariant-preserving Proxy exceeded descriptor tolerance")
         gradient_rows: list[tuple[list[torch.Tensor | None], int]] = []
         for start in range(0, len(candidate_pool), generation_batch):
             arrays = candidate_pool[start : start + generation_batch]
@@ -1244,6 +1451,17 @@ class ProgressiveFeedbackProxy:
             "min_cumulative_relative_l2": float(cumulative_relative.min()),
             "modified_sequences": int(modified_mask.sum()),
             "unmodified_sequences": int((~modified_mask).sum()),
+            "mean_invariant_drift": (
+                None if invariant_drifts is None else float(invariant_drifts.mean())
+            ),
+            "max_invariant_drift": (
+                None if invariant_drifts is None else float(invariant_drifts.max())
+            ),
+            "max_population_seed_invariant_drift": (
+                max(self.population_seed_invariant_drifts)
+                if self.population_seed_invariant_drifts
+                else None
+            ),
             "input_direction_cosine": input_cosine,
             "history_gradient_cosine": history_cosine,
             "source_gradient_cosine": source_gradient_cosine,
@@ -1370,6 +1588,10 @@ class ProgressiveFeedbackProxy:
                 "population_class_counts": list(self.population_class_counts),
                 "population_subject_count": int(self.population_subject_count),
                 "population_record_kind_counts": dict(self.population_record_kind_counts),
+                "population_conflict_map": list(self.population_conflict_map),
+                "preserve_eeg_invariants": bool(
+                    getattr(self.args, "progressive_preserve_eeg_invariants", False)
+                ),
             }
         )
         task_dir = self.payload_root / f"task_{task_index}_subject_{subject}"

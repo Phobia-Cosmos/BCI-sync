@@ -1350,6 +1350,20 @@ def build_split(args) -> dict:
     subjects = discover_subjects(args.data_root)
     train_idx, val_idx, old_idx, new_idx = split_subjects(subjects, args.seed)
     new_order = [int(subject) for subject in new_idx]
+    order_name = "seed_random"
+    if getattr(args, "subject_order_manifest", None) is not None:
+        manifest = json.loads(args.subject_order_manifest.read_text())
+        if manifest.get("dataset") not in (None, args.dataset):
+            raise ValueError("Subject-order manifest dataset mismatch")
+        if int(manifest.get("partition_seed", args.seed)) != int(args.seed):
+            raise ValueError("Subject-order manifest partition seed mismatch")
+        manifest_order = [int(subject) for subject in manifest["new_order"]]
+        if len(manifest_order) != len(set(manifest_order)):
+            raise ValueError("Subject-order manifest contains duplicate subjects")
+        if set(manifest_order) != set(new_order):
+            raise ValueError("Subject-order manifest must permute the fixed incremental partition")
+        new_order = manifest_order
+        order_name = str(manifest.get("order_name", args.subject_order_manifest.stem))
     if args.max_subjects > 0:
         new_order = new_order[: args.max_subjects]
     return {
@@ -1360,6 +1374,12 @@ def build_split(args) -> dict:
         "old_idx": [int(subject) for subject in old_idx],
         "new_order": new_order,
         "full_new_order": [int(subject) for subject in new_idx],
+        "order_name": order_name,
+        "subject_order_manifest": (
+            None
+            if getattr(args, "subject_order_manifest", None) is None
+            else str(args.subject_order_manifest)
+        ),
     }
 
 
@@ -1392,6 +1412,7 @@ def parse_args():
     )
     parser.add_argument("--seed", type=int, default=4321)
     parser.add_argument("--pretrain-seed", type=int, default=None)
+    parser.add_argument("--subject-order-manifest", type=Path, default=None)
     parser.add_argument("--gpu", type=int, default=0)
     parser.add_argument("--batch", type=int, default=16)
     parser.add_argument("--num-worker", type=int, default=0)
