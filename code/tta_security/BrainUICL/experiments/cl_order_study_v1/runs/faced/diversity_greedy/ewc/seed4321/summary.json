@@ -1,0 +1,22 @@
+{
+  "ewc": {
+    "final_old_acc": 0.246875,
+    "final_old_mf1": 0.24334905288992692,
+    "old_aaa": 0.2323294690860215,
+    "old_aaf1": 0.21926844952758667,
+    "old_fr": 0.02486486486486495,
+    "mean_current_before_acc": 0.24528688524590164,
+    "mean_current_after_acc": 0.32868852459016396,
+    "mean_current_acc_gain": 0.08340163934426227,
+    "mean_current_before_mf1": 0.19691835059829438,
+    "mean_current_after_mf1": 0.3007479149965846,
+    "mean_current_mf1_gain": 0.10382956439829023,
+    "final_seen_acc": 0.26280737704918034,
+    "final_seen_mf1": 0.21677352394182334,
+    "bwt_acc": -0.0658811475409836,
+    "bwt_mf1": -0.08397439105476125,
+    "mean_pseudo_acc_diagnostic_only": 0.3310450819672131,
+    "mean_pseudo_mf1_diagnostic_only": 0.30391931092478985,
+    "pseudo_label_coverage": 1.0
+  }
+}

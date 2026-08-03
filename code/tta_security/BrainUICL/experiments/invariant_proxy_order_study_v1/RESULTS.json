@@ -1,0 +1,165 @@
+{
+  "rows": [
+    {
+      "order": "diversity_greedy",
+      "clean_final_old_acc": 0.6852694610778444,
+      "proxy_final_old_acc": 0.6855089820359281,
+      "delta_final_old_acc_pp": 0.023952095808377205,
+      "clean_final_old_mf1": 0.6595106596464457,
+      "proxy_final_old_mf1": 0.6598950701314996,
+      "delta_final_old_mf1_pp": 0.038441048505388764,
+      "clean_final_seen_acc": 0.6187384959304716,
+      "proxy_final_seen_acc": 0.6195261624179003,
+      "delta_final_seen_acc_pp": 0.07876664874286732,
+      "clean_final_seen_mf1": 0.5258487183520186,
+      "proxy_final_seen_mf1": 0.5269637661290155,
+      "delta_final_seen_mf1_pp": 0.11150477769968914,
+      "all_four_negative": false
+    },
+    {
+      "order": "easy_to_hard",
+      "clean_final_old_acc": 0.2292814371257485,
+      "proxy_final_old_acc": 0.22892215568862276,
+      "delta_final_old_acc_pp": -0.035928143712574134,
+      "clean_final_old_mf1": 0.08567148199873925,
+      "proxy_final_old_mf1": 0.08557360627806836,
+      "delta_final_old_mf1_pp": -0.009787572067089523,
+      "clean_final_seen_acc": 0.3075692137381091,
+      "proxy_final_seen_acc": 0.3078807345481326,
+      "delta_final_seen_acc_pp": 0.03115208100235023,
+      "clean_final_seen_mf1": 0.1431872820937501,
+      "proxy_final_seen_mf1": 0.14387360621325201,
+      "delta_final_seen_mf1_pp": 0.06863241195019243,
+      "all_four_negative": false
+    },
+    {
+      "order": "hard_to_easy",
+      "clean_final_old_acc": 0.6973652694610778,
+      "proxy_final_old_acc": 0.6969461077844311,
+      "delta_final_old_acc_pp": -0.041916167664668436,
+      "clean_final_old_mf1": 0.6891058384365503,
+      "proxy_final_old_mf1": 0.6884231041092963,
+      "delta_final_old_mf1_pp": -0.06827343272539643,
+      "clean_final_seen_acc": 0.6495883247989988,
+      "proxy_final_seen_acc": 0.6495226055080426,
+      "delta_final_seen_acc_pp": -0.0065719290956112175,
+      "clean_final_seen_mf1": 0.5620385603275044,
+      "proxy_final_seen_mf1": 0.5618659355694186,
+      "delta_final_seen_mf1_pp": -0.017262475808588196,
+      "all_four_negative": true
+    },
+    {
+      "order": "seed_random",
+      "clean_final_old_acc": 0.6608383233532934,
+      "proxy_final_old_acc": 0.660059880239521,
+      "delta_final_old_acc_pp": -0.0778443113772398,
+      "clean_final_old_mf1": 0.6456611056406079,
+      "proxy_final_old_mf1": 0.6449821923453074,
+      "delta_final_old_mf1_pp": -0.0678913295300454,
+      "clean_final_seen_acc": 0.5880161585498082,
+      "proxy_final_seen_acc": 0.586578834795777,
+      "delta_final_seen_acc_pp": -0.14373237540311612,
+      "clean_final_seen_mf1": 0.5076890648748491,
+      "proxy_final_seen_mf1": 0.5064685439266763,
+      "delta_final_seen_mf1_pp": -0.12205209481728208,
+      "all_four_negative": true
+    },
+    {
+      "order": "smooth_nearest",
+      "clean_final_old_acc": 0.6802395209580838,
+      "proxy_final_old_acc": 0.681556886227545,
+      "delta_final_old_acc_pp": 0.13173652694611349,
+      "clean_final_old_mf1": 0.6614663204777965,
+      "proxy_final_old_mf1": 0.663007088723939,
+      "delta_final_old_mf1_pp": 0.15407682461424654,
+      "clean_final_seen_acc": 0.631431560180187,
+      "proxy_final_seen_acc": 0.6327027498688336,
+      "delta_final_seen_acc_pp": 0.127118968864659,
+      "clean_final_seen_mf1": 0.5641575543312051,
+      "proxy_final_seen_mf1": 0.566235539937181,
+      "delta_final_seen_mf1_pp": 0.20779856059759405,
+      "all_four_negative": false
+    },
+    {
+      "order": "source_near_to_far",
+      "clean_final_old_acc": 0.6793413173652695,
+      "proxy_final_old_acc": 0.6797005988023952,
+      "delta_final_old_acc_pp": 0.03592814371257136,
+      "clean_final_old_mf1": 0.659829429551819,
+      "proxy_final_old_mf1": 0.6599855812885178,
+      "delta_final_old_mf1_pp": 0.015615173669880633,
+      "clean_final_seen_acc": 0.6291684550214199,
+      "proxy_final_seen_acc": 0.6280813364039418,
+      "delta_final_seen_acc_pp": -0.10871186174781222,
+      "clean_final_seen_mf1": 0.5608392843664518,
+      "proxy_final_seen_mf1": 0.5604129862418713,
+      "delta_final_seen_mf1_pp": -0.04262981245805042,
+      "all_four_negative": false
+    }
+  ],
+  "audits": [
+    {
+      "order": "diversity_greedy",
+      "proxy_tasks": 5,
+      "all_sequences_modified": true,
+      "max_invariant_drift": 0.006509243431185344,
+      "max_step_relative_l2": 0.05000000819563866,
+      "max_cumulative_relative_l2": 0.09868187457323074,
+      "victim_parameters_visible": false
+    },
+    {
+      "order": "easy_to_hard",
+      "proxy_tasks": 5,
+      "all_sequences_modified": true,
+      "max_invariant_drift": 0.00708718327414305,
+      "max_step_relative_l2": 0.05000000819563866,
+      "max_cumulative_relative_l2": 0.10206633806228638,
+      "victim_parameters_visible": false
+    },
+    {
+      "order": "hard_to_easy",
+      "proxy_tasks": 5,
+      "all_sequences_modified": true,
+      "max_invariant_drift": 0.014439011167343706,
+      "max_step_relative_l2": 0.05000000819563866,
+      "max_cumulative_relative_l2": 0.10065389424562454,
+      "victim_parameters_visible": false
+    },
+    {
+      "order": "seed_random",
+      "proxy_tasks": 5,
+      "all_sequences_modified": true,
+      "max_invariant_drift": 0.006760697439672984,
+      "max_step_relative_l2": 0.050000011920928955,
+      "max_cumulative_relative_l2": 0.09380686283111572,
+      "victim_parameters_visible": false
+    },
+    {
+      "order": "smooth_nearest",
+      "proxy_tasks": 5,
+      "all_sequences_modified": true,
+      "max_invariant_drift": 0.006699962440348099,
+      "max_step_relative_l2": 0.05000000447034836,
+      "max_cumulative_relative_l2": 0.09152630716562271,
+      "victim_parameters_visible": false
+    },
+    {
+      "order": "source_near_to_far",
+      "proxy_tasks": 5,
+      "all_sequences_modified": true,
+      "max_invariant_drift": 0.0069404335214471825,
+      "max_step_relative_l2": 0.05000000819563866,
+      "max_cumulative_relative_l2": 0.10037574917078018,
+      "victim_parameters_visible": false
+    }
+  ],
+  "audit": {
+    "runs": 6,
+    "all_have_five_proxy_tasks": true,
+    "all_sequences_modified": true,
+    "max_invariant_drift": 0.014439011167343706,
+    "max_step_relative_l2": 0.050000011920928955,
+    "max_cumulative_relative_l2": 0.10206633806228638,
+    "all_victim_parameters_hidden": true
+  }
+}

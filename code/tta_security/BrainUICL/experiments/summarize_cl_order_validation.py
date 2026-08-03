@@ -6,7 +6,14 @@ import json
 from pathlib import Path
 
 
-METRICS = ("final_old_acc", "final_old_mf1", "final_seen_acc", "final_seen_mf1")
+METRICS = (
+    "final_old_acc",
+    "final_old_mf1",
+    "final_seen_acc",
+    "final_seen_mf1",
+    "old_aaa",
+    "old_aaf1",
+)
 
 
 def main():
@@ -31,14 +38,15 @@ def main():
     lines = [
         "# Cross-partition Validation of Selected CL Orders", "",
         "Deltas are selected order minus the same-partition seed-random clean run, in percentage points.", "",
-        "| Seed | Method | Selected order | Old ACC/MF1 delta | Seen-new ACC/MF1 delta |",
-        "|---:|---|---|---:|---:|",
+        "| Seed | Method | Selected order | Final old ACC/MF1 delta | Final seen-new ACC/MF1 delta | AAA/AAF1 delta |",
+        "|---:|---|---|---:|---:|---:|",
     ]
     for row in rows:
         lines.append(
             f"| {row['seed']} | {row['method']} | {row['order']} | "
             f"{row['delta_final_old_acc_pp']:+.3f}/{row['delta_final_old_mf1_pp']:+.3f} | "
-            f"{row['delta_final_seen_acc_pp']:+.3f}/{row['delta_final_seen_mf1_pp']:+.3f} |"
+            f"{row['delta_final_seen_acc_pp']:+.3f}/{row['delta_final_seen_mf1_pp']:+.3f} | "
+            f"{row['delta_old_aaa_pp']:+.3f}/{row['delta_old_aaf1_pp']:+.3f} |"
         )
     (args.run_root / "SUMMARY_ZH.md").write_text("\n".join(lines) + "\n")
     print(json.dumps({"runs": len(rows)}))
