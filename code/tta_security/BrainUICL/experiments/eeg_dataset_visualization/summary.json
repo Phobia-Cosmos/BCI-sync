@@ -1,0 +1,126 @@
+{
+  "ISRUC": {
+    "root": "/home/undefined/Disk/datasets/brainuicl/processed/isruc_group1_npy_float32",
+    "sampling_rate": 100,
+    "epoch_seconds": 30,
+    "sequence_length": 20,
+    "channels": 8,
+    "display_unit": "uV",
+    "sample": {
+      "subject": "1",
+      "sequence": 0,
+      "shape": [
+        20,
+        8,
+        3000
+      ],
+      "labels": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1,
+        1,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2
+      ],
+      "minimum": -2.838914588210173e-05,
+      "maximum": 2.9061118766549043e-05,
+      "mean": -2.1022084073507585e-09,
+      "std": 1.7373560012856615e-06
+    },
+    "statistics": {
+      "subjects": 98,
+      "sequences": 4276,
+      "epochs": 85520,
+      "sequences_per_subject": {
+        "minimum": 36,
+        "median": 43.0,
+        "maximum": 52
+      },
+      "class_counts": {
+        "W": 19375,
+        "N1": 10906,
+        "N2": 27126,
+        "N3": 16863,
+        "REM": 11250
+      }
+    }
+  },
+  "FACED": {
+    "root": "/home/undefined/Disk/datasets/FACED_processed",
+    "sampling_rate": 250,
+    "epoch_seconds": 10,
+    "sequence_length": 20,
+    "channels": 32,
+    "display_unit": "epoch z-score",
+    "sample": {
+      "subject": "sub-000",
+      "sequence": 0,
+      "shape": [
+        20,
+        32,
+        2500
+      ],
+      "labels": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        2,
+        2,
+        2,
+        2,
+        2,
+        2,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        1,
+        1
+      ],
+      "minimum": -6.2768025398254395,
+      "maximum": 9.761062622070312,
+      "mean": -4.49419029768805e-10,
+      "std": 0.985633909702301
+    },
+    "statistics": {
+      "subjects": 123,
+      "sequences": 984,
+      "epochs": 19680,
+      "sequences_per_subject": {
+        "minimum": 8,
+        "median": 8.0,
+        "maximum": 8
+      },
+      "class_counts": {
+        "Anger": 2432,
+        "Disgust": 2563,
+        "Fear": 2393,
+        "Sadness": 2075,
+        "Neutral": 1590,
+        "Amusement": 2103,
+        "Inspiration": 3064,
+        "Joy": 1423,
+        "Tenderness": 2037
+      }
+    }
+  }
+}
