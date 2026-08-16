@@ -35,6 +35,7 @@ __pycache__/
 /experiments/distribution_trajectory/
 /experiments/stable_neuron_analysis/
 /experiments/code_checkpoints/
+/experiments/edgeforge_runs/
 **/pseudo_labels/
 **/poisoned_sequences/
 *.log
