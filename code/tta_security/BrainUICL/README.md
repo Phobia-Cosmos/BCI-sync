@@ -34,3 +34,47 @@ The code we provide uses the ISRUC dataset as an example for demonstration. Spec
 ```python
 parser.add_argument('--is_pretrain', type=bool, default=True, help='pretraining')
 ```
+
+## LoP diagnostics
+
+`experiments/raeeg_lop_probe.py` is the BrainUICL-to-EdgeForge integration for
+checkpoint-level Loss of Plasticity diagnostics. It does not change the
+continual-learning trainer or checkpoint files. For each selected checkpoint
+stage it measures the `fusion -> Transformer -> classifier_input` token
+representations, effective/stable rank, CKA/Procrustes drift on one fixed
+anchor subject, sampled Jacobian/NTK, gradients, activation statistics and
+BrainUICL's head-normalized attention. It then runs a fixed-budget held-out
+probe comparing the current checkpoint with the source-pretrained (or random)
+fresh reference; `fresh_gap_final` is the primary LoP outcome.
+
+The command below assumes the storage layout documented in
+`REPRODUCTION_NOTES.md` and uses bounded calibration batches:
+
+```bash
+PYTHONPATH=. EDGEFORGE_SRC=/home/undefined/Desktop/EdgeForge/src \
+/home/undefined/Disk/ai-storage/BrainUICL/envs/brainuicl/bin/python \
+  experiments/raeeg_lop_probe.py \
+  --dataset ISRUC \
+  --data-root /home/undefined/Disk/ai-storage/BrainUICL/processed/isruc_group1_npy_float32 \
+  --input-checkpoint-root /home/undefined/Disk/ai-storage/BrainUICL/model_parameter \
+  --run-root experiments/regularization_cl_eeg_runs/clean49_bn_frozen_e10_lr1e6_seed4321 \
+  --method finetune --stages 0,10,25 --fresh-reference random \
+  --probe-steps 0,5,10,25,50 --batch 4 --num-worker 0 \
+  --diagnostic-max-batches 4 --max-observations 256 \
+  --jacobian-samples 2 --freeze-bn-stats \
+  --output experiments/lop_diagnostics/brainuicl_isruc_seed4321.json
+```
+
+The command writes both the JSON payload and a same-name `.md` summary under
+`experiments/lop_diagnostics/`. The JSON keeps all layer-level diagnostics;
+the Markdown file is the compact stage table for review.
+
+Use `--dataset FACED` with its 32-channel processed root to reuse the same
+adapter. The default `--fresh-reference random` is the strict LoP probe: a
+randomly initialized model gets the same target train/eval split and update
+budget as the warm checkpoint. Use `--fresh-reference source` only for a
+separate source-pretrained transfer baseline, and do not mix the two outcomes.
+The probe labels are used only as an evaluation/oracle diagnostic;
+they are not supplied to the unsupervised continual-learning update. Formal
+LoP claims require the same split and budget across at least three seeds and
+should report both `fresh_gap_final`/AULC and old-subject retention/BWT.

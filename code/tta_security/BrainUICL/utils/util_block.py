@@ -23,6 +23,10 @@ class MultiHeadAttention(torch.nn.Module):
         self.drop = nn.Dropout(0.2)
         self.input_size = input_size
         self.att_dropout = nn.Dropout(0.25)
+        # Kept detached so diagnostics can inspect the real normalization
+        # axis without changing the forward value or retaining an autograd
+        # graph during continual-learning updates.
+        self.last_attention_prob = None
 
     def forward(self, input_tensor):
         batch_size = input_tensor.shape[0]
@@ -35,6 +39,7 @@ class MultiHeadAttention(torch.nn.Module):
         attention_score = torch.matmul(query, key.transpose(-1, -2))
         attention_score = attention_score / math.sqrt(input_tensor.shape[2])
         attention_prob = nn.Softmax(dim=1)(attention_score)
+        self.last_attention_prob = attention_prob.detach()
         attention_prob = self.att_dropout(attention_prob)
         context = torch.matmul(attention_prob, value)
         context = context.permute(0, 2, 1, 3).contiguous()
