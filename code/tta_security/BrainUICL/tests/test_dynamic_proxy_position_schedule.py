@@ -2,6 +2,8 @@ import unittest
 
 from experiments.dynamic_proxy_position_schedule import (
     DATASET_TASKS,
+    PLACEMENTS,
+    STRENGTHS,
     clean_tasks,
     manifest,
     proxy_tasks,
@@ -44,12 +46,11 @@ class DynamicProxyPositionScheduleTest(unittest.TestCase):
                         )
                         self.assertEqual(clean, clean_tasks(total_tasks, selected))
 
-    def test_manifest_contains_all_twelve_dataset_schedules(self) -> None:
+    def test_manifest_contains_all_configured_dataset_schedules(self) -> None:
         payload = manifest()
         self.assertEqual(set(payload["datasets"]), {"ISRUC", "FACED"})
-        self.assertTrue(
-            all(len(rows) == 6 for rows in payload["datasets"].values())
-        )
+        expected_count = len(STRENGTHS) * len(PLACEMENTS)
+        self.assertTrue(all(len(rows) == expected_count for rows in payload["datasets"].values()))
 
 
 if __name__ == "__main__":

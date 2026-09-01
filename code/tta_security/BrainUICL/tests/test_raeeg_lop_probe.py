@@ -1,4 +1,5 @@
 import unittest
+import tempfile
 from types import SimpleNamespace
 from pathlib import Path
 
@@ -10,6 +11,8 @@ from experiments.raeeg_lop_probe import (
     evaluate_retention,
     effective_rank,
     parse_int_list,
+    preflight_resources,
+    blocked_result,
     write_markdown_report,
 )
 
@@ -101,6 +104,51 @@ class RAEEGLoPProbeTest(unittest.TestCase):
         result = evaluate_retention(None, [], args)
         self.assertEqual(result["status"], "not-requested")
         self.assertEqual(result["label_source"], "true_labels_for_retention_eval_only")
+
+    def test_preflight_reports_missing_external_resources_without_loading_them(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            args = SimpleNamespace(
+                data_root=root / "data",
+                input_checkpoint_root=root / "parameters",
+                run_root=root / "runs",
+                dataset="ISRUC",
+                method="finetune",
+                seed=4321,
+                pretrain_seed=None,
+                fresh_reference="random",
+                anchor_subject=-1,
+                retention_subject=[],
+            )
+            split_path = root / "split.json"
+            preflight = preflight_resources(args, split_path=split_path, stages=[0, 1])
+            self.assertEqual(preflight["status"], "blocked")
+            self.assertTrue(any(item["kind"] == "split-manifest" for item in preflight["blockers"]))
+            blocked = blocked_result(args, preflight=preflight, stages=[0, 1], split_path=split_path)
+            self.assertEqual(blocked["status"], "blocked")
+            self.assertEqual(blocked["block_reason"], "blocked-by-split-manifest")
+            output = root / "blocked.md"
+            write_markdown_report(blocked, output)
+            self.assertIn("blocked-by-split-manifest", output.read_text(encoding="utf-8"))
+
+    def test_adapter_metric_alias_can_feed_edgeforge_lagged_analyzer(self):
+        from edgeforge.lop_envelope import diagnostic_to_metrics
+
+        metrics = diagnostic_to_metrics(
+            {
+                "config": {"dataset": "ISRUC", "method": "finetune"},
+                "tasks": [
+                    {
+                        "stage": 10,
+                        "subject": 2,
+                        "spectra": {"transformer": {"effective_rank": 7.0}},
+                        "plasticity": {"outcome": {"fresh_gap_final": 0.2}},
+                    }
+                ],
+            }
+        )
+        names = {item["name"] for item in metrics}
+        self.assertIn("task.spectra.transformer_1.effective_rank", names)
 
 
 if __name__ == "__main__":

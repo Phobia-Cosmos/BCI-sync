@@ -52,6 +52,12 @@ from edgeforge.lop_metrics import (  # noqa: E402
     sampled_parameter_jacobian,
     spectral_summary,
 )
+from edgeforge.lop_diagnostics import (  # noqa: E402
+    calibration_manifest_provenance,
+    hessian_top_eigenvalue_summary,
+    hutchinson_trace_summary,
+)
+from edgeforge.lop_envelope import diagnostic_to_metrics  # noqa: E402
 
 from model.regularization_cl import freeze_batch_norm_running_stats  # noqa: E402
 from rttdp_brainuicl_full import (  # noqa: E402
@@ -399,6 +405,46 @@ def model_lop_diagnostics(
             directions=max(1, int(getattr(args, "linearity_directions", 2))),
             seed=int(seed),
         )
+        hessian_mode = str(getattr(args, "hessian_mode", "none")).lower()
+        if hessian_mode != "none":
+            try:
+                hessian_report: dict[str, Any] = {
+                    "status": "computed",
+                    "mode": hessian_mode,
+                    "objective": "cross_entropy",
+                    "label_source": "true_eval_labels_for_oracle_diagnostics",
+                    "data_dependent": True,
+                    "batch_count": len(packed_batches),
+                    "batch_norm_policy": "eval/frozen during curvature probe",
+                }
+                if hessian_mode in {"power", "all"}:
+                    top = hessian_top_eigenvalue_summary(
+                        model,
+                        packed_batches,
+                        iterations=max(1, int(getattr(args, "hessian_iterations", 8))),
+                        tolerance=float(getattr(args, "hessian_tolerance", 1e-5)),
+                        seed=int(seed),
+                    )
+                    hessian_report["top_eigenvalue"] = top["eigenvalue"]
+                    hessian_report["top_eigenvalue_summary"] = top
+                if hessian_mode in {"hutchinson", "all"}:
+                    trace = hutchinson_trace_summary(
+                        model,
+                        packed_batches,
+                        probes=max(1, int(getattr(args, "hessian_probes", 2))),
+                        seed=int(seed),
+                    )
+                    hessian_report["trace"] = trace["trace"]
+                    hessian_report["trace_summary"] = trace
+                diagnostics["hessian"] = hessian_report
+            except Exception as error:
+                diagnostics["hessian"] = {
+                    "status": "error",
+                    "mode": hessian_mode,
+                    "error": f"{type(error).__name__}: {error}",
+                }
+        else:
+            diagnostics["hessian"] = {"status": "disabled", "mode": "none"}
         diagnostics["parameters"] = parameter_norm_summary(model)
     return diagnostics, representations
 
@@ -482,6 +528,49 @@ def write_markdown_report(result: dict[str, Any], path: Path) -> None:
 
     config = result["config"]
     summary = result["summary"]
+    if result.get("status") in {"blocked", "ready"} and "preflight" in result and not result.get("tasks"):
+        lines = [
+            f"# BrainUICL LoP diagnostics — {result.get('status')}",
+            "",
+            f"- Protocol: `{result.get('protocol', 'raeeg-lop-posthoc-v2-edgeforge-shared')}`",
+            f"- Status: `{result.get('status')}`; reason: `{result.get('block_reason', 'all read-only checks passed')}`",
+            f"- Dataset/method: `{config.get('dataset')}` / `{config.get('method')}`",
+            f"- Stages requested: `{config.get('stages', [])}`; seed: `{config.get('seed')}`",
+            f"- Split manifest: `{config.get('split_manifest', {}).get('status', 'missing')}`; SHA-256: `{config.get('split_manifest', {}).get('sha256') or '—'}`",
+            f"- Calibration manifest: `{config.get('calibration_manifest', {}).get('status', 'not-provided')}`; SHA-256: `{config.get('calibration_manifest', {}).get('sha256') or '—'}`",
+            "",
+            "No EEG arrays or checkpoint parameters were loaded. Resolve every blocker below and rerun the same command; this report is an evidence gate, not a synthetic fallback.",
+            "",
+            "## Blockers",
+            "",
+            "| kind | stage/subject | path | reason |",
+            "| --- | --- | --- | --- |",
+        ]
+        for blocker in result.get("preflight", {}).get("blockers", []):
+            identity = blocker.get("stage", blocker.get("subject", "—"))
+            path_text = blocker.get("path", "—")
+            reason = blocker.get("reason", "—")
+            lines.append(f"| {blocker.get('kind', 'unknown')} | {identity} | `{path_text}` | {reason} |")
+        lines.extend(
+            [
+                "",
+                "## Read-only checks",
+                "",
+                "| resource | ready | count/details |",
+                "| --- | --- | --- |",
+            ]
+        )
+        for subject in result.get("preflight", {}).get("subjects", []):
+            lines.append(
+                f"| subject {subject.get('subject')} | `{subject.get('ready')}` | data={subject.get('data_count', 0)}, labels={subject.get('label_count', 0)} |"
+            )
+        for checkpoint in result.get("preflight", {}).get("checkpoints", []):
+            lines.append(
+                f"| checkpoint stage {checkpoint.get('stage')} | `{checkpoint.get('ready')}` | missing={len(checkpoint.get('missing', []))} |"
+            )
+        lines.extend(["", "`scientific_conclusion_allowed=false`.", ""])
+        path.write_text("\n".join(lines), encoding="utf-8")
+        return
     lines = [
         "# BrainUICL LoP diagnostics",
         "",
@@ -490,6 +579,8 @@ def write_markdown_report(result: dict[str, Any], path: Path) -> None:
         f"- Stages: `{config['stages']}`; seed: `{config['seed']}`",
         f"- Fresh comparator: `{config['fresh_reference']}`",
         f"- Primary outcome: `{result['primary_outcome']}`",
+        f"- Calibration manifest: `{config.get('calibration_manifest', {}).get('status', 'not-provided')}`; SHA-256: `{config.get('calibration_manifest', {}).get('sha256') or '—'}`",
+        f"- Split manifest: `{config.get('split_manifest', {}).get('status', 'missing')}`; SHA-256: `{config.get('split_manifest', {}).get('sha256') or '—'}`",
         "- Labels are used only by the held-out/oracle diagnostics; the native unsupervised trainer is unchanged.",
         f"- Retention subjects: `{config.get('retention_subjects', [])}` (eval-only)",
         "",
@@ -591,6 +682,268 @@ def checkpoint_dir(args, stage: int) -> Path:
     return args.run_root / args.method / "checkpoints" / f"individual_{stage}"
 
 
+def _expected_checkpoint_paths(args, stage: int) -> list[Path]:
+    """Return the exact native BrainUICL files required for one stage."""
+
+    directory = checkpoint_dir(args, stage)
+    seed = args.pretrain_seed if stage == 0 and args.pretrain_seed is not None else args.seed
+    return [directory / f"{name}_parameter_{int(seed)}.pkl" for name in CHECKPOINT_NAMES]
+
+
+def _subject_file_inventory(data_root: Path, subject: int) -> dict[str, Any]:
+    """Inspect a subject without loading any EEG array contents."""
+
+    subject_dir = data_root / str(subject)
+    if not subject_dir.is_dir():
+        subject_dir = data_root / f"sub-{int(subject):03d}"
+    data_dir = subject_dir / "data"
+    label_dir = subject_dir / "label"
+    data_paths = sorted(data_dir.glob("*.npy"), key=lambda path: path.name) if data_dir.is_dir() else []
+    label_paths = sorted(label_dir.glob("*.npy"), key=lambda path: path.name) if label_dir.is_dir() else []
+    data_names = {path.name for path in data_paths}
+    label_names = {path.name for path in label_paths}
+    return {
+        "subject": int(subject),
+        "directory": str(subject_dir),
+        "data_directory": str(data_dir),
+        "label_directory": str(label_dir),
+        "data_count": len(data_paths),
+        "label_count": len(label_paths),
+        "missing_labels": sorted(data_names - label_names),
+        "orphan_labels": sorted(label_names - data_names),
+        "ready": bool(data_paths) and data_names == label_names,
+    }
+
+
+def preflight_resources(
+    args,
+    *,
+    split_path: Path,
+    stages: list[int],
+) -> dict[str, Any]:
+    """Read-only evidence gate for data, split and checkpoint resources.
+
+    No NumPy arrays or model parameters are loaded here.  The returned
+    object is intentionally serialisable and can be written even when the
+    experiment is blocked, making missing external mounts auditable instead
+    of producing an opaque traceback.
+    """
+
+    blockers: list[dict[str, Any]] = []
+    split_record: dict[str, Any] = {
+        "path": str(split_path),
+        "exists": split_path.is_file(),
+        "manifest": calibration_manifest_provenance(split_path),
+    }
+    split: dict[str, Any] | None = None
+    new_order: list[int] = []
+    if not split_path.is_file():
+        blockers.append({"kind": "split-manifest", "path": str(split_path), "reason": "file-not-found"})
+    else:
+        try:
+            payload = json.loads(split_path.read_text(encoding="utf-8"))
+            if not isinstance(payload, dict) or not isinstance(payload.get("new_order"), list):
+                raise ValueError("new_order must be an array")
+            new_order = [int(value) for value in payload["new_order"]]
+            if not new_order:
+                raise ValueError("new_order must not be empty")
+            split = payload
+            split_record["new_order_count"] = len(new_order)
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError) as error:
+            blockers.append(
+                {
+                    "kind": "split-manifest",
+                    "path": str(split_path),
+                    "reason": f"invalid: {type(error).__name__}: {error}",
+                }
+            )
+
+    subject_ids: list[int] = []
+    if new_order:
+        for stage in stages:
+            if stage < 0 or stage >= len(new_order):
+                blockers.append(
+                    {
+                        "kind": "stage-index",
+                        "stage": int(stage),
+                        "reason": f"outside new_order[0:{len(new_order) - 1}]",
+                    }
+                )
+            else:
+                subject_ids.append(int(new_order[stage]))
+        if args.anchor_subject >= 0:
+            subject_ids.append(int(args.anchor_subject))
+        elif new_order:
+            subject_ids.append(int(new_order[0]))
+        subject_ids.extend(int(value) for value in args.retention_subject)
+    subjects = []
+    for subject in sorted(set(subject_ids)):
+        inventory = _subject_file_inventory(args.data_root, subject)
+        subjects.append(inventory)
+        if not inventory["ready"]:
+            reason = "missing-data-or-labels"
+            if inventory["data_count"] and inventory["missing_labels"]:
+                reason = "data-without-matching-labels"
+            blockers.append(
+                {
+                    "kind": "data",
+                    "subject": int(subject),
+                    "path": inventory["directory"],
+                    "reason": reason,
+                    "data_count": inventory["data_count"],
+                    "label_count": inventory["label_count"],
+                    "missing_labels": inventory["missing_labels"][:20],
+                }
+            )
+
+    checkpoint_records = []
+    for stage in stages:
+        if stage < 0 or stage >= len(new_order):
+            continue
+        expected = _expected_checkpoint_paths(args, stage)
+        missing = [str(path) for path in expected if not path.is_file()]
+        record = {
+            "stage": int(stage),
+            "subject": int(new_order[stage]),
+            "directory": str(checkpoint_dir(args, stage)),
+            "expected": [str(path) for path in expected],
+            "missing": missing,
+            "ready": not missing,
+        }
+        checkpoint_records.append(record)
+        if missing:
+            blockers.append(
+                {
+                    "kind": "checkpoint",
+                    "stage": int(stage),
+                    "path": str(checkpoint_dir(args, stage)),
+                    "reason": "missing-parameter-files",
+                    "missing": missing,
+                }
+            )
+
+    if args.fresh_reference == "source" and new_order:
+        expected = _expected_checkpoint_paths(args, 0)
+        missing = [str(path) for path in expected if not path.is_file()]
+        if missing and not any(item.get("kind") == "checkpoint" and item.get("stage") == 0 for item in blockers):
+            blockers.append(
+                {
+                    "kind": "checkpoint",
+                    "stage": "fresh-source",
+                    "path": str(checkpoint_dir(args, 0)),
+                    "reason": "missing-source-parameter-files",
+                    "missing": missing,
+                }
+            )
+
+    return {
+        "status": "ready" if not blockers else "blocked",
+        "blockers": blockers,
+        "split": split_record,
+        "split_payload": split,
+        "subjects": subjects,
+        "checkpoints": checkpoint_records,
+        "scientific_conclusion_allowed": False,
+    }
+
+
+def blocked_result(args, *, preflight: dict[str, Any], stages: list[int], split_path: Path) -> dict[str, Any]:
+    """Build a stable report for an evidence-gated, not-yet-runnable run."""
+
+    kinds = {str(item.get("kind")) for item in preflight.get("blockers", [])}
+    if "checkpoint" in kinds:
+        reason = "blocked-by-checkpoint"
+    elif "data" in kinds:
+        reason = "blocked-by-data"
+    elif "split-manifest" in kinds:
+        reason = "blocked-by-split-manifest"
+    else:
+        reason = "blocked-by-preflight"
+    config = {
+        "dataset": args.dataset,
+        "method": args.method,
+        "seed": args.seed,
+        "pretrain_seed": args.pretrain_seed if args.pretrain_seed is not None else args.seed,
+        "stages": stages,
+        "fresh_reference": args.fresh_reference,
+        "objective": "cross_entropy",
+        "label_source": "true",
+        "data_root": str(args.data_root),
+        "input_checkpoint_root": str(args.input_checkpoint_root),
+        "run_root": str(args.run_root),
+        "split_manifest": calibration_manifest_provenance(split_path),
+        "calibration_manifest": calibration_manifest_provenance(
+            getattr(args, "calibration_manifest", None),
+            declared_digest=getattr(args, "calibration_manifest_digest", None),
+        ),
+    }
+    return {
+        "protocol": "raeeg-lop-posthoc-v2-edgeforge-shared",
+        "status": "blocked",
+        "block_reason": reason,
+        "primary_outcome": "fresh_gap_final = accuracy_fresh - accuracy_warm",
+        "scientific_conclusion_allowed": False,
+        "config": config,
+        "preflight": preflight,
+        "tasks": [],
+        "metrics": [],
+        "envelope": {
+            "schema": "edgeforge-bundle-v1",
+            "metric_count": 0,
+            "scientific_conclusion_allowed": False,
+        },
+        "summary": {
+            "status": "blocked",
+            "block_reason": reason,
+            "blocker_count": len(preflight.get("blockers", [])),
+            "stage_count": 0,
+            "scientific_conclusion_allowed": False,
+        },
+    }
+
+
+def ready_preflight_result(args, *, preflight: dict[str, Any], stages: list[int], split_path: Path) -> dict[str, Any]:
+    """Build a no-load readiness report for ``--preflight-only``."""
+
+    return {
+        "protocol": "raeeg-lop-posthoc-v2-edgeforge-shared",
+        "status": "ready",
+        "scientific_conclusion_allowed": False,
+        "config": {
+            "dataset": args.dataset,
+            "method": args.method,
+            "seed": args.seed,
+            "pretrain_seed": args.pretrain_seed if args.pretrain_seed is not None else args.seed,
+            "stages": stages,
+            "fresh_reference": args.fresh_reference,
+            "objective": "cross_entropy",
+            "label_source": "true",
+            "data_root": str(args.data_root),
+            "input_checkpoint_root": str(args.input_checkpoint_root),
+            "run_root": str(args.run_root),
+            "split_manifest": calibration_manifest_provenance(split_path),
+            "calibration_manifest": calibration_manifest_provenance(
+                getattr(args, "calibration_manifest", None),
+                declared_digest=getattr(args, "calibration_manifest_digest", None),
+            ),
+        },
+        "preflight": preflight,
+        "tasks": [],
+        "metrics": [],
+        "envelope": {
+            "schema": "edgeforge-bundle-v1",
+            "metric_count": 0,
+            "scientific_conclusion_allowed": False,
+        },
+        "summary": {
+            "status": "ready",
+            "stage_count": len(stages),
+            "blocker_count": 0,
+            "scientific_conclusion_allowed": False,
+        },
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", choices=("ISRUC", "FACED"), default="ISRUC")
@@ -611,6 +964,17 @@ def main() -> None:
     )
     parser.add_argument("--method", choices=("finetune", "ewc", "online_ewc", "si", "mas"), default="finetune")
     parser.add_argument("--split", type=Path, default=None)
+    parser.add_argument(
+        "--calibration-manifest",
+        type=Path,
+        default=None,
+        help="optional fixed calibration manifest; only its bytes are hashed for provenance",
+    )
+    parser.add_argument(
+        "--calibration-manifest-digest",
+        default=None,
+        help="optional externally declared SHA-256 (with or without sha256: prefix)",
+    )
     parser.add_argument("--stages", default="0,10,25")
     parser.add_argument("--probe-steps", default="0,10,20,50,100")
     parser.add_argument("--seed", type=int, default=4321)
@@ -660,8 +1024,22 @@ def main() -> None:
     parser.add_argument("--jacobian-samples", type=int, default=2)
     parser.add_argument("--linearity-epsilon", type=float, default=1e-3)
     parser.add_argument("--linearity-directions", type=int, default=2)
+    parser.add_argument(
+        "--hessian-mode",
+        choices=("none", "power", "hutchinson", "all"),
+        default="none",
+        help="optional matrix-free Hessian probe; disabled by default for full BrainUICL checkpoints",
+    )
+    parser.add_argument("--hessian-probes", type=int, default=2)
+    parser.add_argument("--hessian-iterations", type=int, default=8)
+    parser.add_argument("--hessian-tolerance", type=float, default=1e-5)
     parser.add_argument("--probe-train-batches", type=int, default=4)
     parser.add_argument("--probe-eval-batches", type=int, default=4)
+    parser.add_argument(
+        "--preflight-only",
+        action="store_true",
+        help="check split/data/checkpoint provenance and write a readiness report without loading arrays or parameters",
+    )
     parser.add_argument("--output", type=Path, required=True)
     cli = parser.parse_args()
     if not 0.0 < cli.train_fraction < 1.0:
@@ -675,10 +1053,23 @@ def main() -> None:
     if probe_steps[0] != 0:
         probe_steps = [0, *probe_steps]
     split_path = cli.split or cli.run_root / "split.json"
-    split = json.loads(split_path.read_text(encoding="utf-8"))
+    preflight = preflight_resources(cli, split_path=split_path, stages=stages)
+    if preflight["status"] != "ready":
+        result = blocked_result(cli, preflight=preflight, stages=stages, split_path=split_path)
+        cli.output.parent.mkdir(parents=True, exist_ok=True)
+        cli.output.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        write_markdown_report(result, cli.output.with_suffix(".md"))
+        print(json.dumps(result["summary"], ensure_ascii=False, indent=2))
+        return
+    if cli.preflight_only:
+        result = ready_preflight_result(cli, preflight=preflight, stages=stages, split_path=split_path)
+        cli.output.parent.mkdir(parents=True, exist_ok=True)
+        cli.output.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        write_markdown_report(result, cli.output.with_suffix(".md"))
+        print(json.dumps(result["summary"], ensure_ascii=False, indent=2))
+        return
+    split = preflight["split_payload"]
     new_order = [int(value) for value in split["new_order"]]
-    if any(stage < 0 or stage >= len(new_order) for stage in stages):
-        parser.error(f"stages must be in 0..{len(new_order) - 1}")
     device = torch.device(f"cuda:{cli.gpu}" if cli.gpu >= 0 and torch.cuda.is_available() else "cpu")
     args = SimpleNamespace(**vars(cli))
     args.device = device
@@ -776,6 +1167,8 @@ def main() -> None:
             "probe_steps": probe_steps,
             "probe_protocol": "edgeforge-fixed-budget-fresh-vs-warm-heldout",
             "fresh_reference": cli.fresh_reference,
+            "objective": "cross_entropy",
+            "label_source": "true",
             "train_fraction": cli.train_fraction,
             "max_sequences": cli.max_sequences,
             "anchor_subject": anchor_subject,
@@ -783,6 +1176,11 @@ def main() -> None:
             "retention_max_batches": cli.retention_max_batches,
             "diagnostic_max_batches": cli.diagnostic_max_batches,
             "max_observations": cli.max_observations,
+            "calibration_manifest": calibration_manifest_provenance(
+                cli.calibration_manifest,
+                declared_digest=cli.calibration_manifest_digest,
+            ),
+            "split_manifest": calibration_manifest_provenance(split_path),
             "freeze_bn_stats": cli.freeze_bn_stats,
             "device": str(device),
         },
@@ -795,6 +1193,16 @@ def main() -> None:
             "transformer_effective_rank_vs_fresh_gap_pearson": correlation,
             "stage_count": len(tasks),
         },
+    }
+    # Persist the same metric envelope consumed by EdgeForge's
+    # ``edgeforge-bundle-v1`` importer.  Keep the rich task tree above for
+    # local analysis; the flat rows carry explicit predictor/outcome/
+    # retention/diagnostic roles and stable stage contexts.
+    result["metrics"] = diagnostic_to_metrics(result)
+    result["envelope"] = {
+        "schema": "edgeforge-bundle-v1",
+        "metric_count": len(result["metrics"]),
+        "scientific_conclusion_allowed": False,
     }
     cli.output.parent.mkdir(parents=True, exist_ok=True)
     cli.output.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
